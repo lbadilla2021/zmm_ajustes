@@ -1,1 +1,1 @@
-from .barca_maintenance import models
+from .zmm_ajustes import models

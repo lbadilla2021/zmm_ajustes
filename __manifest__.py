@@ -1,5 +1,5 @@
 {
-    "name": "zmm_ajustes",
+    "name": "Barca Mantenimiento",
     "version": "1.0",
     "summary": "Módulo de mantención de flota Barca SpA",
     "category": "Operations",
