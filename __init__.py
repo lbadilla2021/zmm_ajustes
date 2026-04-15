@@ -1,1 +1,1 @@
-from .zmm_ajustes import models
+from . import models
