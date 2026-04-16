@@ -51,9 +51,9 @@ class BarcaTechnicalLocation(models.Model):
 
     _sql_constraints = [
         (
-            "barca_technical_location_unique_node",
+            "unique_location_per_parent_category",
             "unique(name, category_id, parent_id)",
-            "Ya existe una ubicación técnica con ese nombre en la misma categoría y nivel.",
+            "Ya existe una ubicación técnica con ese nombre en este nivel y categoría.",
         )
     ]
 

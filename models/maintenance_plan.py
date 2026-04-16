@@ -7,6 +7,14 @@ class BarcaMaintenancePlan(models.Model):
     _description = "Plan de mantención preventiva"
     _order = "name, technical_location_id, intervention_type_id"
 
+    _sql_constraints = [
+        (
+            "unique_plan_core",
+            "unique(technical_location_id, intervention_type_id, category_id)",
+            "Ya existe un plan con la misma ubicación técnica, tipo de intervención y categoría.",
+        )
+    ]
+
     name = fields.Char(string="Nombre del plan", required=True)
 
     category_id = fields.Many2one(
