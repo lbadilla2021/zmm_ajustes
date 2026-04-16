@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_fleet_vehicle_form_inherit_mantencion_barca" model="ir.ui.view">
+        <field name="name">fleet.vehicle.form.inherit.mantencion.barca</field>
+        <field name="model">fleet.vehicle</field>
+        <field name="inherit_id" ref="fleet.fleet_vehicle_view_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//notebook" position="inside">
+                <page string="Mantención Barca">
+                    <group string="Identificación interna">
+                        <field name="x_internal_code"/>
+                        <field name="x_engine_code"/>
+                    </group>
+                    <group string="Medidores">
+                        <field name="x_odometer_last_service"/>
+                        <field name="x_odometer_next_service"/>
+                        <field name="x_operating_hours"/>
+                    </group>
+                    <group string="Taller">
+                        <field name="x_last_entry_date"/>
+                        <field name="x_last_exit_date"/>
+                        <field name="x_downtime_total"/>
+                    </group>
+                    <group string="Documentación">
+                        <field name="x_doc_circulation_permit_expiry"/>
+                        <field name="x_doc_technical_review_expiry"/>
+                        <field name="x_doc_padron"/>
+                        <field name="x_doc_fuel_card"/>
+                        <field name="x_doc_tag"/>
+                        <field name="x_alert_days_before"/>
+                    </group>
+                    <group string="Notas">
+                        <field name="x_maintenance_note"/>
+                    </group>
+                </page>
+            </xpath>
+        </field>
+    </record>
+</odoo>
