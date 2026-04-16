@@ -1,2 +1,4 @@
 id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
 access_barca_technical_location_user,access.barca.technical.location.user,model_barca_technical_location,base.group_user,1,1,1,1
+access_barca_intervention_type_user,access.barca.intervention.type.user,model_barca_intervention_type,base.group_user,1,1,1,1
+access_barca_maintenance_plan_user,access.barca.maintenance.plan.user,model_barca_maintenance_plan,base.group_user,1,1,1,1
