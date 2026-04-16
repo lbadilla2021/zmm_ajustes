@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_barca_technical_location_tree" model="ir.ui.view">
+        <field name="name">barca.technical.location.tree</field>
+        <field name="model">barca.technical.location</field>
+        <field name="arch" type="xml">
+            <list>
+                <field name="complete_name"/>
+                <field name="category_id"/>
+                <field name="level"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_barca_technical_location_form" model="ir.ui.view">
+        <field name="name">barca.technical.location.form</field>
+        <field name="model">barca.technical.location</field>
+        <field name="arch" type="xml">
+            <form>
+                <sheet>
+                    <group>
+                        <group>
+                            <field name="name"/>
+                            <field name="code"/>
+                            <field name="category_id"/>
+                            <field name="parent_id"/>
+                            <field name="level"/>
+                        </group>
+                        <group>
+                            <field name="kit_id"/>
+                            <field name="estimated_useful_life"/>
+                            <field name="reference_supplier_id"/>
+                        </group>
+                    </group>
+                    <group>
+                        <field name="note"/>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="action_barca_technical_location" model="ir.actions.act_window">
+        <field name="name">Ubicaciones técnicas</field>
+        <field name="res_model">barca.technical.location</field>
+        <field name="view_mode">list,form</field>
+    </record>
+</odoo>

@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_barca_maintenance_plan_tree" model="ir.ui.view">
+        <field name="name">barca.maintenance.plan.tree</field>
+        <field name="model">barca.maintenance.plan</field>
+        <field name="arch" type="xml">
+            <list>
+                <field name="name"/>
+                <field name="category_id"/>
+                <field name="technical_location_id"/>
+                <field name="intervention_type_id"/>
+                <field name="trigger_km"/>
+                <field name="trigger_days"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_barca_maintenance_plan_form" model="ir.ui.view">
+        <field name="name">barca.maintenance.plan.form</field>
+        <field name="model">barca.maintenance.plan</field>
+        <field name="arch" type="xml">
+            <form>
+                <sheet>
+                    <group string="Definición">
+                        <field name="name"/>
+                        <field name="category_id"/>
+                        <field name="vehicle_ids" widget="many2many_tags"/>
+                        <field name="technical_location_id"/>
+                        <field name="intervention_type_id"/>
+                    </group>
+
+                    <group string="Triggers">
+                        <field name="trigger_km"/>
+                        <field name="trigger_days"/>
+                        <field name="trigger_hours"/>
+                    </group>
+
+                    <group string="Adelantos">
+                        <field name="advance_km"/>
+                        <field name="advance_days"/>
+                    </group>
+
+                    <group string="Otros">
+                        <field name="kit_id"/>
+                        <field name="active"/>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="action_barca_maintenance_plan" model="ir.actions.act_window">
+        <field name="name">Planes de mantención</field>
+        <field name="res_model">barca.maintenance.plan</field>
+        <field name="view_mode">list,form</field>
+    </record>
+</odoo>
