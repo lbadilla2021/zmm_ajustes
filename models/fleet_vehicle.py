@@ -50,3 +50,25 @@ class FleetVehicle(models.Model):
     def _compute_downtime(self):
         for vehicle in self:
             vehicle.x_downtime_total = 0.0
+
+    @api.model_create_multi
+    def create(self, vals_list):
+        vehicles = super().create(vals_list)
+        equipment_model = self.env["maintenance.equipment"]
+
+        existing_equipment = equipment_model.search(
+            [("vehicle_id", "in", vehicles.ids)]
+        ).mapped("vehicle_id")
+        vehicles_without_equipment = vehicles - existing_equipment
+
+        equipment_to_create = [
+            {
+                "name": vehicle.name,
+                "vehicle_id": vehicle.id,
+            }
+            for vehicle in vehicles_without_equipment
+        ]
+        if equipment_to_create:
+            equipment_model.create(equipment_to_create)
+
+        return vehicles
