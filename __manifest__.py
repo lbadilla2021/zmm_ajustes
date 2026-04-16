@@ -5,6 +5,7 @@
     'category': 'Operations',
     'depends': ['fleet', 'maintenance', 'stock', 'purchase', 'mail'],
     'data': [
+        'security/res_groups.xml',
         'security/ir.model.access.csv',
         'views/technical_location_views.xml',
         'views/intervention_type_views.xml',

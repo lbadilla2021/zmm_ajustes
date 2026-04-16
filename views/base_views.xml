@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
-    <menuitem id="menu_barca_maintenance_root" name="Mantención Barca" sequence="10"/>
+    <menuitem id="menu_barca_maintenance_root" name="Mantención Barca" sequence="10" groups="zmm_ajustes.group_barca_conductor,zmm_ajustes.group_barca_programador,zmm_ajustes.group_barca_ejecutor,zmm_ajustes.group_barca_bodega,zmm_ajustes.group_barca_admin"/>
 
     <menuitem
         id="menu_barca_technical_location"
@@ -8,6 +8,7 @@
         parent="menu_barca_maintenance_root"
         action="action_barca_technical_location"
         sequence="10"
+        groups="zmm_ajustes.group_barca_admin"
     />
 
     <menuitem
@@ -16,6 +17,7 @@
         parent="menu_barca_maintenance_root"
         action="action_barca_intervention_type"
         sequence="20"
+        groups="zmm_ajustes.group_barca_admin"
     />
 
     <menuitem
@@ -24,6 +26,16 @@
         parent="menu_barca_maintenance_root"
         action="action_barca_maintenance_plan"
         sequence="30"
+        groups="zmm_ajustes.group_barca_programador,zmm_ajustes.group_barca_admin"
+    />
+
+    <menuitem
+        id="menu_barca_maintenance_kit"
+        name="Kits"
+        parent="menu_barca_maintenance_root"
+        action="action_barca_maintenance_kit"
+        sequence="40"
+        groups="zmm_ajustes.group_barca_bodega,zmm_ajustes.group_barca_programador,zmm_ajustes.group_barca_admin"
     />
 
     <menuitem
