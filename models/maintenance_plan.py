@@ -9,9 +9,9 @@ class BarcaMaintenancePlan(models.Model):
 
     _sql_constraints = [
         (
-            "unique_plan_core",
+            "unique_plan_core_category",
             "unique(technical_location_id, intervention_type_id, category_id)",
-            "Ya existe un plan con la misma ubicación técnica, tipo de intervención y categoría.",
+            "Ya existe un plan por categoría con la misma ubicación técnica y tipo de intervención.",
         )
     ]
 
@@ -111,16 +111,34 @@ class BarcaMaintenancePlan(models.Model):
                     "La categoría de la ubicación técnica debe coincidir con la categoría del plan."
                 )
 
-    @api.constrains("technical_location_id", "intervention_type_id", "category_id")
+    @api.constrains(
+        "technical_location_id",
+        "intervention_type_id",
+        "category_id",
+        "vehicle_ids",
+    )
     def _check_unique_plan_definition(self):
         for record in self:
             domain = [
                 ("id", "!=", record.id),
                 ("technical_location_id", "=", record.technical_location_id.id),
                 ("intervention_type_id", "=", record.intervention_type_id.id),
-                ("category_id", "=", record.category_id.id or False),
             ]
-            if self.search_count(domain):
-                raise ValidationError(
-                    "Ya existe un plan con la misma ubicación técnica, tipo de intervención y categoría."
+            candidates = self.search(domain)
+            record_vehicle_ids = set(record.vehicle_ids.ids)
+
+            for candidate in candidates:
+                same_category = (
+                    record.category_id
+                    and candidate.category_id
+                    and record.category_id == candidate.category_id
                 )
+                shared_vehicle = bool(
+                    record_vehicle_ids.intersection(candidate.vehicle_ids.ids)
+                )
+
+                if same_category or shared_vehicle:
+                    raise ValidationError(
+                        "Ya existe un plan con la misma ubicación técnica y tipo de intervención "
+                        "que coincide por categoría o por vehículo."
+                    )

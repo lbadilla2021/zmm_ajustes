@@ -1,0 +1,78 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_barca_maintenance_kit_tree" model="ir.ui.view">
+        <field name="name">barca.maintenance.kit.tree</field>
+        <field name="model">barca.maintenance.kit</field>
+        <field name="arch" type="xml">
+            <list>
+                <field name="name"/>
+                <field name="code"/>
+                <field name="category_id"/>
+                <field name="technical_location_id"/>
+                <field name="active"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_barca_maintenance_kit_form" model="ir.ui.view">
+        <field name="name">barca.maintenance.kit.form</field>
+        <field name="model">barca.maintenance.kit</field>
+        <field name="arch" type="xml">
+            <form>
+                <sheet>
+                    <group>
+                        <group>
+                            <field name="name"/>
+                            <field name="code"/>
+                            <field name="category_id"/>
+                            <field name="technical_location_id"/>
+                            <field name="active"/>
+                        </group>
+                        <group>
+                            <field name="note"/>
+                        </group>
+                    </group>
+
+                    <notebook>
+                        <page string="Líneas">
+                            <field name="line_ids">
+                                <list editable="bottom">
+                                    <field name="product_id"/>
+                                    <field name="quantity"/>
+                                    <field name="uom_id"/>
+                                    <field name="note"/>
+                                </list>
+                            </field>
+                        </page>
+                    </notebook>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="view_maintenance_kit_search" model="ir.ui.view">
+        <field name="name">barca.maintenance.kit.search</field>
+        <field name="model">barca.maintenance.kit</field>
+        <field name="arch" type="xml">
+            <search>
+                <field name="name"/>
+                <field name="code"/>
+                <field name="category_id"/>
+                <field name="technical_location_id"/>
+
+                <filter name="active" string="Activos" domain="[('active', '=', True)]"/>
+
+                <group expand="0" string="Agrupar por">
+                    <filter name="group_by_category" string="Categoría" domain="[]" context="{'group_by': 'category_id'}"/>
+                    <filter name="group_by_technical_location" string="Ubicación técnica" domain="[]" context="{'group_by': 'technical_location_id'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <record id="action_barca_maintenance_kit" model="ir.actions.act_window">
+        <field name="name">Kits</field>
+        <field name="res_model">barca.maintenance.kit</field>
+        <field name="view_mode">list,form</field>
+    </record>
+</odoo>
