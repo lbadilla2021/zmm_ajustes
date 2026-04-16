@@ -48,12 +48,12 @@
                 <field name="name"/>
                 <field name="category_id"/>
 
-                <filter string="Nivel 1" domain="[('level', '=', 1)]"/>
-                <filter string="Nivel 2" domain="[('level', '=', 2)]"/>
+                <filter name="level_1" string="Nivel 1" domain="[('level', '=', 1)]"/>
+                <filter name="level_2" string="Nivel 2" domain="[('level', '=', 2)]"/>
 
                 <group expand="0" string="Agrupar por">
-                    <filter string="Categoría" domain="[]" context="{'group_by':'category_id'}"/>
-                    <filter string="Nivel" domain="[]" context="{'group_by':'level'}"/>
+                    <filter name="group_by_category" string="Categoría" domain="[]" context="{'group_by': 'category_id'}"/>
+                    <filter name="group_by_level" string="Nivel" domain="[]" context="{'group_by': 'level'}"/>
                 </group>
             </search>
         </field>

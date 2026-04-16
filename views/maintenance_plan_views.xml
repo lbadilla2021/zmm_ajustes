@@ -60,12 +60,12 @@
                 <field name="intervention_type_id"/>
                 <field name="technical_location_id"/>
 
-                <filter string="Activos" domain="[('active','=',True)]"/>
+                <filter name="active" string="Activos" domain="[('active', '=', True)]"/>
 
                 <group expand="0" string="Agrupar por">
-                    <filter string="Categoría" context="{'group_by':'category_id'}"/>
-                    <filter string="Tipo intervención" context="{'group_by':'intervention_type_id'}"/>
-                    <filter string="Ubicación técnica" context="{'group_by':'technical_location_id'}"/>
+                    <filter name="group_by_category" string="Categoría" domain="[]" context="{'group_by': 'category_id'}"/>
+                    <filter name="group_by_intervention_type" string="Tipo intervención" domain="[]" context="{'group_by': 'intervention_type_id'}"/>
+                    <filter name="group_by_technical_location" string="Ubicación técnica" domain="[]" context="{'group_by': 'technical_location_id'}"/>
                 </group>
             </search>
         </field>
