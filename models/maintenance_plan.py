@@ -57,24 +57,56 @@ class BarcaMaintenancePlan(models.Model):
     active = fields.Boolean(default=True)
 
     @api.constrains("category_id", "vehicle_ids")
-    def _check_plan_scope(self):
-        for record in self:
-            if not record.category_id and not record.vehicle_ids:
+    def _check_scope(self):
+        for rec in self:
+            if not rec.category_id and not rec.vehicle_ids:
                 raise ValidationError(
-                    "Debe definir al menos una categoría o vehículos específicos para el plan."
+                    "Debe definir una categoría o vehículos específicos."
                 )
 
     @api.constrains("trigger_km", "trigger_days", "trigger_hours")
     def _check_triggers(self):
-        for record in self:
-            if (
-                not record.trigger_km
-                and not record.trigger_days
-                and not record.trigger_hours
-            ):
+        for rec in self:
+            if not rec.trigger_km and not rec.trigger_days and not rec.trigger_hours:
                 raise ValidationError(
-                    "Debe definir al menos un trigger: km, días u horas."
+                    "Debe definir al menos un trigger: km, días o horas."
                 )
+
+    @api.constrains("technical_location_id", "category_id")
+    def _check_location_category(self):
+        for rec in self:
+            if rec.category_id and rec.technical_location_id:
+                if rec.technical_location_id.category_id != rec.category_id:
+                    raise ValidationError(
+                        "La ubicación técnica no corresponde a la categoría seleccionada."
+                    )
+
+    @api.constrains("trigger_km", "trigger_days", "trigger_hours")
+    def _check_trigger_values(self):
+        for rec in self:
+            if rec.trigger_km and rec.trigger_km <= 0:
+                raise ValidationError("El intervalo en km debe ser mayor a cero.")
+
+            if rec.trigger_days and rec.trigger_days <= 0:
+                raise ValidationError("El intervalo en días debe ser mayor a cero.")
+
+            if rec.trigger_hours and rec.trigger_hours <= 0:
+                raise ValidationError("El intervalo en horas debe ser mayor a cero.")
+
+    @api.constrains("advance_km", "trigger_km", "advance_days", "trigger_days")
+    def _check_advance_values(self):
+        for rec in self:
+            if rec.advance_km and rec.trigger_km:
+                if rec.advance_km >= rec.trigger_km:
+                    raise ValidationError(
+                        "El aviso anticipado en km debe ser menor que el intervalo."
+                    )
+
+            if rec.advance_days and rec.trigger_days:
+                if rec.advance_days >= rec.trigger_days:
+                    raise ValidationError(
+                        "El aviso anticipado en días debe ser menor que el intervalo."
+                    )
 
     @api.constrains("category_id", "technical_location_id")
     def _check_technical_location_category(self):
