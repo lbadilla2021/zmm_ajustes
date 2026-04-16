@@ -5,12 +5,14 @@ from odoo.exceptions import ValidationError
 class BarcaMaintenancePlan(models.Model):
     _name = "barca.maintenance.plan"
     _description = "Plan de mantención preventiva"
+    _order = "name, technical_location_id, intervention_type_id"
 
     name = fields.Char(string="Nombre del plan", required=True)
 
     category_id = fields.Many2one(
         "fleet.vehicle.model.category",
         string="Categoría",
+        index=True,
     )
 
     vehicle_ids = fields.Many2many(
@@ -22,12 +24,14 @@ class BarcaMaintenancePlan(models.Model):
         "barca.technical.location",
         string="Ubicación técnica",
         required=True,
+        index=True,
     )
 
     intervention_type_id = fields.Many2one(
         "barca.intervention.type",
         string="Tipo de intervención",
         required=True,
+        index=True,
     )
 
     trigger_km = fields.Float(string="Intervalo km")
@@ -74,4 +78,18 @@ class BarcaMaintenancePlan(models.Model):
             ):
                 raise ValidationError(
                     "La categoría de la ubicación técnica debe coincidir con la categoría del plan."
+                )
+
+    @api.constrains("technical_location_id", "intervention_type_id", "category_id")
+    def _check_unique_plan_definition(self):
+        for record in self:
+            domain = [
+                ("id", "!=", record.id),
+                ("technical_location_id", "=", record.technical_location_id.id),
+                ("intervention_type_id", "=", record.intervention_type_id.id),
+                ("category_id", "=", record.category_id.id or False),
+            ]
+            if self.search_count(domain):
+                raise ValidationError(
+                    "Ya existe un plan con la misma ubicación técnica, tipo de intervención y categoría."
                 )

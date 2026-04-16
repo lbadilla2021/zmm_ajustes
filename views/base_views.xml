@@ -1,4 +1,28 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
-    <data/>
+    <menuitem id="menu_barca_maintenance_root" name="Mantención Barca" sequence="10"/>
+
+    <menuitem
+        id="menu_barca_technical_location"
+        name="Ubicaciones técnicas"
+        parent="menu_barca_maintenance_root"
+        action="action_barca_technical_location"
+        sequence="10"
+    />
+
+    <menuitem
+        id="menu_barca_intervention_type"
+        name="Tipos de intervención"
+        parent="menu_barca_maintenance_root"
+        action="action_barca_intervention_type"
+        sequence="20"
+    />
+
+    <menuitem
+        id="menu_barca_maintenance_plan"
+        name="Planes de mantención"
+        parent="menu_barca_maintenance_root"
+        action="action_barca_maintenance_plan"
+        sequence="30"
+    />
 </odoo>
