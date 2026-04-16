@@ -12,8 +12,8 @@ class MaintenanceEquipment(models.Model):
 
     _sql_constraints = [
         (
-            "maintenance_equipment_vehicle_uniq",
+            "unique_vehicle_equipment",
             "unique(vehicle_id)",
-            "Ya existe un equipo de mantenimiento asociado a este vehículo.",
+            "Ya existe un equipo de mantenimiento para este vehículo.",
         )
     ]
