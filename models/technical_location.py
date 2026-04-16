@@ -69,6 +69,8 @@ class BarcaTechnicalLocation(models.Model):
             parts = []
             current = rec
             while current:
-                parts.append(current.name)
+                parts.append(current.name or "")
                 current = current.parent_id
-            rec.complete_name = " / ".join(reversed(parts))
+            rec.complete_name = " / ".join(
+                part for part in reversed(parts) if part
+            )
