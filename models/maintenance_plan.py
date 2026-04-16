@@ -35,6 +35,12 @@ class BarcaMaintenancePlan(models.Model):
         index=True,
     )
 
+    company_id = fields.Many2one(
+        "res.company",
+        string="Compañía",
+        default=lambda self: self.env.company,
+    )
+
     intervention_type_id = fields.Many2one(
         "barca.intervention.type",
         string="Tipo de intervención",
@@ -45,6 +51,10 @@ class BarcaMaintenancePlan(models.Model):
     trigger_km = fields.Float(string="Intervalo km")
     trigger_days = fields.Integer(string="Intervalo días")
     trigger_hours = fields.Float(string="Intervalo horas")
+
+    last_execution_date = fields.Date(string="Última ejecución")
+    last_execution_km = fields.Float(string="KM última ejecución")
+    last_execution_hours = fields.Float(string="Horas última ejecución")
 
     advance_km = fields.Float(string="Aviso anticipado km")
     advance_days = fields.Integer(string="Aviso anticipado días")
