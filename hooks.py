@@ -13,10 +13,11 @@ def load_technical_locations(cr, registry):
     module_path = os.path.dirname(os.path.abspath(__file__))
     file_path = os.path.join(module_path, "data", "technical_locations.csv")
 
-    _logger.info("Iniciando carga de ubicaciones técnicas desde CSV: %s", file_path)
+    _logger.info("Iniciando carga de ubicaciones técnicas")
+    _logger.info("Archivo CSV detectado en: %s", file_path)
 
     if not os.path.exists(file_path):
-        _logger.warning("No se encontró archivo CSV de ubicaciones técnicas: %s", file_path)
+        _logger.warning("Archivo no encontrado: %s", file_path)
         return
 
     skipped_rows = 0
@@ -34,22 +35,24 @@ def load_technical_locations(cr, registry):
             if not categoria or not ubicacion:
                 skipped_rows += 1
                 _logger.warning(
-                    "Fila %s omitida por datos incompletos (categoria/ubicacion).", row_number
-                )
-                continue
-
-            category = env["fleet.vehicle.model.category"].search(
-                [("name", "=", categoria)],
-                limit=1,
-            )
-            if not category:
-                skipped_rows += 1
-                _logger.warning(
-                    "Fila %s omitida: categoría '%s' no existe.", row_number, categoria
+                    "Fila omitida (%s): faltan CATEGORIA o UBICACION TECNICA. Datos: %s",
+                    row_number,
+                    row,
                 )
                 continue
 
             try:
+                category = env["fleet.vehicle.model.category"].search(
+                    [("name", "=", categoria)],
+                    limit=1,
+                )
+                if not category:
+                    skipped_rows += 1
+                    _logger.warning(
+                        "Categoría no encontrada en fila %s: %s", row_number, categoria
+                    )
+                    continue
+
                 parent = env["barca.technical.location"].search(
                     [
                         ("name", "=", ubicacion),
@@ -68,6 +71,9 @@ def load_technical_locations(cr, registry):
                             "level": 1,
                         }
                     )
+                    _logger.info(
+                        "Creación de nodo padre (fila %s): %s", row_number, parent.complete_name
+                    )
 
                 if sububicacion:
                     existing_child = env["barca.technical.location"].search(
@@ -80,7 +86,7 @@ def load_technical_locations(cr, registry):
                     )
 
                     if not existing_child:
-                        env["barca.technical.location"].create(
+                        child = env["barca.technical.location"].create(
                             {
                                 "name": sububicacion,
                                 "code": codigo_sububicacion,
@@ -89,11 +95,12 @@ def load_technical_locations(cr, registry):
                                 "level": 2,
                             }
                         )
+                        _logger.info(
+                            "Creación de nodo hijo (fila %s): %s", row_number, child.complete_name
+                        )
             except Exception as error:  # pragma: no cover
                 skipped_rows += 1
-                _logger.exception(
-                    "Error cargando fila %s de ubicaciones técnicas: %s", row_number, error
-                )
+                _logger.error("Error procesando fila %s: %s", row, error)
 
     if skipped_rows:
         _logger.warning("Carga finalizada con %s filas omitidas.", skipped_rows)

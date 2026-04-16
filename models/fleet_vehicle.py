@@ -72,3 +72,15 @@ class FleetVehicle(models.Model):
             equipment_model.create(equipment_to_create)
 
         return vehicles
+
+    def write(self, vals):
+        res = super().write(vals)
+
+        if "name" in vals:
+            equipment_model = self.env["maintenance.equipment"]
+            for rec in self:
+                equipment = equipment_model.search([("vehicle_id", "=", rec.id)], limit=1)
+                if equipment:
+                    equipment.name = rec.name
+
+        return res

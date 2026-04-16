@@ -5,7 +5,7 @@ from odoo.exceptions import ValidationError
 class BarcaMaintenancePlan(models.Model):
     _name = "barca.maintenance.plan"
     _description = "Plan de mantención preventiva"
-    _order = "name, technical_location_id, intervention_type_id"
+    _order = "name"
 
     _sql_constraints = [
         (
@@ -71,15 +71,6 @@ class BarcaMaintenancePlan(models.Model):
                 raise ValidationError(
                     "Debe definir al menos un trigger: km, días o horas."
                 )
-
-    @api.constrains("technical_location_id", "category_id")
-    def _check_location_category(self):
-        for rec in self:
-            if rec.category_id and rec.technical_location_id:
-                if rec.technical_location_id.category_id != rec.category_id:
-                    raise ValidationError(
-                        "La ubicación técnica no corresponde a la categoría seleccionada."
-                    )
 
     @api.constrains("trigger_km", "trigger_days", "trigger_hours")
     def _check_trigger_values(self):
