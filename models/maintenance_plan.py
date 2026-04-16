@@ -9,9 +9,9 @@ class BarcaMaintenancePlan(models.Model):
 
     _sql_constraints = [
         (
-            "unique_plan_core",
+            "unique_plan_core_category",
             "unique(technical_location_id, intervention_type_id, category_id)",
-            "Ya existe un plan con la misma ubicación técnica, tipo de intervención y categoría.",
+            "Ya existe un plan por categoría con la misma ubicación técnica y tipo de intervención.",
         )
     ]
 
@@ -35,6 +35,12 @@ class BarcaMaintenancePlan(models.Model):
         index=True,
     )
 
+    company_id = fields.Many2one(
+        "res.company",
+        string="Compañía",
+        default=lambda self: self.env.company,
+    )
+
     intervention_type_id = fields.Many2one(
         "barca.intervention.type",
         string="Tipo de intervención",
@@ -45,6 +51,10 @@ class BarcaMaintenancePlan(models.Model):
     trigger_km = fields.Float(string="Intervalo km")
     trigger_days = fields.Integer(string="Intervalo días")
     trigger_hours = fields.Float(string="Intervalo horas")
+
+    last_execution_date = fields.Date(string="Última ejecución")
+    last_execution_km = fields.Float(string="KM última ejecución")
+    last_execution_hours = fields.Float(string="Horas última ejecución")
 
     advance_km = fields.Float(string="Aviso anticipado km")
     advance_days = fields.Integer(string="Aviso anticipado días")
@@ -111,16 +121,34 @@ class BarcaMaintenancePlan(models.Model):
                     "La categoría de la ubicación técnica debe coincidir con la categoría del plan."
                 )
 
-    @api.constrains("technical_location_id", "intervention_type_id", "category_id")
+    @api.constrains(
+        "technical_location_id",
+        "intervention_type_id",
+        "category_id",
+        "vehicle_ids",
+    )
     def _check_unique_plan_definition(self):
         for record in self:
             domain = [
                 ("id", "!=", record.id),
                 ("technical_location_id", "=", record.technical_location_id.id),
                 ("intervention_type_id", "=", record.intervention_type_id.id),
-                ("category_id", "=", record.category_id.id or False),
             ]
-            if self.search_count(domain):
-                raise ValidationError(
-                    "Ya existe un plan con la misma ubicación técnica, tipo de intervención y categoría."
+            candidates = self.search(domain)
+            record_vehicle_ids = set(record.vehicle_ids.ids)
+
+            for candidate in candidates:
+                same_category = (
+                    record.category_id
+                    and candidate.category_id
+                    and record.category_id == candidate.category_id
                 )
+                shared_vehicle = bool(
+                    record_vehicle_ids.intersection(candidate.vehicle_ids.ids)
+                )
+
+                if same_category or shared_vehicle:
+                    raise ValidationError(
+                        "Ya existe un plan con la misma ubicación técnica y tipo de intervención "
+                        "que coincide por categoría o por vehículo."
+                    )

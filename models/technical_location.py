@@ -15,6 +15,12 @@ class BarcaTechnicalLocation(models.Model):
         required=True,
     )
 
+    company_id = fields.Many2one(
+        "res.company",
+        string="Compañía",
+        default=lambda self: self.env.company,
+    )
+
     parent_id = fields.Many2one(
         "barca.technical.location",
         string="Ubicación padre",
@@ -63,6 +69,8 @@ class BarcaTechnicalLocation(models.Model):
             parts = []
             current = rec
             while current:
-                parts.append(current.name)
+                parts.append(current.name or "")
                 current = current.parent_id
-            rec.complete_name = " / ".join(reversed(parts))
+            rec.complete_name = " / ".join(
+                part for part in reversed(parts) if part
+            )
