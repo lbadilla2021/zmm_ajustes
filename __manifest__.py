@@ -5,10 +5,12 @@
     'category': 'Operations',
     'depends': ['fleet', 'maintenance', 'stock', 'purchase', 'mail'],
     'data': [
+        'security/res_groups.xml',
         'security/ir.model.access.csv',
         'views/technical_location_views.xml',
         'views/intervention_type_views.xml',
         'views/maintenance_plan_views.xml',
+        'views/maintenance_kit_views.xml',
         'views/base_views.xml',
         'views/fleet_vehicle_views.xml',
         'data/cron.xml',
