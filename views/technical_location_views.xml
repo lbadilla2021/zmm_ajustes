@@ -4,7 +4,7 @@
         <field name="name">barca.technical.location.tree</field>
         <field name="model">barca.technical.location</field>
         <field name="arch" type="xml">
-            <list>
+            <list default_order="parent_id, name">
                 <field name="complete_name"/>
                 <field name="category_id"/>
                 <field name="level"/>
@@ -37,6 +37,25 @@
                     </group>
                 </sheet>
             </form>
+        </field>
+    </record>
+
+    <record id="view_technical_location_search" model="ir.ui.view">
+        <field name="name">barca.technical.location.search</field>
+        <field name="model">barca.technical.location</field>
+        <field name="arch" type="xml">
+            <search>
+                <field name="name"/>
+                <field name="category_id"/>
+
+                <filter name="level_1" string="Nivel 1" domain="[('level', '=', 1)]"/>
+                <filter name="level_2" string="Nivel 2" domain="[('level', '=', 2)]"/>
+
+                <group expand="0" string="Agrupar por">
+                    <filter name="group_by_category" string="Categoría" domain="[]" context="{'group_by': 'category_id'}"/>
+                    <filter name="group_by_level" string="Nivel" domain="[]" context="{'group_by': 'level'}"/>
+                </group>
+            </search>
         </field>
     </record>
 
