@@ -21,30 +21,52 @@
         <field name="arch" type="xml">
             <form>
                 <sheet>
-                    <group col="2">
-                        <group>
-                            <field name="name"/>
-                            <field name="category_id"/>
-                            <field name="vehicle_ids" widget="many2many_tags"/>
-                            <field name="technical_location_id"/>
-                            <field name="intervention_type_id"/>
-                        </group>
+                    <notebook>
+                        <page string="Definición">
+                            <group col="2">
+                                <group>
+                                    <field name="name"/>
+                                    <field name="category_id"/>
+                                    <field name="vehicle_ids" widget="many2many_tags"/>
+                                </group>
+                                <group>
+                                    <field name="technical_location_id" domain="[('category_id', '=?', category_id)]"/>
+                                    <field name="intervention_type_id"/>
+                                </group>
+                            </group>
+                        </page>
 
-                        <group>
-                            <separator string="Triggers"/>
-                            <field name="trigger_km"/>
-                            <field name="trigger_days"/>
-                            <field name="trigger_hours"/>
+                        <page string="Triggers">
+                            <group>
+                                <field name="trigger_km"/>
+                                <field name="trigger_days"/>
+                                <field name="trigger_hours"/>
+                            </group>
+                        </page>
 
-                            <separator string="Adelantos"/>
-                            <field name="advance_km"/>
-                            <field name="advance_days"/>
+                        <page string="Adelantos">
+                            <group>
+                                <field name="advance_km"/>
+                                <field name="advance_days"/>
+                            </group>
+                        </page>
 
-                            <separator string="Otros"/>
-                            <field name="kit_id"/>
-                            <field name="active"/>
-                        </group>
-                    </group>
+                        <page string="Materiales/Kits">
+                            <group>
+                                <field name="kit_id" domain="[('active', '=', True), ('category_id', '=?', category_id), ('technical_location_id', '=?', technical_location_id)]"/>
+                            </group>
+                        </page>
+
+                        <page string="Seguimiento base">
+                            <group>
+                                <field name="company_id" groups="base.group_multi_company"/>
+                                <field name="last_execution_date"/>
+                                <field name="last_execution_km"/>
+                                <field name="last_execution_hours"/>
+                                <field name="active"/>
+                            </group>
+                        </page>
+                    </notebook>
                 </sheet>
             </form>
         </field>

@@ -5,9 +5,12 @@
         <field name="model">barca.technical.location</field>
         <field name="arch" type="xml">
             <list default_order="parent_id, name">
-                <field name="complete_name"/>
+                <field name="code"/>
+                <field name="name"/>
                 <field name="category_id"/>
+                <field name="parent_id"/>
                 <field name="level"/>
+                <field name="complete_name"/>
             </list>
         </field>
     </record>
@@ -19,9 +22,13 @@
             <form>
                 <sheet>
                     <group>
+                        <field name="complete_name" readonly="1"/>
+                    </group>
+                    <group>
                         <group>
                             <field name="name"/>
                             <field name="code"/>
+                            <field name="company_id" groups="base.group_multi_company"/>
                             <field name="category_id"/>
                             <field name="parent_id"/>
                             <field name="level"/>
@@ -46,7 +53,10 @@
         <field name="arch" type="xml">
             <search>
                 <field name="name"/>
+                <field name="code"/>
                 <field name="category_id"/>
+                <field name="parent_id"/>
+                <field name="level"/>
 
                 <filter name="level_1" string="Nivel 1" domain="[('level', '=', 1)]"/>
                 <filter name="level_2" string="Nivel 2" domain="[('level', '=', 2)]"/>
@@ -54,6 +64,7 @@
                 <group expand="0" string="Agrupar por">
                     <filter name="group_by_category" string="Categoría" domain="[]" context="{'group_by': 'category_id'}"/>
                     <filter name="group_by_level" string="Nivel" domain="[]" context="{'group_by': 'level'}"/>
+                    <filter name="group_by_parent" string="Padre" domain="[]" context="{'group_by': 'parent_id'}"/>
                 </group>
             </search>
         </field>

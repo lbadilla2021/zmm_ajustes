@@ -15,6 +15,12 @@ class BarcaTechnicalLocation(models.Model):
         required=True,
     )
 
+    company_id = fields.Many2one(
+        "res.company",
+        string="Compañía",
+        default=lambda self: self.env.company,
+    )
+
     parent_id = fields.Many2one(
         "barca.technical.location",
         string="Ubicación padre",
