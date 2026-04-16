@@ -1,8 +1,8 @@
 from odoo import fields, models
 
 
-class FleetVehicleCost(models.Model):
-    _inherit = "fleet.vehicle.cost"
+class FleetVehicleLogServices(models.Model):
+    _inherit = "fleet.vehicle.log.services"
 
-    # Compatibilidad para vistas/filtros que usan `name` en costos/servicios
+    # Compatibilidad Odoo 18 para vistas/filtros que usan `name` en costos/servicios
     name = fields.Char(string="Nombre")
