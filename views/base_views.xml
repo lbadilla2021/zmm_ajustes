@@ -25,4 +25,12 @@
         action="action_barca_maintenance_plan"
         sequence="30"
     />
+
+    <menuitem
+        id="menu_barca_maintenance_kit"
+        name="Kits"
+        parent="menu_barca_maintenance_root"
+        action="action_barca_maintenance_kit"
+        sequence="40"
+    />
 </odoo>
