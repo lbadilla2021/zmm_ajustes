@@ -37,12 +37,4 @@
         sequence="40"
         groups="zmm_ajustes.group_barca_bodega,zmm_ajustes.group_barca_programador,zmm_ajustes.group_barca_admin"
     />
-
-    <menuitem
-        id="menu_barca_maintenance_kit"
-        name="Kits"
-        parent="menu_barca_maintenance_root"
-        action="action_barca_maintenance_kit"
-        sequence="40"
-    />
 </odoo>
