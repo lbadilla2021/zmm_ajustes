@@ -21,31 +21,53 @@
         <field name="arch" type="xml">
             <form>
                 <sheet>
-                    <group string="Definición">
-                        <field name="name"/>
-                        <field name="category_id"/>
-                        <field name="vehicle_ids" widget="many2many_tags"/>
-                        <field name="technical_location_id"/>
-                        <field name="intervention_type_id"/>
-                    </group>
+                    <group col="2">
+                        <group>
+                            <field name="name"/>
+                            <field name="category_id"/>
+                            <field name="vehicle_ids" widget="many2many_tags"/>
+                            <field name="technical_location_id"/>
+                            <field name="intervention_type_id"/>
+                        </group>
 
-                    <group string="Triggers">
-                        <field name="trigger_km"/>
-                        <field name="trigger_days"/>
-                        <field name="trigger_hours"/>
-                    </group>
+                        <group>
+                            <separator string="Triggers"/>
+                            <field name="trigger_km"/>
+                            <field name="trigger_days"/>
+                            <field name="trigger_hours"/>
 
-                    <group string="Adelantos">
-                        <field name="advance_km"/>
-                        <field name="advance_days"/>
-                    </group>
+                            <separator string="Adelantos"/>
+                            <field name="advance_km"/>
+                            <field name="advance_days"/>
 
-                    <group string="Otros">
-                        <field name="kit_id"/>
-                        <field name="active"/>
+                            <separator string="Otros"/>
+                            <field name="kit_id"/>
+                            <field name="active"/>
+                        </group>
                     </group>
                 </sheet>
             </form>
+        </field>
+    </record>
+
+    <record id="view_maintenance_plan_search" model="ir.ui.view">
+        <field name="name">barca.maintenance.plan.search</field>
+        <field name="model">barca.maintenance.plan</field>
+        <field name="arch" type="xml">
+            <search>
+                <field name="name"/>
+                <field name="category_id"/>
+                <field name="intervention_type_id"/>
+                <field name="technical_location_id"/>
+
+                <filter string="Activos" domain="[('active','=',True)]"/>
+
+                <group expand="0" string="Agrupar por">
+                    <filter string="Categoría" context="{'group_by':'category_id'}"/>
+                    <filter string="Tipo intervención" context="{'group_by':'intervention_type_id'}"/>
+                    <filter string="Ubicación técnica" context="{'group_by':'technical_location_id'}"/>
+                </group>
+            </search>
         </field>
     </record>
 

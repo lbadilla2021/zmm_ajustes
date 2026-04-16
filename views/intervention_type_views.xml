@@ -28,6 +28,17 @@
         </field>
     </record>
 
+    <record id="view_intervention_type_search" model="ir.ui.view">
+        <field name="name">barca.intervention.type.search</field>
+        <field name="model">barca.intervention.type</field>
+        <field name="arch" type="xml">
+            <search>
+                <field name="name"/>
+                <field name="code"/>
+            </search>
+        </field>
+    </record>
+
     <record id="action_barca_intervention_type" model="ir.actions.act_window">
         <field name="name">Tipos de intervención</field>
         <field name="res_model">barca.intervention.type</field>
