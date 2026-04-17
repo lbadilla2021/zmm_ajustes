@@ -1,4 +1,5 @@
 from odoo import api, fields, models
+from odoo.exceptions import ValidationError
 
 
 class BarcaMaintenanceAlert(models.Model):
@@ -103,6 +104,49 @@ class BarcaMaintenanceAlert(models.Model):
         string="OT asociada",
         readonly=True,
     )
+
+    @api.constrains("vehicle_id")
+    def _check_vehicle_required(self):
+        for record in self:
+            if not record.vehicle_id:
+                raise ValidationError("El vehículo es obligatorio para el aviso.")
+
+    @api.constrains("vehicle_id", "equipment_id")
+    def _check_vehicle_equipment_consistency(self):
+        for record in self:
+            if (
+                record.equipment_id
+                and record.vehicle_id
+                and record.equipment_id.vehicle_id != record.vehicle_id
+            ):
+                raise ValidationError(
+                    "El equipo de mantenimiento debe corresponder al mismo vehículo del aviso."
+                )
+
+    @api.constrains("vehicle_id", "technical_location_id")
+    def _check_technical_location_category(self):
+        for record in self:
+            if (
+                record.technical_location_id
+                and record.vehicle_id
+                and record.technical_location_id.category_id
+                and record.vehicle_id.category_id
+                and record.technical_location_id.category_id
+                != record.vehicle_id.category_id
+            ):
+                raise ValidationError(
+                    "La ubicación técnica debe ser compatible con la categoría del vehículo."
+                )
+
+    @api.constrains("state")
+    def _check_state_allowed(self):
+        allowed_states = {
+            key
+            for key, _label in self._fields["state"].selection
+        }
+        for record in self:
+            if record.state not in allowed_states:
+                raise ValidationError("El estado del aviso no es válido.")
 
     @api.onchange("vehicle_id")
     def _onchange_vehicle_id_set_equipment(self):
