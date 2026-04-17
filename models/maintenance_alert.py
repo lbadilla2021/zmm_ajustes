@@ -104,11 +104,33 @@ class BarcaMaintenanceAlert(models.Model):
         readonly=True,
     )
 
+    @api.onchange("vehicle_id")
+    def _onchange_vehicle_id_set_equipment(self):
+        for record in self:
+            if record.vehicle_id and not record.equipment_id:
+                record.equipment_id = self.env["maintenance.equipment"].search(
+                    [("vehicle_id", "=", record.vehicle_id.id)], limit=1
+                )
+
     @api.model_create_multi
     def create(self, vals_list):
+        equipment_by_vehicle = {}
+
         for vals in vals_list:
             if vals.get("name", "Nuevo") == "Nuevo":
                 vals["name"] = self.env["ir.sequence"].next_by_code(
                     "barca.maintenance.alert"
                 ) or "Nuevo"
+
+            vehicle_id = vals.get("vehicle_id")
+            if vehicle_id and not vals.get("equipment_id"):
+                if vehicle_id not in equipment_by_vehicle:
+                    equipment = self.env["maintenance.equipment"].search(
+                        [("vehicle_id", "=", vehicle_id)],
+                        limit=1,
+                    )
+                    equipment_by_vehicle[vehicle_id] = equipment.id
+                if equipment_by_vehicle[vehicle_id]:
+                    vals["equipment_id"] = equipment_by_vehicle[vehicle_id]
+
         return super().create(vals_list)
