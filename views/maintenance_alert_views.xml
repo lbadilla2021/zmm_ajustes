@@ -1,0 +1,154 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_barca_maintenance_alert_tree" model="ir.ui.view">
+        <field name="name">barca.maintenance.alert.tree</field>
+        <field name="model">barca.maintenance.alert</field>
+        <field name="arch" type="xml">
+            <list default_order="create_date desc,id desc">
+                <field name="name"/>
+                <field name="alert_date"/>
+                <field name="source_type"/>
+                <field name="vehicle_id"/>
+                <field name="technical_location_id"/>
+                <field name="intervention_type_id"/>
+                <field name="priority"/>
+                <field name="state"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_barca_maintenance_alert_form" model="ir.ui.view">
+        <field name="name">barca.maintenance.alert.form</field>
+        <field name="model">barca.maintenance.alert</field>
+        <field name="arch" type="xml">
+            <form>
+                <header>
+                    <field
+                        name="state"
+                        widget="statusbar"
+                        statusbar_visible="pending_evaluation,approved,rejected,in_progress,in_review,closed"
+                    />
+                </header>
+                <sheet>
+                    <group col="2">
+                        <group>
+                            <field name="name" readonly="1"/>
+                        </group>
+                        <group>
+                            <field name="priority"/>
+                        </group>
+                    </group>
+
+                    <group string="Origen" col="2">
+                        <group>
+                            <field name="source_type"/>
+                            <field name="source_reference"/>
+                        </group>
+                        <group>
+                            <field name="alert_date"/>
+                        </group>
+                    </group>
+
+                    <group string="Activo afectado" col="2">
+                        <group>
+                            <field name="vehicle_id"/>
+                            <field name="equipment_id"/>
+                        </group>
+                        <group>
+                            <field name="technical_location_id"/>
+                        </group>
+                    </group>
+
+                    <group string="Clasificación" col="2">
+                        <group>
+                            <field name="intervention_type_id"/>
+                        </group>
+                        <group>
+                            <field name="priority"/>
+                        </group>
+                    </group>
+
+                    <group string="Datos operativos" col="2">
+                        <group>
+                            <field name="odometer"/>
+                        </group>
+                        <group>
+                            <field name="operating_hours"/>
+                        </group>
+                    </group>
+
+                    <group string="Gestión" col="2">
+                        <group>
+                            <field name="evaluation_date"/>
+                            <field name="review_date"/>
+                            <field name="close_date"/>
+                        </group>
+                        <group>
+                            <field name="evaluated_by_id"/>
+                            <field name="approved_by_id"/>
+                            <field name="closed_by_id"/>
+                            <field name="maintenance_request_id" readonly="1"/>
+                        </group>
+                    </group>
+
+                    <group string="Descripción" col="2">
+                        <group colspan="2">
+                            <field name="description"/>
+                            <field name="origin_note"/>
+                        </group>
+                    </group>
+                </sheet>
+                <chatter>
+                    <field name="message_follower_ids"/>
+                    <field name="activity_ids"/>
+                    <field name="message_ids"/>
+                </chatter>
+            </form>
+        </field>
+    </record>
+
+    <record id="view_barca_maintenance_alert_search" model="ir.ui.view">
+        <field name="name">barca.maintenance.alert.search</field>
+        <field name="model">barca.maintenance.alert</field>
+        <field name="arch" type="xml">
+            <search>
+                <field name="name"/>
+                <field name="vehicle_id"/>
+                <field name="technical_location_id"/>
+                <field name="intervention_type_id"/>
+                <field name="source_type"/>
+                <field name="state"/>
+                <field name="priority"/>
+
+                <filter name="pending_evaluation" string="Pendiente evaluación" domain="[('state', '=', 'pending_evaluation')]"/>
+                <filter name="approved" string="Aprobado" domain="[('state', '=', 'approved')]"/>
+                <filter name="in_progress" string="En proceso" domain="[('state', '=', 'in_progress')]"/>
+                <filter name="in_review" string="En revisión" domain="[('state', '=', 'in_review')]"/>
+                <filter name="closed" string="Cerrado" domain="[('state', '=', 'closed')]"/>
+
+                <group expand="0" string="Agrupar por">
+                    <filter name="group_by_state" string="Estado" domain="[]" context="{'group_by': 'state'}"/>
+                    <filter name="group_by_source_type" string="Origen" domain="[]" context="{'group_by': 'source_type'}"/>
+                    <filter name="group_by_priority" string="Prioridad" domain="[]" context="{'group_by': 'priority'}"/>
+                    <filter name="group_by_vehicle" string="Vehículo" domain="[]" context="{'group_by': 'vehicle_id'}"/>
+                    <filter name="group_by_intervention_type" string="Tipo de intervención" domain="[]" context="{'group_by': 'intervention_type_id'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <record id="action_barca_maintenance_alert" model="ir.actions.act_window">
+        <field name="name">Avisos</field>
+        <field name="res_model">barca.maintenance.alert</field>
+        <field name="view_mode">list,form</field>
+    </record>
+
+    <menuitem
+        id="menu_barca_maintenance_alert"
+        name="Avisos"
+        parent="menu_barca_maintenance_root"
+        action="action_barca_maintenance_alert"
+        sequence="25"
+        groups="zmm_ajustes.group_barca_conductor,zmm_ajustes.group_barca_programador,zmm_ajustes.group_barca_ejecutor,zmm_ajustes.group_barca_bodega,zmm_ajustes.group_barca_admin"
+    />
+</odoo>
