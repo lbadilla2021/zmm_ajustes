@@ -5,3 +5,5 @@ from . import maintenance_plan
 from . import maintenance_equipment
 from . import technical_location
 from . import maintenance_kit
+
+from . import maintenance_alert

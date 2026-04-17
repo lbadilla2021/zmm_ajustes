@@ -19,3 +19,8 @@ access_barca_maintenance_kit_line_programador,access.barca.maintenance.kit.line.
 access_barca_maintenance_kit_line_ejecutor,access.barca.maintenance.kit.line.ejecutor,model_barca_maintenance_kit_line,zmm_ajustes.group_barca_ejecutor,1,0,0,0
 access_barca_maintenance_kit_line_bodega,access.barca.maintenance.kit.line.bodega,model_barca_maintenance_kit_line,zmm_ajustes.group_barca_bodega,1,1,0,0
 access_barca_maintenance_kit_line_admin,access.barca.maintenance.kit.line.admin,model_barca_maintenance_kit_line,zmm_ajustes.group_barca_admin,1,1,1,1
+access_barca_maintenance_alert_conductor,access.barca.maintenance.alert.conductor,model_barca_maintenance_alert,zmm_ajustes.group_barca_conductor,1,1,1,0
+access_barca_maintenance_alert_programador,access.barca.maintenance.alert.programador,model_barca_maintenance_alert,zmm_ajustes.group_barca_programador,1,1,1,0
+access_barca_maintenance_alert_ejecutor,access.barca.maintenance.alert.ejecutor,model_barca_maintenance_alert,zmm_ajustes.group_barca_ejecutor,1,1,1,0
+access_barca_maintenance_alert_bodega,access.barca.maintenance.alert.bodega,model_barca_maintenance_alert,zmm_ajustes.group_barca_bodega,1,0,0,0
+access_barca_maintenance_alert_admin,access.barca.maintenance.alert.admin,model_barca_maintenance_alert,zmm_ajustes.group_barca_admin,1,1,1,1
