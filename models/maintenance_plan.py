@@ -99,9 +99,7 @@ class BarcaMaintenancePlan(models.Model):
             km_triggered = vehicle_km >= km_threshold
 
         if plan.trigger_days:
-            base_date = plan.last_execution_date
-            if not base_date:
-                base_date = fields.Date.to_date(plan.create_date) if plan.create_date else today
+            base_date = fields.Date.to_date(plan.last_execution_date or plan.create_date or today)
             days_threshold = base_date + timedelta(
                 days=(plan.trigger_days - (plan.advance_days or 0))
             )
@@ -118,18 +116,25 @@ class BarcaMaintenancePlan(models.Model):
     def _evaluate_and_generate_alerts(self):
         Alert = self.env["barca.maintenance.alert"]
         Equipment = self.env["maintenance.equipment"]
-        today = fields.Date.context_today(self)
+        today = fields.Date.today()
 
         counters = {"created": 0, "duplicated": 0}
+        _logger.info("Evaluando planes de mantenimiento")
         _logger.info("Inicio evaluación PM para %s plan(es).", len(self))
 
         for plan in self:
+            _logger.info("Procesando plan: %s", plan.name)
             vehicles = plan._get_plan_vehicles()
             for vehicle in vehicles:
+                if plan.trigger_km and not vehicle.odometer:
+                    continue
+
                 if not plan._should_generate_alert(plan, vehicle, today):
                     continue
 
                 duplicate_domain = [
+                    ("source_type", "=", "pm"),
+                    ("pm_id", "=", plan.id),
                     ("vehicle_id", "=", vehicle.id),
                     ("technical_location_id", "=", plan.technical_location_id.id),
                     ("intervention_type_id", "=", plan.intervention_type_id.id),
@@ -137,6 +142,7 @@ class BarcaMaintenancePlan(models.Model):
                 ]
                 if Alert.search_count(duplicate_domain):
                     counters["duplicated"] += 1
+                    _logger.info("Aviso omitido por duplicado")
                     continue
 
                 equipment = Equipment.search([("vehicle_id", "=", vehicle.id)], limit=1)
@@ -147,6 +153,7 @@ class BarcaMaintenancePlan(models.Model):
                 Alert.create(
                     {
                         "source_type": "pm",
+                        "pm_id": plan.id,
                         "vehicle_id": vehicle.id,
                         "equipment_id": equipment.id or False,
                         "technical_location_id": plan.technical_location_id.id,
@@ -158,6 +165,7 @@ class BarcaMaintenancePlan(models.Model):
                     }
                 )
                 counters["created"] += 1
+                _logger.info("Aviso creado para vehículo: %s", vehicle.name)
 
         _logger.info(
             "Evaluación PM finalizada. Planes: %s | Avisos creados: %s | Duplicados omitidos: %s",
