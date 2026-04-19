@@ -1,4 +1,5 @@
 from odoo import api, fields, models
+from odoo.exceptions import ValidationError
 
 
 class BarcaTechnicalLocation(models.Model):
@@ -28,6 +29,13 @@ class BarcaTechnicalLocation(models.Model):
         string="Ubicación padre",
         domain="[('category_id', '=', category_id), ('company_id', 'in', [company_id, False]), ('id', '!=', id)]",
         ondelete="cascade",
+    )
+
+    parent_code = fields.Char(
+        string="Código ubicación padre",
+        compute="_compute_parent_code",
+        inverse="_inverse_parent_code",
+        store=True,
     )
 
     child_ids = fields.One2many(
@@ -88,6 +96,35 @@ class BarcaTechnicalLocation(models.Model):
     def _compute_level(self):
         for rec in self:
             rec.level = rec.parent_id.level + 1 if rec.parent_id else 0
+
+    @api.depends("parent_id.code")
+    def _compute_parent_code(self):
+        for rec in self:
+            rec.parent_code = rec.parent_id.code or False
+
+    def _inverse_parent_code(self):
+        for rec in self:
+            if not rec.parent_code:
+                rec.parent_id = False
+                continue
+
+            domain = [("code", "=", rec.parent_code), ("id", "!=", rec.id)]
+            if rec.category_id:
+                domain.append(("category_id", "=", rec.category_id.id))
+
+            parents = self.search(domain, limit=2)
+            if not parents:
+                raise ValidationError(
+                    "No se encontró una ubicación padre con código '%s'."
+                    % rec.parent_code
+                )
+            if len(parents) > 1:
+                raise ValidationError(
+                    "El código de ubicación padre '%s' no es único para esta categoría."
+                    % rec.parent_code
+                )
+
+            rec.parent_id = parents.id
 
     def _ensure_external_ids(self):
         """Crea un XMLID estable por código para facilitar imports parent_id/id."""
