@@ -137,6 +137,7 @@ class BarcaMaintenanceAlert(models.Model):
         self._write_state_transition(
             "approved",
             {
+                "evaluated_by_id": self.env.user.id,
                 "approved_by_id": self.env.user.id,
                 "evaluation_date": fields.Datetime.now(),
             },
@@ -181,19 +182,22 @@ class BarcaMaintenanceAlert(models.Model):
                 )
             if alert.maintenance_request_id:
                 raise ValidationError("El aviso ya tiene una OT asociada.")
+            if not alert.equipment_id:
+                raise ValidationError(
+                    "Debe existir un equipo de mantenimiento para crear la OT."
+                )
 
             request_vals = {
                 "name": alert.name,
                 "request_date": fields.Datetime.now(),
                 "maintenance_type": "corrective",
                 "description": alert.description,
+                "equipment_id": alert.equipment_id.id,
             }
-            if alert.equipment_id:
-                request_vals["equipment_id"] = alert.equipment_id.id
-                if "category_id" in self.env["maintenance.request"]._fields:
-                    equipment_category = alert.equipment_id.category_id
-                    if equipment_category:
-                        request_vals["category_id"] = equipment_category.id
+            if "category_id" in self.env["maintenance.request"]._fields:
+                equipment_category = alert.equipment_id.category_id
+                if equipment_category:
+                    request_vals["category_id"] = equipment_category.id
 
             request = self.env["maintenance.request"].create(request_vals)
             alert.with_context(allow_alert_state_write=True).write(
@@ -233,16 +237,6 @@ class BarcaMaintenanceAlert(models.Model):
                 raise ValidationError(
                     "La ubicación técnica debe ser compatible con la categoría del vehículo."
                 )
-
-    @api.constrains("state")
-    def _check_state_allowed(self):
-        allowed_states = {
-            key
-            for key, _label in self._fields["state"].selection
-        }
-        for record in self:
-            if record.state not in allowed_states:
-                raise ValidationError("El estado del aviso no es válido.")
 
     @api.onchange("vehicle_id")
     def _onchange_vehicle_id_set_equipment(self):

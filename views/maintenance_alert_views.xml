@@ -79,9 +79,6 @@
                         <group>
                             <field name="name" readonly="1"/>
                         </group>
-                        <group>
-                            <field name="priority"/>
-                        </group>
                     </group>
 
                     <group string="Origen" col="2">

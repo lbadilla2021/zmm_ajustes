@@ -9,12 +9,7 @@ class MaintenanceRequest(models.Model):
         tracked_fields = {"stage_id", "close_date", "kanban_state", "maintenance_status"}
         if tracked_fields.intersection(vals):
             finished_requests = self.filtered(
-                lambda req: (
-                    req.stage_id
-                    and "done" in req.stage_id._fields
-                    and req.stage_id.done
-                )
-                or bool(req.close_date)
+                lambda req: req.stage_id and req.stage_id.fold
             )
             if finished_requests:
                 alerts = self.env["barca.maintenance.alert"].search(
