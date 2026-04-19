@@ -9,7 +9,7 @@
                 <page string="Actividades del plan">
                     <field name="line_ids">
                         <list editable="bottom">
-                            <field name="task_id"/>
+                            <field name="task_id" required="1"/>
                             <field name="frequency_km"/>
                             <field name="frequency_days"/>
                         </list>
