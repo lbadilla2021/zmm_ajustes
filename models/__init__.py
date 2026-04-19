@@ -7,3 +7,4 @@ from . import technical_location
 from . import maintenance_kit
 
 from . import maintenance_alert
+from . import maintenance_request

@@ -23,6 +23,51 @@
         <field name="arch" type="xml">
             <form>
                 <header>
+                    <button
+                        name="action_approve"
+                        string="Aprobar"
+                        type="object"
+                        class="oe_highlight"
+                        groups="zmm_ajustes.group_barca_programador,zmm_ajustes.group_barca_admin"
+                        invisible="state != 'pending_evaluation'"
+                    />
+                    <button
+                        name="action_reject"
+                        string="Rechazar"
+                        type="object"
+                        groups="zmm_ajustes.group_barca_programador,zmm_ajustes.group_barca_admin"
+                        invisible="state not in ['pending_evaluation', 'approved']"
+                    />
+                    <button
+                        name="action_start"
+                        string="Iniciar ejecución"
+                        type="object"
+                        class="oe_highlight"
+                        groups="zmm_ajustes.group_barca_ejecutor,zmm_ajustes.group_barca_programador"
+                        invisible="state != 'approved'"
+                    />
+                    <button
+                        name="action_create_maintenance_request"
+                        string="Crear OT"
+                        type="object"
+                        groups="zmm_ajustes.group_barca_programador,zmm_ajustes.group_barca_admin"
+                        invisible="state != 'approved' or maintenance_request_id"
+                    />
+                    <button
+                        name="action_review"
+                        string="Enviar a revisión"
+                        type="object"
+                        groups="zmm_ajustes.group_barca_ejecutor"
+                        invisible="state != 'in_progress'"
+                    />
+                    <button
+                        name="action_close"
+                        string="Cerrar"
+                        type="object"
+                        class="oe_highlight"
+                        groups="zmm_ajustes.group_barca_programador,zmm_ajustes.group_barca_admin"
+                        invisible="state != 'in_review'"
+                    />
                     <field
                         name="state"
                         widget="statusbar"
