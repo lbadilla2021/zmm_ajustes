@@ -42,6 +42,16 @@
                     <group>
                         <field name="note"/>
                     </group>
+                    <group string="Jerarquía">
+                        <field name="child_ids" context="{'default_parent_id': id}" readonly="1">
+                            <list>
+                                <field name="code"/>
+                                <field name="name"/>
+                                <field name="category_id"/>
+                                <field name="level"/>
+                            </list>
+                        </field>
+                    </group>
                 </sheet>
             </form>
         </field>
