@@ -1,5 +1,11 @@
+import logging
+from datetime import timedelta
+
 from odoo import api, fields, models
 from odoo.exceptions import ValidationError
+
+
+_logger = logging.getLogger(__name__)
 
 
 class BarcaMaintenancePlan(models.Model):
@@ -65,6 +71,112 @@ class BarcaMaintenancePlan(models.Model):
     )
 
     active = fields.Boolean(default=True)
+
+    def _get_plan_vehicles(self):
+        self.ensure_one()
+        vehicles = self.vehicle_ids
+        if self.category_id:
+            category_vehicles = self.env["fleet.vehicle"].search(
+                [("category_id", "=", self.category_id.id)]
+            )
+            vehicles |= category_vehicles
+        return vehicles
+
+    def _get_vehicle_operating_hours(self, vehicle):
+        for field_name in ("operating_hours", "x_operating_hours", "hours_meter"):
+            if field_name in vehicle._fields:
+                return vehicle[field_name] or 0.0
+        return None
+
+    def _should_generate_alert(self, plan, vehicle, today):
+        km_triggered = False
+        days_triggered = False
+        hours_triggered = False
+
+        vehicle_km = vehicle.odometer if "odometer" in vehicle._fields else 0.0
+        if plan.trigger_km:
+            km_threshold = plan.trigger_km - (plan.advance_km or 0.0)
+            km_triggered = vehicle_km >= km_threshold
+
+        if plan.trigger_days:
+            base_date = plan.last_execution_date
+            if not base_date:
+                base_date = fields.Date.to_date(plan.create_date) if plan.create_date else today
+            days_threshold = base_date + timedelta(
+                days=(plan.trigger_days - (plan.advance_days or 0))
+            )
+            days_triggered = today >= days_threshold
+
+        if plan.trigger_hours:
+            vehicle_hours = plan._get_vehicle_operating_hours(vehicle)
+            if vehicle_hours is not None:
+                hours_threshold = plan.trigger_hours
+                hours_triggered = vehicle_hours >= hours_threshold
+
+        return km_triggered or days_triggered or hours_triggered
+
+    def _evaluate_and_generate_alerts(self):
+        Alert = self.env["barca.maintenance.alert"]
+        Equipment = self.env["maintenance.equipment"]
+        today = fields.Date.context_today(self)
+
+        counters = {"created": 0, "duplicated": 0}
+        _logger.info("Inicio evaluación PM para %s plan(es).", len(self))
+
+        for plan in self:
+            vehicles = plan._get_plan_vehicles()
+            for vehicle in vehicles:
+                if not plan._should_generate_alert(plan, vehicle, today):
+                    continue
+
+                duplicate_domain = [
+                    ("vehicle_id", "=", vehicle.id),
+                    ("technical_location_id", "=", plan.technical_location_id.id),
+                    ("intervention_type_id", "=", plan.intervention_type_id.id),
+                    ("state", "not in", ["closed", "rejected"]),
+                ]
+                if Alert.search_count(duplicate_domain):
+                    counters["duplicated"] += 1
+                    continue
+
+                equipment = Equipment.search([("vehicle_id", "=", vehicle.id)], limit=1)
+                priority = "medium"
+                if "priority" in plan._fields and plan.priority:
+                    priority = plan.priority
+
+                Alert.create(
+                    {
+                        "source_type": "pm",
+                        "vehicle_id": vehicle.id,
+                        "equipment_id": equipment.id or False,
+                        "technical_location_id": plan.technical_location_id.id,
+                        "intervention_type_id": plan.intervention_type_id.id,
+                        "priority": priority,
+                        "odometer": vehicle.odometer if "odometer" in vehicle._fields else 0.0,
+                        "alert_date": fields.Datetime.now(),
+                        "description": f"Aviso generado automáticamente desde PM: {plan.name}",
+                    }
+                )
+                counters["created"] += 1
+
+        _logger.info(
+            "Evaluación PM finalizada. Planes: %s | Avisos creados: %s | Duplicados omitidos: %s",
+            len(self),
+            counters["created"],
+            counters["duplicated"],
+        )
+        return counters
+
+    def action_generate_alerts(self):
+        self._evaluate_and_generate_alerts()
+        return True
+
+    @api.model
+    def run_pm_scheduler(self):
+        plans = self.search([("active", "=", True)])
+        _logger.info("Ejecución programada PM. Planes activos detectados: %s", len(plans))
+        plans._evaluate_and_generate_alerts()
+        return True
 
     @api.constrains("category_id", "vehicle_ids")
     def _check_scope(self):
