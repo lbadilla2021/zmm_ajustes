@@ -37,4 +37,21 @@
         sequence="40"
         groups="zmm_ajustes.group_barca_bodega,zmm_ajustes.group_barca_programador,zmm_ajustes.group_barca_admin"
     />
+
+    <menuitem
+        id="menu_barca_configuration"
+        name="Configuración"
+        parent="menu_barca_maintenance_root"
+        sequence="90"
+        groups="zmm_ajustes.group_barca_programador,zmm_ajustes.group_barca_admin"
+    />
+
+    <menuitem
+        id="menu_barca_maintenance_task"
+        name="Actividades"
+        parent="menu_barca_configuration"
+        action="action_barca_maintenance_task"
+        sequence="10"
+        groups="zmm_ajustes.group_barca_programador,zmm_ajustes.group_barca_admin"
+    />
 </odoo>

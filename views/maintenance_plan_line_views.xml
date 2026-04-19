@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_barca_maintenance_plan_form_inherit_tasks" model="ir.ui.view">
+        <field name="name">barca.maintenance.plan.form.inherit.tasks</field>
+        <field name="model">barca.maintenance.plan</field>
+        <field name="inherit_id" ref="zmm_ajustes.view_barca_maintenance_plan_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//sheet/notebook" position="inside">
+                <page string="Actividades del plan">
+                    <field name="line_ids">
+                        <list editable="bottom">
+                            <field name="task_id"/>
+                            <field name="frequency_km"/>
+                            <field name="frequency_days"/>
+                        </list>
+                    </field>
+                </page>
+            </xpath>
+        </field>
+    </record>
+</odoo>
