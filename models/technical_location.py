@@ -4,6 +4,8 @@ from odoo import api, fields, models
 class BarcaTechnicalLocation(models.Model):
     _name = "barca.technical.location"
     _description = "Ubicación técnica"
+    _parent_name = "parent_id"
+    _parent_store = True
     _order = "category_id, parent_id, name"
 
     name = fields.Char(string="Nombre", required=True)
@@ -24,6 +26,7 @@ class BarcaTechnicalLocation(models.Model):
     parent_id = fields.Many2one(
         "barca.technical.location",
         string="Ubicación padre",
+        domain="[('category_id', '=', category_id), ('company_id', 'in', [company_id, False]), ('id', '!=', id)]",
         ondelete="cascade",
     )
 
@@ -39,7 +42,13 @@ class BarcaTechnicalLocation(models.Model):
         store=True,
     )
 
-    level = fields.Integer(string="Nivel")
+    parent_path = fields.Char(index=True)
+
+    level = fields.Integer(
+        string="Nivel",
+        compute="_compute_level",
+        store=True,
+    )
 
     kit_id = fields.Many2one(
         "barca.maintenance.kit",
@@ -74,3 +83,8 @@ class BarcaTechnicalLocation(models.Model):
             rec.complete_name = " / ".join(
                 part for part in reversed(parts) if part
             )
+
+    @api.depends("parent_id", "parent_id.level")
+    def _compute_level(self):
+        for rec in self:
+            rec.level = rec.parent_id.level + 1 if rec.parent_id else 0
