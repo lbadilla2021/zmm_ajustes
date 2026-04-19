@@ -16,6 +16,7 @@
         'views/maintenance_alert_views.xml',
         'views/fleet_vehicle_views.xml',
         'data/cron.xml',
+        'data/cron_pm_alerts.xml',
     ],
     'installable': True,
     'application': True,

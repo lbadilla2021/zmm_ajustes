@@ -20,6 +20,15 @@
         <field name="model">barca.maintenance.plan</field>
         <field name="arch" type="xml">
             <form>
+                <header>
+                    <button
+                        name="action_generate_alerts"
+                        type="object"
+                        string="Generar avisos"
+                        class="oe_highlight"
+                        groups="zmm_ajustes.group_barca_programador,zmm_ajustes.group_barca_admin"
+                    />
+                </header>
                 <sheet>
                     <notebook>
                         <page string="Definición">
