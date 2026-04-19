@@ -4,6 +4,8 @@ from odoo import api, fields, models
 class BarcaTechnicalLocation(models.Model):
     _name = "barca.technical.location"
     _description = "Ubicación técnica"
+    _parent_name = "parent_id"
+    _parent_store = True
     _order = "category_id, parent_id, name"
 
     name = fields.Char(string="Nombre", required=True)
@@ -24,6 +26,7 @@ class BarcaTechnicalLocation(models.Model):
     parent_id = fields.Many2one(
         "barca.technical.location",
         string="Ubicación padre",
+        domain="[('category_id', '=', category_id), ('company_id', 'in', [company_id, False]), ('id', '!=', id)]",
         ondelete="cascade",
     )
 
@@ -39,7 +42,13 @@ class BarcaTechnicalLocation(models.Model):
         store=True,
     )
 
-    level = fields.Integer(string="Nivel")
+    parent_path = fields.Char(index=True)
+
+    level = fields.Integer(
+        string="Nivel",
+        compute="_compute_level",
+        store=True,
+    )
 
     kit_id = fields.Many2one(
         "barca.maintenance.kit",
@@ -74,3 +83,43 @@ class BarcaTechnicalLocation(models.Model):
             rec.complete_name = " / ".join(
                 part for part in reversed(parts) if part
             )
+
+    @api.depends("parent_id", "parent_id.level")
+    def _compute_level(self):
+        for rec in self:
+            rec.level = rec.parent_id.level + 1 if rec.parent_id else 0
+
+    def _ensure_external_ids(self):
+        """Crea un XMLID estable por código para facilitar imports parent_id/id."""
+        imd_model = self.env["ir.model.data"].sudo()
+        for rec in self.filtered("code"):
+            existing = imd_model.search(
+                [
+                    ("module", "=", "zmm_ajustes"),
+                    ("name", "=", rec.code),
+                    ("model", "=", self._name),
+                ],
+                limit=1,
+            )
+            if not existing:
+                imd_model.create(
+                    {
+                        "module": "zmm_ajustes",
+                        "name": rec.code,
+                        "model": self._name,
+                        "res_id": rec.id,
+                        "noupdate": True,
+                    }
+                )
+
+    @api.model_create_multi
+    def create(self, vals_list):
+        records = super().create(vals_list)
+        records._ensure_external_ids()
+        return records
+
+    def write(self, vals):
+        result = super().write(vals)
+        if "code" in vals:
+            self._ensure_external_ids()
+        return result
