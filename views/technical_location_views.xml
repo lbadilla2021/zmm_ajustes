@@ -9,6 +9,7 @@
                 <field name="name"/>
                 <field name="category_id"/>
                 <field name="parent_id"/>
+                <field name="parent_code"/>
                 <field name="level"/>
                 <field name="complete_name"/>
             </list>
@@ -31,6 +32,7 @@
                             <field name="company_id" groups="base.group_multi_company"/>
                             <field name="category_id"/>
                             <field name="parent_id"/>
+                            <field name="parent_code"/>
                             <field name="level"/>
                         </group>
                         <group>
@@ -41,6 +43,16 @@
                     </group>
                     <group>
                         <field name="note"/>
+                    </group>
+                    <group string="Jerarquía">
+                        <field name="child_ids" context="{'default_parent_id': id}" readonly="1">
+                            <list>
+                                <field name="code"/>
+                                <field name="name"/>
+                                <field name="category_id"/>
+                                <field name="level"/>
+                            </list>
+                        </field>
                     </group>
                 </sheet>
             </form>
@@ -56,6 +68,7 @@
                 <field name="code"/>
                 <field name="category_id"/>
                 <field name="parent_id"/>
+                <field name="parent_code"/>
                 <field name="level"/>
 
                 <filter name="level_1" string="Nivel 1" domain="[('level', '=', 1)]"/>
