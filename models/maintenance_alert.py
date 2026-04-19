@@ -31,6 +31,11 @@ class BarcaMaintenanceAlert(models.Model):
         tracking=True,
     )
     source_reference = fields.Char(string="Referencia de origen")
+    pm_id = fields.Many2one(
+        "barca.maintenance.plan",
+        string="Plan de mantenimiento",
+        index=True,
+    )
 
     vehicle_id = fields.Many2one(
         "fleet.vehicle",
