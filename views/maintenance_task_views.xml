@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_barca_maintenance_task_tree" model="ir.ui.view">
+        <field name="name">barca.maintenance.task.tree</field>
+        <field name="model">barca.maintenance.task</field>
+        <field name="arch" type="xml">
+            <list>
+                <field name="name"/>
+                <field name="code"/>
+                <field name="location_id"/>
+                <field name="intervention_type_id"/>
+                <field name="active"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_barca_maintenance_task_form" model="ir.ui.view">
+        <field name="name">barca.maintenance.task.form</field>
+        <field name="model">barca.maintenance.task</field>
+        <field name="arch" type="xml">
+            <form>
+                <sheet>
+                    <group col="2">
+                        <group>
+                            <field name="name"/>
+                            <field name="code"/>
+                        </group>
+                        <group>
+                            <field name="location_id"/>
+                            <field name="intervention_type_id"/>
+                            <field name="active"/>
+                        </group>
+                    </group>
+                    <group>
+                        <field name="description"/>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="action_barca_maintenance_task" model="ir.actions.act_window">
+        <field name="name">Actividades</field>
+        <field name="res_model">barca.maintenance.task</field>
+        <field name="view_mode">list,form</field>
+    </record>
+
+
+</odoo>
