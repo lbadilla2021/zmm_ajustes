@@ -104,6 +104,102 @@ class BarcaMaintenanceAlert(models.Model):
         string="OT asociada",
         readonly=True,
     )
+    _allowed_state_transitions = {
+        "pending_evaluation": {"approved", "rejected"},
+        "approved": {"in_progress", "rejected"},
+        "in_progress": {"in_review"},
+        "in_review": {"closed"},
+    }
+
+    def _validate_state_transition(self, new_state):
+        for record in self:
+            allowed_targets = self._allowed_state_transitions.get(record.state, set())
+            if new_state not in allowed_targets:
+                raise ValidationError(
+                    "Transición de estado no permitida: %(current)s → %(new)s."
+                    % {
+                        "current": dict(self._fields["state"].selection).get(
+                            record.state, record.state
+                        ),
+                        "new": dict(self._fields["state"].selection).get(
+                            new_state, new_state
+                        ),
+                    }
+                )
+
+    def _write_state_transition(self, new_state, extra_vals=None):
+        vals = dict(extra_vals or {})
+        vals["state"] = new_state
+        self.with_context(allow_alert_state_write=True).write(vals)
+
+    def action_approve(self):
+        self._validate_state_transition("approved")
+        self._write_state_transition(
+            "approved",
+            {
+                "approved_by_id": self.env.user.id,
+                "evaluation_date": fields.Datetime.now(),
+            },
+        )
+
+    def action_reject(self):
+        self._validate_state_transition("rejected")
+        self._write_state_transition(
+            "rejected",
+            {
+                "evaluated_by_id": self.env.user.id,
+                "evaluation_date": fields.Datetime.now(),
+            },
+        )
+
+    def action_start(self):
+        self._validate_state_transition("in_progress")
+        self._write_state_transition("in_progress")
+
+    def action_review(self):
+        self._validate_state_transition("in_review")
+        self._write_state_transition(
+            "in_review",
+            {"review_date": fields.Datetime.now()},
+        )
+
+    def action_close(self):
+        self._validate_state_transition("closed")
+        self._write_state_transition(
+            "closed",
+            {
+                "closed_by_id": self.env.user.id,
+                "close_date": fields.Datetime.now(),
+            },
+        )
+
+    def action_create_maintenance_request(self):
+        for alert in self:
+            if alert.state != "approved":
+                raise ValidationError(
+                    "Solo se puede crear una OT para avisos en estado Aprobado."
+                )
+            if alert.maintenance_request_id:
+                raise ValidationError("El aviso ya tiene una OT asociada.")
+
+            request_vals = {
+                "name": alert.name,
+                "request_date": fields.Datetime.now(),
+                "maintenance_type": "corrective",
+                "description": alert.description,
+            }
+            if alert.equipment_id:
+                request_vals["equipment_id"] = alert.equipment_id.id
+                if "category_id" in self.env["maintenance.request"]._fields:
+                    equipment_category = alert.equipment_id.category_id
+                    if equipment_category:
+                        request_vals["category_id"] = equipment_category.id
+
+            request = self.env["maintenance.request"].create(request_vals)
+            alert.with_context(allow_alert_state_write=True).write(
+                {"maintenance_request_id": request.id}
+            )
+            alert.action_start()
 
     @api.constrains("vehicle_id")
     def _check_vehicle_required(self):
@@ -178,3 +274,10 @@ class BarcaMaintenanceAlert(models.Model):
                     vals["equipment_id"] = equipment_by_vehicle[vehicle_id]
 
         return super().create(vals_list)
+
+    def write(self, vals):
+        if "state" in vals and not self.env.context.get("allow_alert_state_write"):
+            raise ValidationError(
+                "No está permitido cambiar el estado manualmente. Use las acciones del aviso."
+            )
+        return super().write(vals)
