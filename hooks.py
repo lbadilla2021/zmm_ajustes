@@ -106,6 +106,7 @@ def load_technical_locations(cr, registry):
         else:
             _logger.info("Carga finalizada sin filas omitidas.")
 
+    env["barca.technical.location"].search([])._ensure_external_ids()
     sync_existing_vehicle_equipment(cr, registry)
 
 
