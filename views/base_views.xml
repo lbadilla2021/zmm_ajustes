@@ -93,6 +93,23 @@
     />
 
     <menuitem
+        id="menu_barca_maintenance_plan"
+        name="Planes Mantención"
+        parent="menu_barca_maintenance_root"
+        action="action_barca_maintenance_plan"
+        sequence="10"
+        groups="zmm_ajustes.group_barca_programador,zmm_ajustes.group_barca_admin"
+    />
+
+    <menuitem
+        id="menu_barca_configuraciones"
+        name="Maestros"
+        parent="menu_barca_maintenance_root"
+        sequence="30"
+        groups="zmm_ajustes.group_barca_admin"
+    />
+
+    <menuitem
         id="menu_barca_technical_location"
         name="Ubicaciones técnicas"
         parent="menu_barca_configuraciones"
