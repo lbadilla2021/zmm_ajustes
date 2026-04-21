@@ -7,12 +7,6 @@ class FleetVehicle(models.Model):
     # Identificación
     x_internal_code = fields.Char(string="Código interno")
     x_engine_code = fields.Char(string="Código motor")
-    x_vehicle_identifier = fields.Integer(
-        string="Identificador de vehículo",
-        compute="_compute_vehicle_identifier",
-        store=True,
-        readonly=True,
-    )
 
     # Medición
     x_odometer_last_service = fields.Float(string="Odómetro último servicio")
@@ -50,12 +44,6 @@ class FleetVehicle(models.Model):
 
     # Notas
     x_maintenance_note = fields.Text(string="Notas de mantención")
-
-
-    @api.depends("id")
-    def _compute_vehicle_identifier(self):
-        for vehicle in self:
-            vehicle.x_vehicle_identifier = vehicle.id
 
     @api.depends("x_odometer_last_service")
     def _compute_next_service(self):

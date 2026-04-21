@@ -1,3 +1,0 @@
-id,x_vehicle_identifier,name,license_plate,category_id/id,category_id/name,x_internal_code
-__export__.fleet_vehicle_1,1,Camión 001,ABC-123,__export__.fleet_vehicle_model_category_1,Camión,INT-001
-__export__.fleet_vehicle_2,2,Camioneta 002,XYZ-456,__export__.fleet_vehicle_model_category_2,Camioneta,INT-002

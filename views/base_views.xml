@@ -158,4 +158,5 @@
         sequence="50"
         groups="zmm_ajustes.group_barca_admin"
     />
+
 </odoo>

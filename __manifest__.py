@@ -1,6 +1,6 @@
 {
     'name': 'Barca Mantenimiento',
-    'version': '1.2',
+    'version': '1.1',
     'summary': 'Módulo de mantención de flota Barca SpA',
     'category': 'Operations',
     'depends': ['fleet', 'maintenance', 'stock', 'purchase', 'mail'],
@@ -21,4 +21,5 @@
     ],
     'installable': True,
     'application': True,
+    'post_init_hook': 'load_technical_locations',
 }
