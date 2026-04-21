@@ -8,6 +8,18 @@
         <field name="context">{'default_vehicle_id': context.get('default_vehicle_id')}</field>
     </record>
 
+
+    <record id="view_fleet_vehicle_tree_inherit_mantencion_barca" model="ir.ui.view">
+        <field name="name">fleet.vehicle.tree.inherit.mantencion.barca</field>
+        <field name="model">fleet.vehicle</field>
+        <field name="inherit_id" ref="fleet.fleet_vehicle_view_tree"/>
+        <field name="arch" type="xml">
+            <xpath expr="//field[@name='name']" position="after">
+                <field name="x_vehicle_identifier" optional="show"/>
+            </xpath>
+        </field>
+    </record>
+
     <record id="view_fleet_vehicle_form_inherit_mantencion_barca" model="ir.ui.view">
         <field name="name">fleet.vehicle.form.inherit.mantencion.barca</field>
         <field name="model">fleet.vehicle</field>
@@ -33,6 +45,7 @@
             <xpath expr="//notebook" position="inside">
                 <page string="Mantención Barca">
                     <group string="Identificación interna">
+                        <field name="x_vehicle_identifier" readonly="1"/>
                         <field name="x_internal_code"/>
                         <field name="x_engine_code"/>
                     </group>
