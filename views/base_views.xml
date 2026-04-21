@@ -158,13 +158,4 @@
         sequence="50"
         groups="zmm_ajustes.group_barca_admin"
     />
-
-    <menuitem
-        id="menu_barca_maintenance_stage"
-        name="Etapas"
-        parent="menu_barca_configuraciones"
-        action="action_barca_maintenance_stage"
-        sequence="60"
-        groups="zmm_ajustes.group_barca_admin"
-    />
 </odoo>
