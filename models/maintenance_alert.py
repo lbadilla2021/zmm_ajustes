@@ -65,7 +65,6 @@ class BarcaMaintenanceAlert(models.Model):
             ("low", "Baja"),
             ("medium", "Media"),
             ("high", "Alta"),
-            ("critical", "Crítica"),
         ],
         string="Prioridad",
         default="medium",
