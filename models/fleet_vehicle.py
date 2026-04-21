@@ -16,6 +16,10 @@ class FleetVehicle(models.Model):
         store=True,
     )
     x_operating_hours = fields.Float(string="Horas de operación")
+    x_hours_last_service = fields.Float(
+        string="Horas operación último servicio",
+        help="Horas de operación registradas al momento del último servicio realizado.",
+    )
 
     # Taller
     x_last_entry_date = fields.Date(string="Última entrada a taller")

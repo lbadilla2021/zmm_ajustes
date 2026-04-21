@@ -15,6 +15,7 @@
                         <field name="x_odometer_last_service"/>
                         <field name="x_odometer_next_service"/>
                         <field name="x_operating_hours"/>
+                        <field name="x_hours_last_service"/>
                     </group>
                     <group string="Taller">
                         <field name="x_last_entry_date"/>

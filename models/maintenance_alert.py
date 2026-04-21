@@ -1,5 +1,9 @@
+import logging
+
 from odoo import api, fields, models
 from odoo.exceptions import ValidationError
+
+_logger = logging.getLogger(__name__)
 
 
 class BarcaMaintenanceAlert(models.Model):
@@ -179,6 +183,48 @@ class BarcaMaintenanceAlert(models.Model):
                 "close_date": fields.Datetime.now(),
             },
         )
+        # Actualizar medidores del vehículo con los valores del aviso
+        for alert in self:
+            alert._update_vehicle_last_service()
+
+    def _update_vehicle_last_service(self):
+        """
+        Al cerrar un aviso PM, actualiza en el vehículo:
+          - x_odometer_last_service  (km registrado en el aviso)
+          - x_last_exit_date         (fecha de cierre)
+          - x_operating_hours        (horas registradas en el aviso)
+
+        Nunca retrocede un valor: solo actualiza si el nuevo valor
+        es mayor o igual al que ya tenía el vehículo.
+        """
+        self.ensure_one()
+        if not self.vehicle_id or self.source_type != "pm":
+            return
+
+        vehicle = self.vehicle_id
+        update_vals = {}
+
+        if (
+            "x_odometer_last_service" in vehicle._fields
+            and self.odometer
+            and self.odometer > (vehicle.x_odometer_last_service or 0.0)
+        ):
+            update_vals["x_odometer_last_service"] = self.odometer
+
+        if "x_last_exit_date" in vehicle._fields:
+            close_date = fields.Date.today()
+            if not vehicle.x_last_exit_date or close_date >= vehicle.x_last_exit_date:
+                update_vals["x_last_exit_date"] = close_date
+
+        if (
+            "x_hours_last_service" in vehicle._fields
+            and self.operating_hours
+            and self.operating_hours > (vehicle.x_hours_last_service or 0.0)
+        ):
+            update_vals["x_hours_last_service"] = self.operating_hours
+
+        if update_vals:
+            vehicle.write(update_vals)
 
     def action_create_maintenance_request(self):
         for alert in self:

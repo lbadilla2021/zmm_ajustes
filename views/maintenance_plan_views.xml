@@ -124,9 +124,7 @@
                         <page string="Seguimiento base" name="tracking">
                             <group>
                                 <field name="company_id" groups="base.group_multi_company"/>
-                                <field name="last_execution_date"/>
-                                <field name="last_execution_km"/>
-                                <field name="last_execution_hours"/>
+                                <field name="active"/>
                             </group>
                         </page>
                     </notebook>
