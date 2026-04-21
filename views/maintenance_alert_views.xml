@@ -194,7 +194,7 @@
         name="Avisos"
         parent="menu_barca_maintenance_root"
         action="action_barca_maintenance_alert"
-        sequence="25"
+        sequence="20"
         groups="zmm_ajustes.group_barca_conductor,zmm_ajustes.group_barca_programador,zmm_ajustes.group_barca_ejecutor,zmm_ajustes.group_barca_bodega,zmm_ajustes.group_barca_admin"
     />
 </odoo>

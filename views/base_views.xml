@@ -3,18 +3,19 @@
     <menuitem id="menu_barca_maintenance_root" name="Mantención Barca" sequence="10" groups="zmm_ajustes.group_barca_conductor,zmm_ajustes.group_barca_programador,zmm_ajustes.group_barca_ejecutor,zmm_ajustes.group_barca_bodega,zmm_ajustes.group_barca_admin"/>
 
     <menuitem
-        id="menu_barca_maestros"
-        name="Maestros"
+        id="menu_barca_maintenance_plan"
+        name="Planes Mantención"
         parent="menu_barca_maintenance_root"
+        action="action_barca_maintenance_plan"
         sequence="10"
         groups="zmm_ajustes.group_barca_programador,zmm_ajustes.group_barca_admin"
     />
 
     <menuitem
         id="menu_barca_configuraciones"
-        name="Configuraciones"
+        name="Maestros"
         parent="menu_barca_maintenance_root"
-        sequence="20"
+        sequence="30"
         groups="zmm_ajustes.group_barca_admin"
     />
 
@@ -42,15 +43,6 @@
         parent="menu_barca_configuraciones"
         action="action_barca_maintenance_activity"
         sequence="25"
-        groups="zmm_ajustes.group_barca_programador,zmm_ajustes.group_barca_admin"
-    />
-
-    <menuitem
-        id="menu_barca_maintenance_plan"
-        name="Planes de mantención"
-        parent="menu_barca_maestros"
-        action="action_barca_maintenance_plan"
-        sequence="10"
         groups="zmm_ajustes.group_barca_programador,zmm_ajustes.group_barca_admin"
     />
 
