@@ -3,9 +3,25 @@
     <menuitem id="menu_barca_maintenance_root" name="Mantención Barca" sequence="10" groups="zmm_ajustes.group_barca_conductor,zmm_ajustes.group_barca_programador,zmm_ajustes.group_barca_ejecutor,zmm_ajustes.group_barca_bodega,zmm_ajustes.group_barca_admin"/>
 
     <menuitem
+        id="menu_barca_maestros"
+        name="Maestros"
+        parent="menu_barca_maintenance_root"
+        sequence="10"
+        groups="zmm_ajustes.group_barca_programador,zmm_ajustes.group_barca_admin"
+    />
+
+    <menuitem
+        id="menu_barca_configuraciones"
+        name="Configuraciones"
+        parent="menu_barca_maintenance_root"
+        sequence="20"
+        groups="zmm_ajustes.group_barca_admin"
+    />
+
+    <menuitem
         id="menu_barca_technical_location"
         name="Ubicaciones técnicas"
-        parent="menu_barca_maintenance_root"
+        parent="menu_barca_configuraciones"
         action="action_barca_technical_location"
         sequence="10"
         groups="zmm_ajustes.group_barca_admin"
@@ -14,17 +30,16 @@
     <menuitem
         id="menu_barca_intervention_type"
         name="Tipos de intervención"
-        parent="menu_barca_maintenance_root"
+        parent="menu_barca_configuraciones"
         action="action_barca_intervention_type"
         sequence="20"
         groups="zmm_ajustes.group_barca_admin"
     />
 
-    <!-- NUEVO: Maestro de actividades de mantención -->
     <menuitem
         id="menu_barca_maintenance_activity"
         name="Actividades"
-        parent="menu_barca_maintenance_root"
+        parent="menu_barca_configuraciones"
         action="action_barca_maintenance_activity"
         sequence="25"
         groups="zmm_ajustes.group_barca_programador,zmm_ajustes.group_barca_admin"
@@ -33,16 +48,16 @@
     <menuitem
         id="menu_barca_maintenance_plan"
         name="Planes de mantención"
-        parent="menu_barca_maintenance_root"
+        parent="menu_barca_maestros"
         action="action_barca_maintenance_plan"
-        sequence="30"
+        sequence="10"
         groups="zmm_ajustes.group_barca_programador,zmm_ajustes.group_barca_admin"
     />
 
     <menuitem
         id="menu_barca_maintenance_kit"
         name="Kits"
-        parent="menu_barca_maintenance_root"
+        parent="menu_barca_configuraciones"
         action="action_barca_maintenance_kit"
         sequence="40"
         groups="zmm_ajustes.group_barca_bodega,zmm_ajustes.group_barca_programador,zmm_ajustes.group_barca_admin"
