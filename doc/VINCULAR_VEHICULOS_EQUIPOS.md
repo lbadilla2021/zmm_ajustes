@@ -22,6 +22,7 @@ para vincular la flota existente antes de instalar el módulo.
    - Activar **"Exportar con External ID"** (imprescindible).
    - Agregar los campos en este orden:
      - `id`  ← columna clave, es el External ID
+     - `Identificador de vehículo` (`x_vehicle_identifier`)  ← ID numérico del registro para trazabilidad
      - `Nombre` (`name`)
      - `Matrícula` (`license_plate`)
      - `Categoría / External ID` (`category_id/id`)
@@ -31,6 +32,8 @@ para vincular la flota existente antes de instalar el módulo.
 
 El archivo resultante tendrá en la columna `id` valores del tipo:
 `__export__.fleet_vehicle_42`
+
+Además, la columna `x_vehicle_identifier` mostrará el identificador numérico interno del vehículo (por ejemplo `42`).
 
 Guardar ese archivo — se usará como referencia en el Paso 2.
 
