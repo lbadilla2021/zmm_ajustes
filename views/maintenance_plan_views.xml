@@ -7,10 +7,11 @@
             <list>
                 <field name="name"/>
                 <field name="category_id"/>
-                <field name="technical_location_id"/>
-                <field name="intervention_type_id"/>
+                <field name="line_count" string="N° actividades"/>
                 <field name="trigger_km"/>
                 <field name="trigger_days"/>
+                <field name="trigger_hours"/>
+                <field name="active" optional="show"/>
             </list>
         </field>
     </record>
@@ -30,22 +31,64 @@
                     />
                 </header>
                 <sheet>
+                    <div class="oe_title">
+                        <label for="name"/>
+                        <h1><field name="name" placeholder="Nombre del plan"/></h1>
+                    </div>
+
+                    <group col="2">
+                        <group>
+                            <field name="category_id"/>
+                            <field name="vehicle_ids" widget="many2many_tags"/>
+                        </group>
+                        <group>
+                            <field name="line_count" string="N° actividades" readonly="1"/>
+                            <field name="active"/>
+                        </group>
+                    </group>
+
                     <notebook>
-                        <page string="Definición">
-                            <group col="2">
-                                <group>
-                                    <field name="name"/>
-                                    <field name="category_id"/>
-                                    <field name="vehicle_ids" widget="many2many_tags"/>
-                                </group>
-                                <group>
-                                    <field name="technical_location_id" domain="[('category_id', '=?', category_id)]"/>
-                                    <field name="intervention_type_id"/>
-                                </group>
-                            </group>
+                        <!-- ================================================ -->
+                        <!-- TAB 1: ACTIVIDADES (el corazón del plan)          -->
+                        <!-- ================================================ -->
+                        <page string="Actividades" name="activities">
+                            <field
+                                name="plan_line_ids"
+                                context="{
+                                    'default_category_id': category_id
+                                }"
+                            >
+                                <list editable="bottom">
+                                    <field name="sequence" widget="handle"/>
+                                    <field
+                                        name="technical_location_id"
+                                        domain="[('category_id', '=?', parent.category_id)]"
+                                        options="{'no_create': True}"
+                                    />
+                                    <field
+                                        name="activity_id"
+                                        domain="[
+                                            ('category_id', '=?', parent.category_id),
+                                            ('technical_location_id', '=?', technical_location_id)
+                                        ]"
+                                        options="{'no_create': True}"
+                                    />
+                                    <field
+                                        name="intervention_type_id"
+                                        options="{'no_create': True}"
+                                    />
+                                    <field name="estimated_duration" string="Duración (hrs)"/>
+                                    <field name="note" optional="show"/>
+                                    <!-- Campo oculto necesario para domain dinámico -->
+                                    <field name="category_id" column_invisible="1"/>
+                                </list>
+                            </field>
                         </page>
 
-                        <page string="Triggers">
+                        <!-- ================================================ -->
+                        <!-- TAB 2: TRIGGERS                                   -->
+                        <!-- ================================================ -->
+                        <page string="Triggers" name="triggers">
                             <group>
                                 <field name="trigger_km"/>
                                 <field name="trigger_days"/>
@@ -53,26 +96,37 @@
                             </group>
                         </page>
 
-                        <page string="Adelantos">
+                        <!-- ================================================ -->
+                        <!-- TAB 3: ADELANTOS                                  -->
+                        <!-- ================================================ -->
+                        <page string="Adelantos" name="advance">
                             <group>
                                 <field name="advance_km"/>
                                 <field name="advance_days"/>
                             </group>
                         </page>
 
-                        <page string="Materiales/Kits">
+                        <!-- ================================================ -->
+                        <!-- TAB 4: MATERIALES / KITS                          -->
+                        <!-- ================================================ -->
+                        <page string="Materiales/Kits" name="materials">
                             <group>
-                                <field name="kit_id" domain="[('active', '=', True), ('category_id', '=?', category_id), ('technical_location_id', '=?', technical_location_id)]"/>
+                                <field
+                                    name="kit_id"
+                                    domain="[('active', '=', True), ('category_id', '=?', category_id)]"
+                                />
                             </group>
                         </page>
 
-                        <page string="Seguimiento base">
+                        <!-- ================================================ -->
+                        <!-- TAB 5: SEGUIMIENTO BASE                           -->
+                        <!-- ================================================ -->
+                        <page string="Seguimiento base" name="tracking">
                             <group>
                                 <field name="company_id" groups="base.group_multi_company"/>
                                 <field name="last_execution_date"/>
                                 <field name="last_execution_km"/>
                                 <field name="last_execution_hours"/>
-                                <field name="active"/>
                             </group>
                         </page>
                     </notebook>
@@ -88,15 +142,16 @@
             <search>
                 <field name="name"/>
                 <field name="category_id"/>
-                <field name="intervention_type_id"/>
-                <field name="technical_location_id"/>
 
                 <filter name="active" string="Activos" domain="[('active', '=', True)]"/>
 
                 <group expand="0" string="Agrupar por">
-                    <filter name="group_by_category" string="Categoría" domain="[]" context="{'group_by': 'category_id'}"/>
-                    <filter name="group_by_intervention_type" string="Tipo intervención" domain="[]" context="{'group_by': 'intervention_type_id'}"/>
-                    <filter name="group_by_technical_location" string="Ubicación técnica" domain="[]" context="{'group_by': 'technical_location_id'}"/>
+                    <filter
+                        name="group_by_category"
+                        string="Categoría"
+                        domain="[]"
+                        context="{'group_by': 'category_id'}"
+                    />
                 </group>
             </search>
         </field>
@@ -106,5 +161,6 @@
         <field name="name">Planes de mantención</field>
         <field name="res_model">barca.maintenance.plan</field>
         <field name="view_mode">list,form</field>
+        <field name="context">{'search_default_active': 1}</field>
     </record>
 </odoo>

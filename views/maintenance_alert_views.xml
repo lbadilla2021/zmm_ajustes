@@ -9,8 +9,6 @@
                 <field name="alert_date"/>
                 <field name="source_type"/>
                 <field name="vehicle_id"/>
-                <field name="technical_location_id"/>
-                <field name="intervention_type_id"/>
                 <field name="priority"/>
                 <field name="state"/>
             </list>
@@ -85,6 +83,7 @@
                         <group>
                             <field name="source_type"/>
                             <field name="source_reference"/>
+                            <field name="pm_id" readonly="1"/>
                         </group>
                         <group>
                             <field name="alert_date"/>
@@ -97,48 +96,56 @@
                             <field name="equipment_id"/>
                         </group>
                         <group>
-                            <field name="technical_location_id"/>
+                            <field name="odometer"/>
+                            <field name="operating_hours"/>
                         </group>
                     </group>
 
                     <group string="Clasificación" col="2">
                         <group>
-                            <field name="intervention_type_id"/>
-                        </group>
-                        <group>
                             <field name="priority"/>
                         </group>
                     </group>
 
-                    <group string="Datos operativos" col="2">
-                        <group>
-                            <field name="odometer"/>
-                        </group>
-                        <group>
-                            <field name="operating_hours"/>
-                        </group>
-                    </group>
+                    <!-- ================================================ -->
+                    <!-- ACTIVIDADES DEL AVISO                             -->
+                    <!-- ================================================ -->
+                    <notebook>
+                        <page string="Actividades" name="activities">
+                            <field name="alert_line_ids">
+                                <list editable="bottom">
+                                    <field name="sequence" widget="handle"/>
+                                    <field name="technical_location_id" readonly="1"/>
+                                    <field name="intervention_type_id" readonly="1"/>
+                                    <field name="activity_id" readonly="1"/>
+                                    <field name="estimated_duration" string="Duración (hrs)" readonly="1"/>
+                                    <field name="done"/>
+                                    <field name="note" optional="show"/>
+                                </list>
+                            </field>
+                        </page>
 
-                    <group string="Gestión" col="2">
-                        <group>
-                            <field name="evaluation_date"/>
-                            <field name="review_date"/>
-                            <field name="close_date"/>
-                        </group>
-                        <group>
-                            <field name="evaluated_by_id"/>
-                            <field name="approved_by_id"/>
-                            <field name="closed_by_id"/>
-                            <field name="maintenance_request_id" readonly="1"/>
-                        </group>
-                    </group>
+                        <page string="Descripción y gestión" name="description">
+                            <group string="Descripción">
+                                <field name="description" nolabel="1"/>
+                                <field name="origin_note" nolabel="1"/>
+                            </group>
 
-                    <group string="Descripción" col="2">
-                        <group colspan="2">
-                            <field name="description"/>
-                            <field name="origin_note"/>
-                        </group>
-                    </group>
+                            <group string="Gestión" col="2">
+                                <group>
+                                    <field name="evaluation_date"/>
+                                    <field name="review_date"/>
+                                    <field name="close_date"/>
+                                </group>
+                                <group>
+                                    <field name="evaluated_by_id"/>
+                                    <field name="approved_by_id"/>
+                                    <field name="closed_by_id"/>
+                                    <field name="maintenance_request_id" readonly="1"/>
+                                </group>
+                            </group>
+                        </page>
+                    </notebook>
                 </sheet>
                 <chatter>
                     <field name="message_follower_ids"/>
@@ -156,8 +163,6 @@
             <search>
                 <field name="name"/>
                 <field name="vehicle_id"/>
-                <field name="technical_location_id"/>
-                <field name="intervention_type_id"/>
                 <field name="source_type"/>
                 <field name="state"/>
                 <field name="priority"/>
@@ -173,7 +178,6 @@
                     <filter name="group_by_source_type" string="Origen" domain="[]" context="{'group_by': 'source_type'}"/>
                     <filter name="group_by_priority" string="Prioridad" domain="[]" context="{'group_by': 'priority'}"/>
                     <filter name="group_by_vehicle" string="Vehículo" domain="[]" context="{'group_by': 'vehicle_id'}"/>
-                    <filter name="group_by_intervention_type" string="Tipo de intervención" domain="[]" context="{'group_by': 'intervention_type_id'}"/>
                 </group>
             </search>
         </field>

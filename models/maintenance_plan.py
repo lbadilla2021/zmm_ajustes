@@ -15,9 +15,9 @@ class BarcaMaintenancePlan(models.Model):
 
     _sql_constraints = [
         (
-            "unique_plan_core_category",
-            "unique(technical_location_id, intervention_type_id, category_id)",
-            "Ya existe un plan por categoría con la misma ubicación técnica y tipo de intervención.",
+            "unique_plan_name_category",
+            "unique(name, category_id)",
+            "Ya existe un plan con ese nombre para esta categoría.",
         )
     ]
 
@@ -34,24 +34,17 @@ class BarcaMaintenancePlan(models.Model):
         string="Vehículos específicos",
     )
 
-    technical_location_id = fields.Many2one(
-        "barca.technical.location",
-        string="Ubicación técnica",
-        required=True,
-        index=True,
-    )
-
     company_id = fields.Many2one(
         "res.company",
         string="Compañía",
         default=lambda self: self.env.company,
     )
 
-    intervention_type_id = fields.Many2one(
-        "barca.intervention.type",
-        string="Tipo de intervención",
-        required=True,
-        index=True,
+    # Líneas de actividades: el corazón del plan
+    plan_line_ids = fields.One2many(
+        "barca.maintenance.plan.line",
+        "plan_id",
+        string="Actividades del plan",
     )
 
     trigger_km = fields.Float(string="Intervalo km")
@@ -71,6 +64,25 @@ class BarcaMaintenancePlan(models.Model):
     )
 
     active = fields.Boolean(default=True)
+
+    # -------------------------------------------------------------------------
+    # Campos computados de resumen (informativos en encabezado)
+    # -------------------------------------------------------------------------
+
+    line_count = fields.Integer(
+        string="N° actividades",
+        compute="_compute_line_count",
+        store=True,
+    )
+
+    @api.depends("plan_line_ids")
+    def _compute_line_count(self):
+        for rec in self:
+            rec.line_count = len(rec.plan_line_ids)
+
+    # -------------------------------------------------------------------------
+    # Lógica de vehículos y triggers
+    # -------------------------------------------------------------------------
 
     def _get_plan_vehicles(self):
         self.ensure_one()
@@ -99,7 +111,9 @@ class BarcaMaintenancePlan(models.Model):
             km_triggered = vehicle_km >= km_threshold
 
         if plan.trigger_days:
-            base_date = fields.Date.to_date(plan.last_execution_date or plan.create_date or today)
+            base_date = fields.Date.to_date(
+                plan.last_execution_date or plan.create_date or today
+            )
             days_threshold = base_date + timedelta(
                 days=(plan.trigger_days - (plan.advance_days or 0))
             )
@@ -108,13 +122,17 @@ class BarcaMaintenancePlan(models.Model):
         if plan.trigger_hours:
             vehicle_hours = plan._get_vehicle_operating_hours(vehicle)
             if vehicle_hours is not None:
-                hours_threshold = plan.trigger_hours
-                hours_triggered = vehicle_hours >= hours_threshold
+                hours_triggered = vehicle_hours >= plan.trigger_hours
 
         return km_triggered or days_triggered or hours_triggered
 
+    # -------------------------------------------------------------------------
+    # Generación de avisos
+    # -------------------------------------------------------------------------
+
     def _evaluate_and_generate_alerts(self):
         Alert = self.env["barca.maintenance.alert"]
+        AlertLine = self.env["barca.maintenance.alert.line"]
         Equipment = self.env["maintenance.equipment"]
         today = fields.Date.today()
 
@@ -124,6 +142,13 @@ class BarcaMaintenancePlan(models.Model):
 
         for plan in self:
             _logger.info("Procesando plan: %s", plan.name)
+
+            if not plan.plan_line_ids:
+                _logger.warning(
+                    "Plan '%s' sin líneas de actividad definidas, se omite.", plan.name
+                )
+                continue
+
             vehicles = plan._get_plan_vehicles()
             for vehicle in vehicles:
                 if plan.trigger_km and not vehicle.odometer:
@@ -132,12 +157,12 @@ class BarcaMaintenancePlan(models.Model):
                 if not plan._should_generate_alert(plan, vehicle, today):
                     continue
 
+                # Usamos plan.id como referencia de duplicado (ya no hay
+                # technical_location/intervention en encabezado)
                 duplicate_domain = [
                     ("source_type", "=", "pm"),
                     ("pm_id", "=", plan.id),
                     ("vehicle_id", "=", vehicle.id),
-                    ("technical_location_id", "=", plan.technical_location_id.id),
-                    ("intervention_type_id", "=", plan.intervention_type_id.id),
                     ("state", "not in", ["closed", "rejected"]),
                 ]
                 if Alert.search_count(duplicate_domain):
@@ -145,30 +170,53 @@ class BarcaMaintenancePlan(models.Model):
                     _logger.info("Aviso omitido por duplicado")
                     continue
 
-                equipment = Equipment.search([("vehicle_id", "=", vehicle.id)], limit=1)
+                equipment = Equipment.search(
+                    [("vehicle_id", "=", vehicle.id)], limit=1
+                )
                 priority = "medium"
-                if "priority" in plan._fields and plan.priority:
-                    priority = plan.priority
 
-                Alert.create(
+                # Construir líneas del aviso a partir de las líneas del plan
+                alert_line_vals = [
+                    {
+                        "plan_line_id": line.id,
+                        "activity_id": line.activity_id.id,
+                        "technical_location_id": line.technical_location_id.id,
+                        "intervention_type_id": line.intervention_type_id.id,
+                        "estimated_duration": line.estimated_duration,
+                        "note": line.note,
+                        "sequence": line.sequence,
+                    }
+                    for line in plan.plan_line_ids
+                ]
+
+                alert = Alert.create(
                     {
                         "source_type": "pm",
                         "pm_id": plan.id,
                         "vehicle_id": vehicle.id,
                         "equipment_id": equipment.id or False,
-                        "technical_location_id": plan.technical_location_id.id,
-                        "intervention_type_id": plan.intervention_type_id.id,
                         "priority": priority,
-                        "odometer": vehicle.odometer if "odometer" in vehicle._fields else 0.0,
+                        "odometer": vehicle.odometer
+                        if "odometer" in vehicle._fields
+                        else 0.0,
                         "alert_date": fields.Datetime.now(),
-                        "description": f"Aviso generado automáticamente desde PM: {plan.name}",
+                        "description": (
+                            "Aviso generado automáticamente desde PM: %s" % plan.name
+                        ),
                     }
                 )
+
+                # Crear las líneas de actividad en el aviso
+                for line_vals in alert_line_vals:
+                    line_vals["alert_id"] = alert.id
+                AlertLine.create(alert_line_vals)
+
                 counters["created"] += 1
                 _logger.info("Aviso creado para vehículo: %s", vehicle.name)
 
         _logger.info(
-            "Evaluación PM finalizada. Planes: %s | Avisos creados: %s | Duplicados omitidos: %s",
+            "Evaluación PM finalizada. Planes: %s | Avisos creados: %s | "
+            "Duplicados omitidos: %s",
             len(self),
             counters["created"],
             counters["duplicated"],
@@ -182,9 +230,15 @@ class BarcaMaintenancePlan(models.Model):
     @api.model
     def run_pm_scheduler(self):
         plans = self.search([("active", "=", True)])
-        _logger.info("Ejecución programada PM. Planes activos detectados: %s", len(plans))
+        _logger.info(
+            "Ejecución programada PM. Planes activos detectados: %s", len(plans)
+        )
         plans._evaluate_and_generate_alerts()
         return True
+
+    # -------------------------------------------------------------------------
+    # Constrains
+    # -------------------------------------------------------------------------
 
     @api.constrains("category_id", "vehicle_ids")
     def _check_scope(self):
@@ -207,10 +261,8 @@ class BarcaMaintenancePlan(models.Model):
         for rec in self:
             if rec.trigger_km and rec.trigger_km <= 0:
                 raise ValidationError("El intervalo en km debe ser mayor a cero.")
-
             if rec.trigger_days and rec.trigger_days <= 0:
                 raise ValidationError("El intervalo en días debe ser mayor a cero.")
-
             if rec.trigger_hours and rec.trigger_hours <= 0:
                 raise ValidationError("El intervalo en horas debe ser mayor a cero.")
 
@@ -222,53 +274,8 @@ class BarcaMaintenancePlan(models.Model):
                     raise ValidationError(
                         "El aviso anticipado en km debe ser menor que el intervalo."
                     )
-
             if rec.advance_days and rec.trigger_days:
                 if rec.advance_days >= rec.trigger_days:
                     raise ValidationError(
                         "El aviso anticipado en días debe ser menor que el intervalo."
-                    )
-
-    @api.constrains("category_id", "technical_location_id")
-    def _check_technical_location_category(self):
-        for record in self:
-            if (
-                record.category_id
-                and record.technical_location_id.category_id
-                and record.technical_location_id.category_id != record.category_id
-            ):
-                raise ValidationError(
-                    "La categoría de la ubicación técnica debe coincidir con la categoría del plan."
-                )
-
-    @api.constrains(
-        "technical_location_id",
-        "intervention_type_id",
-        "category_id",
-        "vehicle_ids",
-    )
-    def _check_unique_plan_definition(self):
-        for record in self:
-            domain = [
-                ("id", "!=", record.id),
-                ("technical_location_id", "=", record.technical_location_id.id),
-                ("intervention_type_id", "=", record.intervention_type_id.id),
-            ]
-            candidates = self.search(domain)
-            record_vehicle_ids = set(record.vehicle_ids.ids)
-
-            for candidate in candidates:
-                same_category = (
-                    record.category_id
-                    and candidate.category_id
-                    and record.category_id == candidate.category_id
-                )
-                shared_vehicle = bool(
-                    record_vehicle_ids.intersection(candidate.vehicle_ids.ids)
-                )
-
-                if same_category or shared_vehicle:
-                    raise ValidationError(
-                        "Ya existe un plan con la misma ubicación técnica y tipo de intervención "
-                        "que coincide por categoría o por vehículo."
                     )

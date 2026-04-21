@@ -20,6 +20,16 @@
         groups="zmm_ajustes.group_barca_admin"
     />
 
+    <!-- NUEVO: Maestro de actividades de mantención -->
+    <menuitem
+        id="menu_barca_maintenance_activity"
+        name="Actividades"
+        parent="menu_barca_maintenance_root"
+        action="action_barca_maintenance_activity"
+        sequence="25"
+        groups="zmm_ajustes.group_barca_programador,zmm_ajustes.group_barca_admin"
+    />
+
     <menuitem
         id="menu_barca_maintenance_plan"
         name="Planes de mantención"

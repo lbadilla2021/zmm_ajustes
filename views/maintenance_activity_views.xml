@@ -1,0 +1,96 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_barca_maintenance_activity_list" model="ir.ui.view">
+        <field name="name">barca.maintenance.activity.list</field>
+        <field name="model">barca.maintenance.activity</field>
+        <field name="arch" type="xml">
+            <list export_xlsx="1">
+                <field name="code" optional="show"/>
+                <field name="name"/>
+                <field name="category_id"/>
+                <field name="technical_location_id"/>
+                <field name="technical_location_code" string="Código ubic. técnica"/>
+                <field name="intervention_type_id"/>
+                <field name="estimated_duration"/>
+                <field name="active" optional="show"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_barca_maintenance_activity_form" model="ir.ui.view">
+        <field name="name">barca.maintenance.activity.form</field>
+        <field name="model">barca.maintenance.activity</field>
+        <field name="arch" type="xml">
+            <form>
+                <sheet>
+                    <group col="2">
+                        <group>
+                            <field name="name"/>
+                            <field name="code"/>
+                            <field name="active"/>
+                        </group>
+                        <group>
+                            <field name="category_id"/>
+                            <field
+                                name="technical_location_id"
+                                domain="[('category_id', '=?', category_id)]"
+                            />
+                            <field name="intervention_type_id"/>
+                            <field name="estimated_duration"/>
+                        </group>
+                    </group>
+                    <group string="Instrucciones técnicas">
+                        <field name="note" nolabel="1"/>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="view_barca_maintenance_activity_search" model="ir.ui.view">
+        <field name="name">barca.maintenance.activity.search</field>
+        <field name="model">barca.maintenance.activity</field>
+        <field name="arch" type="xml">
+            <search>
+                <field name="name"/>
+                <field name="code"/>
+                <field name="category_id"/>
+                <field name="technical_location_id"/>
+                <field name="intervention_type_id"/>
+
+                <filter name="active" string="Activos" domain="[('active', '=', True)]"/>
+                <filter name="inactive" string="Inactivos" domain="[('active', '=', False)]"/>
+
+                <group expand="0" string="Agrupar por">
+                    <filter
+                        name="group_by_category"
+                        string="Categoría"
+                        domain="[]"
+                        context="{'group_by': 'category_id'}"
+                    />
+                    <filter
+                        name="group_by_location"
+                        string="Ubicación técnica"
+                        domain="[]"
+                        context="{'group_by': 'technical_location_id'}"
+                    />
+                    <filter
+                        name="group_by_intervention"
+                        string="Tipo de intervención"
+                        domain="[]"
+                        context="{'group_by': 'intervention_type_id'}"
+                    />
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <record id="action_barca_maintenance_activity" model="ir.actions.act_window">
+        <field name="name">Actividades de mantención</field>
+        <field name="res_model">barca.maintenance.activity</field>
+        <field name="view_mode">list,form</field>
+        <field name="context">{'search_default_active': 1}</field>
+    </record>
+
+
+</odoo>

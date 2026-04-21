@@ -1,6 +1,6 @@
 {
     'name': 'Barca Mantenimiento',
-    'version': '1.0',
+    'version': '1.1',
     'summary': 'Módulo de mantención de flota Barca SpA',
     'category': 'Operations',
     'depends': ['fleet', 'maintenance', 'stock', 'purchase', 'mail'],
@@ -10,6 +10,7 @@
         'data/maintenance_alert_sequence.xml',
         'views/technical_location_views.xml',
         'views/intervention_type_views.xml',
+        'views/maintenance_activity_views.xml',
         'views/maintenance_plan_views.xml',
         'views/maintenance_kit_views.xml',
         'views/base_views.xml',

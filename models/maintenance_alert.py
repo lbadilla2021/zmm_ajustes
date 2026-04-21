@@ -48,16 +48,12 @@ class BarcaMaintenanceAlert(models.Model):
         string="Equipo de mantenimiento",
         tracking=True,
     )
-    technical_location_id = fields.Many2one(
-        "barca.technical.location",
-        string="Ubicación técnica",
-        tracking=True,
-    )
 
-    intervention_type_id = fields.Many2one(
-        "barca.intervention.type",
-        string="Tipo de intervención",
-        tracking=True,
+    # Líneas de actividades propagadas desde el plan
+    alert_line_ids = fields.One2many(
+        "barca.maintenance.alert.line",
+        "alert_id",
+        string="Actividades",
     )
 
     priority = fields.Selection(
@@ -109,12 +105,17 @@ class BarcaMaintenanceAlert(models.Model):
         string="OT asociada",
         readonly=True,
     )
+
     _allowed_state_transitions = {
         "pending_evaluation": {"approved", "rejected"},
         "approved": {"in_progress", "rejected"},
         "in_progress": {"in_review"},
         "in_review": {"closed"},
     }
+
+    # -------------------------------------------------------------------------
+    # Transiciones de estado
+    # -------------------------------------------------------------------------
 
     def _validate_state_transition(self, new_state):
         for record in self:
@@ -192,11 +193,26 @@ class BarcaMaintenanceAlert(models.Model):
                     "Debe existir un equipo de mantenimiento para crear la OT."
                 )
 
+            # Construir descripción enriquecida con las actividades del aviso
+            activities_summary = ""
+            if alert.alert_line_ids:
+                lines = []
+                for line in alert.alert_line_ids:
+                    lines.append(
+                        "- [%s] %s — %s"
+                        % (
+                            line.technical_location_id.name or "",
+                            line.activity_id.name or "",
+                            line.intervention_type_id.name or "",
+                        )
+                    )
+                activities_summary = "\n\nActividades:\n" + "\n".join(lines)
+
             request_vals = {
                 "name": alert.name,
                 "request_date": fields.Datetime.now(),
                 "maintenance_type": "corrective",
-                "description": alert.description,
+                "description": (alert.description or "") + activities_summary,
                 "equipment_id": alert.equipment_id.id,
             }
             if "category_id" in self.env["maintenance.request"]._fields:
@@ -209,6 +225,10 @@ class BarcaMaintenanceAlert(models.Model):
                 {"maintenance_request_id": request.id}
             )
             alert.action_start()
+
+    # -------------------------------------------------------------------------
+    # Constrains y onchange
+    # -------------------------------------------------------------------------
 
     @api.constrains("vehicle_id")
     def _check_vehicle_required(self):
@@ -225,22 +245,8 @@ class BarcaMaintenanceAlert(models.Model):
                 and record.equipment_id.vehicle_id != record.vehicle_id
             ):
                 raise ValidationError(
-                    "El equipo de mantenimiento debe corresponder al mismo vehículo del aviso."
-                )
-
-    @api.constrains("vehicle_id", "technical_location_id")
-    def _check_technical_location_category(self):
-        for record in self:
-            if (
-                record.technical_location_id
-                and record.vehicle_id
-                and record.technical_location_id.category_id
-                and record.vehicle_id.category_id
-                and record.technical_location_id.category_id
-                != record.vehicle_id.category_id
-            ):
-                raise ValidationError(
-                    "La ubicación técnica debe ser compatible con la categoría del vehículo."
+                    "El equipo de mantenimiento debe corresponder al mismo "
+                    "vehículo del aviso."
                 )
 
     @api.onchange("vehicle_id")
@@ -257,9 +263,10 @@ class BarcaMaintenanceAlert(models.Model):
 
         for vals in vals_list:
             if vals.get("name", "Nuevo") == "Nuevo":
-                vals["name"] = self.env["ir.sequence"].next_by_code(
-                    "barca.maintenance.alert"
-                ) or "Nuevo"
+                vals["name"] = (
+                    self.env["ir.sequence"].next_by_code("barca.maintenance.alert")
+                    or "Nuevo"
+                )
 
             vehicle_id = vals.get("vehicle_id")
             if vehicle_id and not vals.get("equipment_id"):
@@ -277,6 +284,61 @@ class BarcaMaintenanceAlert(models.Model):
     def write(self, vals):
         if "state" in vals and not self.env.context.get("allow_alert_state_write"):
             raise ValidationError(
-                "No está permitido cambiar el estado manualmente. Use las acciones del aviso."
+                "No está permitido cambiar el estado manualmente. "
+                "Use las acciones del aviso."
             )
         return super().write(vals)
+
+
+class BarcaMaintenanceAlertLine(models.Model):
+    _name = "barca.maintenance.alert.line"
+    _description = "Línea de actividad del aviso de mantención"
+    _order = "sequence, id"
+
+    sequence = fields.Integer(string="Secuencia", default=10)
+
+    alert_id = fields.Many2one(
+        "barca.maintenance.alert",
+        string="Aviso",
+        required=True,
+        ondelete="cascade",
+        index=True,
+    )
+
+    # Referencia trazable al origen en el plan
+    plan_line_id = fields.Many2one(
+        "barca.maintenance.plan.line",
+        string="Línea de plan origen",
+        ondelete="set null",
+    )
+
+    technical_location_id = fields.Many2one(
+        "barca.technical.location",
+        string="Ubicación técnica",
+        required=True,
+    )
+
+    intervention_type_id = fields.Many2one(
+        "barca.intervention.type",
+        string="Tipo de intervención",
+        required=True,
+    )
+
+    activity_id = fields.Many2one(
+        "barca.maintenance.activity",
+        string="Actividad",
+        required=True,
+    )
+
+    estimated_duration = fields.Float(
+        string="Duración estimada (hrs)",
+        digits=(6, 2),
+    )
+
+    done = fields.Boolean(
+        string="Realizada",
+        default=False,
+        tracking=True,
+    )
+
+    note = fields.Text(string="Observaciones")
