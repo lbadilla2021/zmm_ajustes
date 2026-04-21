@@ -1,5 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
+    <record id="action_fleet_vehicle_related_equipment" model="ir.actions.act_window">
+        <field name="name">Equipo de mantenimiento</field>
+        <field name="res_model">maintenance.equipment</field>
+        <field name="view_mode">list,kanban,form</field>
+        <field name="domain">[('vehicle_id', '=', context.get('default_vehicle_id'))]</field>
+        <field name="context">{'default_vehicle_id': context.get('default_vehicle_id')}</field>
+    </record>
+
     <record id="view_fleet_vehicle_form_inherit_mantencion_barca" model="ir.ui.view">
         <field name="name">fleet.vehicle.form.inherit.mantencion.barca</field>
         <field name="model">fleet.vehicle</field>
@@ -8,11 +16,12 @@
             <!-- Smart button: equipo de mantenimiento vinculado -->
             <xpath expr="//div[hasclass('oe_button_box')]" position="inside">
                 <button
-                    name="%(maintenance.hr_equipment_action)d"
+                    name="%(zmm_ajustes.action_fleet_vehicle_related_equipment)d"
                     type="action"
                     class="oe_stat_button"
                     icon="fa-wrench"
-                    context="{'search_default_vehicle_id': active_id}"
+                    groups="hr.group_hr_user,fleet.fleet_group_user"
+                    context="{'default_vehicle_id': id, 'search_default_vehicle_id': id}"
                 >
                     <div class="o_field_widget o_stat_info">
                         <span class="o_stat_text">Equipo</span>
