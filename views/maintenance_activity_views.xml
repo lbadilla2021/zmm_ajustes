@@ -10,7 +10,6 @@
                 <field name="category_id"/>
                 <field name="technical_location_id"/>
                 <field name="technical_location_code" string="Código ubic. técnica"/>
-                <field name="intervention_type_id"/>
                 <field name="estimated_duration"/>
                 <field name="active" optional="show"/>
             </list>
@@ -35,7 +34,6 @@
                                 name="technical_location_id"
                                 domain="[('category_id', '=?', category_id)]"
                             />
-                            <field name="intervention_type_id"/>
                             <field name="estimated_duration"/>
                         </group>
                     </group>
@@ -56,7 +54,6 @@
                 <field name="code"/>
                 <field name="category_id"/>
                 <field name="technical_location_id"/>
-                <field name="intervention_type_id"/>
 
                 <filter name="active" string="Activos" domain="[('active', '=', True)]"/>
                 <filter name="inactive" string="Inactivos" domain="[('active', '=', False)]"/>
@@ -73,12 +70,6 @@
                         string="Ubicación técnica"
                         domain="[]"
                         context="{'group_by': 'technical_location_id'}"
-                    />
-                    <filter
-                        name="group_by_intervention"
-                        string="Tipo de intervención"
-                        domain="[]"
-                        context="{'group_by': 'intervention_type_id'}"
                     />
                 </group>
             </search>

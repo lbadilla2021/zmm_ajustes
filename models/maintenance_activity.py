@@ -43,10 +43,6 @@ class BarcaMaintenanceActivity(models.Model):
         readonly=True,
     )
 
-    intervention_type_id = fields.Many2one(
-        "barca.intervention.type",
-        string="Tipo de intervención sugerido",
-    )
 
     estimated_duration = fields.Float(
         string="Duración estimada (hrs)",

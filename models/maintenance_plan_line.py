@@ -73,17 +73,9 @@ class BarcaMaintenancePlanLine(models.Model):
 
     @api.onchange("activity_id")
     def _onchange_activity_id(self):
-        """Al seleccionar actividad, autocompletar tipo de intervención siempre
-        (valor por defecto modificable) y duración estimada si la línea no tiene
-        valor propio aún."""
-        if self.activity_id:
-            # Tipo de intervención: se carga siempre desde el maestro como valor
-            # por defecto. El usuario puede modificarlo libremente después.
-            if self.activity_id.intervention_type_id:
-                self.intervention_type_id = self.activity_id.intervention_type_id
-            # Duración: se sugiere solo si la línea no tiene valor aún
-            if self.activity_id.estimated_duration and not self.estimated_duration:
-                self.estimated_duration = self.activity_id.estimated_duration
+        if self.activity_id and self.activity_id.estimated_duration \
+                and not self.estimated_duration:
+            self.estimated_duration = self.activity_id.estimated_duration
 
     @api.constrains("activity_id", "technical_location_id")
     def _check_activity_location_consistency(self):
