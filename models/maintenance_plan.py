@@ -49,6 +49,30 @@ class BarcaMaintenancePlan(models.Model):
     trigger_km = fields.Float(string="Intervalo km")
     trigger_days = fields.Integer(string="Intervalo días")
     trigger_hours = fields.Float(string="Intervalo horas")
+    trigger_km_start = fields.Float(
+        string="Inicio km",
+        default=0.0,
+        help=(
+            "Kilometraje desde el cual comienza a aplicar este plan. "
+            "Luego se repite según el intervalo en km."
+        ),
+    )
+    trigger_days_start = fields.Integer(
+        string="Inicio días",
+        default=0,
+        help=(
+            "Cantidad de días desde la fecha base desde la cual comienza "
+            "a aplicar este plan. Luego se repite según el intervalo en días."
+        ),
+    )
+    trigger_hours_start = fields.Float(
+        string="Inicio horas",
+        default=0.0,
+        help=(
+            "Horómetro desde el cual comienza a aplicar este plan. "
+            "Luego se repite según el intervalo en horas."
+        ),
+    )
 
     advance_km = fields.Float(string="Aviso anticipado km")
     advance_days = fields.Integer(string="Aviso anticipado días")
@@ -119,6 +143,17 @@ class BarcaMaintenancePlan(models.Model):
         return None
 
     @staticmethod
+    def _get_vehicle_maintenance_base_date(vehicle):
+        """
+        Fecha base para el inicio por días (trigger_days_start).
+        Prioriza campos de negocio ya existentes del vehículo.
+        """
+        for fname in ("x_last_entry_date", "x_last_exit_date", "acquisition_date"):
+            if fname in vehicle._fields and vehicle[fname]:
+                return vehicle[fname]
+        return None
+
+    @staticmethod
     def _get_vehicle_last_service_hours(vehicle):
         """Horas de operación en el último servicio registrado."""
         if "x_hours_last_service" in vehicle._fields:
@@ -161,9 +196,11 @@ class BarcaMaintenancePlan(models.Model):
         if self.trigger_km:
             current_km = self._get_vehicle_km(vehicle)
             last_service_km = self._get_vehicle_last_service_km(vehicle)
+            start_km = self.trigger_km_start or 0.0
+            interval_km = self.trigger_km
 
-            next_km = (last_service_km + self.trigger_km) if last_service_km > 0 \
-                else self.trigger_km
+            next_km = max(start_km, last_service_km + interval_km) \
+                if last_service_km > 0 else (start_km or interval_km)
             threshold_km = next_km - (self.advance_km or 0.0)
             km_triggered = current_km >= threshold_km
 
@@ -176,24 +213,42 @@ class BarcaMaintenancePlan(models.Model):
 
         # ── Trigger días ─────────────────────────────────────────────────────
         if self.trigger_days:
-            base_date = self._get_vehicle_last_service_date(vehicle) or today
-            next_date = base_date + timedelta(
-                days=self.trigger_days - (self.advance_days or 0)
-            )
-            days_triggered = today >= next_date
+            last_service_date = self._get_vehicle_last_service_date(vehicle)
+            base_date = self._get_vehicle_maintenance_base_date(vehicle)
+            start_days = self.trigger_days_start or 0
+            interval_days = self.trigger_days
+
+            if base_date:
+                start_date = base_date + timedelta(days=start_days)
+            else:
+                # Sin una fecha base confiable en el vehículo, se conserva el
+                # comportamiento previo (base=today) y se aplica start_days de forma
+                # conservadora para no romper compatibilidad en datos existentes.
+                start_date = today + timedelta(days=start_days)
+
+            if last_service_date:
+                next_date = max(start_date, last_service_date + timedelta(days=interval_days))
+            else:
+                next_date = start_date or (today + timedelta(days=interval_days))
+
+            threshold_date = next_date - timedelta(days=(self.advance_days or 0))
+            days_triggered = today >= threshold_date
 
             _logger.debug(
-                "Plan '%s' | '%s' | días: base=%s next=%s today=%s → %s",
-                self.name, vehicle.name, base_date, next_date, today, days_triggered,
+                "Plan '%s' | '%s' | días: base=%s last=%s start=%s next=%s "
+                "threshold=%s today=%s → %s",
+                self.name, vehicle.name, base_date, last_service_date, start_date,
+                next_date, threshold_date, today, days_triggered,
             )
 
         # ── Trigger horas ────────────────────────────────────────────────────
         if self.trigger_hours:
             current_hours = self._get_vehicle_hours(vehicle)
             last_service_hours = self._get_vehicle_last_service_hours(vehicle)
-
-            next_hours = (last_service_hours + self.trigger_hours) \
-                if last_service_hours > 0 else self.trigger_hours
+            start_hours = self.trigger_hours_start or 0.0
+            interval_hours = self.trigger_hours
+            next_hours = max(start_hours, last_service_hours + interval_hours) \
+                if last_service_hours > 0 else (start_hours or interval_hours)
             hours_triggered = current_hours >= next_hours
 
             _logger.debug(
