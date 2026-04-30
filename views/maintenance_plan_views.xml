@@ -90,8 +90,11 @@
                         <!-- ================================================ -->
                         <page string="Triggers" name="triggers">
                             <group>
+                                <field name="trigger_km_start"/>
                                 <field name="trigger_km"/>
+                                <field name="trigger_days_start"/>
                                 <field name="trigger_days"/>
+                                <field name="trigger_hours_start"/>
                                 <field name="trigger_hours"/>
                             </group>
                         </page>

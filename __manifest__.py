@@ -13,6 +13,7 @@
         'views/maintenance_activity_views.xml',
         'views/maintenance_plan_views.xml',
         'views/maintenance_kit_views.xml',
+        'views/maintenance_request_views.xml',
         'views/base_views.xml',
         'views/maintenance_alert_views.xml',
         'views/fleet_vehicle_views.xml',
