@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <!--
+        Compatibilidad Odoo 18:
+        El XML-ID maintenance.hr_equipment_request_view no existe.
+        Se usa la vista formulario vigente del módulo maintenance.
+    -->
+    <record id="barca_maintenance_request_form_inherit" model="ir.ui.view">
+        <field name="name">barca.maintenance.request.form.inherit</field>
+        <field name="model">maintenance.request</field>
+        <field name="inherit_id" ref="maintenance.hr_equipment_request_view_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//field[@name='name']" position="attributes">
+                <attribute name="placeholder">Solicitud de mantenimiento</attribute>
+            </xpath>
+        </field>
+    </record>
+</odoo>
