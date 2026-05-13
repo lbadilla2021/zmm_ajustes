@@ -1,7 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
-    <menuitem id="menu_barca_maintenance_root" name="Mantención Barca" sequence="10" groups="zmm_ajustes.group_barca_conductor,zmm_ajustes.group_barca_programador,zmm_ajustes.group_barca_ejecutor,zmm_ajustes.group_barca_bodega,zmm_ajustes.group_barca_admin"/>
-
     <record id="action_barca_equipment" model="ir.actions.act_window">
         <field name="name">Equipos</field>
         <field name="res_model">maintenance.equipment</field>
@@ -33,6 +31,14 @@
         <field name="res_model">maintenance.team</field>
         <field name="view_mode">list,kanban,form</field>
     </record>
+
+    <menuitem
+        id="menu_barca_maintenance_root"
+        name="Mantención Barca"
+        action="action_barca_maintenance_calendar"
+        sequence="10"
+        groups="zmm_ajustes.group_barca_conductor,zmm_ajustes.group_barca_programador,zmm_ajustes.group_barca_ejecutor,zmm_ajustes.group_barca_bodega,zmm_ajustes.group_barca_admin"
+    />
 
     <menuitem
         id="menu_barca_maintenance"
