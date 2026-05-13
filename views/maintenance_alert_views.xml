@@ -192,7 +192,7 @@
     <menuitem
         id="menu_barca_maintenance_alert"
         name="Avisos"
-        parent="menu_barca_maintenance_root"
+        parent="menu_barca_maintenance"
         action="action_barca_maintenance_alert"
         sequence="20"
         groups="zmm_ajustes.group_barca_conductor,zmm_ajustes.group_barca_programador,zmm_ajustes.group_barca_ejecutor,zmm_ajustes.group_barca_bodega,zmm_ajustes.group_barca_admin"
