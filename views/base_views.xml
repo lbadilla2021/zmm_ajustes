@@ -40,6 +40,15 @@
         groups="zmm_ajustes.group_barca_conductor,zmm_ajustes.group_barca_programador,zmm_ajustes.group_barca_ejecutor,zmm_ajustes.group_barca_bodega,zmm_ajustes.group_barca_admin"
     />
 
+
+    <menuitem
+        id="menu_barca_alert_origins"
+        name="Orígenes Avisos"
+        parent="menu_barca_maintenance_root"
+        sequence="5"
+        groups="zmm_ajustes.group_barca_conductor,zmm_ajustes.group_barca_programador,zmm_ajustes.group_barca_ejecutor,zmm_ajustes.group_barca_bodega,zmm_ajustes.group_barca_admin"
+    />
+
     <menuitem
         id="menu_barca_maintenance"
         name="Mantenimiento"
@@ -51,7 +60,7 @@
     <menuitem
         id="menu_barca_maintenance_plan"
         name="Planes de Mantenimiento"
-        parent="menu_barca_maintenance"
+        parent="menu_barca_alert_origins"
         action="action_barca_maintenance_plan"
         sequence="10"
         groups="zmm_ajustes.group_barca_programador,zmm_ajustes.group_barca_admin"
