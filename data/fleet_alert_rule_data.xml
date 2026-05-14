@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <function model="barca.fleet.alert.rule" name="_ensure_default_rules"/>
+</odoo>
