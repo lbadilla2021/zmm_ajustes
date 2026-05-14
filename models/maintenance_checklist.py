@@ -257,8 +257,11 @@ class BarcaMaintenanceChecklist(models.Model):
                 continue
 
             item = self.env["barca.maintenance.checklist.item"]
-            item_template_id = values.get("item_template_id")
+            item_template_id = self._extract_command_record_id(
+                values.get("item_template_id")
+            )
             if item_template_id:
+                values["item_template_id"] = item_template_id
                 item = self.env["barca.maintenance.checklist.item"].browse(
                     item_template_id
                 )
@@ -269,6 +272,12 @@ class BarcaMaintenanceChecklist(models.Model):
 
             sanitized_commands.append((0, 0, values))
         return sanitized_commands
+
+
+    def _extract_command_record_id(self, value):
+        if isinstance(value, (list, tuple)):
+            return value[0] if value else False
+        return value
 
     def _get_equipment_for_vehicle(self, vehicle_id):
         if not vehicle_id:
@@ -468,6 +477,31 @@ class BarcaMaintenanceChecklistLine(models.Model):
     no = fields.Boolean(string="No")
     sequence = fields.Integer(string="Secuencia", default=10)
 
+    def _get_item_template_id_from_vals(self, vals):
+        item_template_id = vals.get("item_template_id")
+        if isinstance(item_template_id, (list, tuple)):
+            return item_template_id[0] if item_template_id else False
+        return item_template_id
+
+    def _complete_values_from_item_template(self, vals):
+        vals = dict(vals)
+        item_template_id = self._get_item_template_id_from_vals(vals)
+        if item_template_id:
+            item = self.env["barca.maintenance.checklist.item"].browse(item_template_id)
+            vals["item_template_id"] = item_template_id
+            vals.setdefault("control_type", item.control_type)
+            vals.setdefault("control_item", item.control_item)
+            vals.setdefault("sequence", item.sequence)
+        return vals
+
+    @api.onchange("item_template_id")
+    def _onchange_item_template_id(self):
+        for line in self:
+            if line.item_template_id:
+                line.control_type = line.item_template_id.control_type
+                line.control_item = line.item_template_id.control_item
+                line.sequence = line.item_template_id.sequence
+
     @api.onchange("yes")
     def _onchange_yes(self):
         for line in self:
@@ -490,15 +524,17 @@ class BarcaMaintenanceChecklistLine(models.Model):
 
     @api.model_create_multi
     def create(self, vals_list):
-        for vals in vals_list:
+        for index, vals in enumerate(vals_list):
+            vals = self._complete_values_from_item_template(vals)
             if vals.get("yes"):
                 vals["no"] = False
             if vals.get("no"):
                 vals["yes"] = False
+            vals_list[index] = vals
         return super().create(vals_list)
 
     def write(self, vals):
-        vals = dict(vals)
+        vals = self._complete_values_from_item_template(vals)
         if vals.get("yes"):
             vals["no"] = False
         if vals.get("no"):
