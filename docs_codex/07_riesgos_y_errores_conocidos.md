@@ -125,3 +125,11 @@ maintenance_type = 'corrective'
 Puede ser una decisión práctica, pero conceptualmente podría ser `preventive` si el estándar de Odoo y la operación lo permiten.
 
 Antes de cambiarlo, revisar impacto en reportes estándar.
+
+## 14. Botón `Enviar Avisos` revisa toda la flotilla
+
+El botón del formulario de vehículo ejecuta `_send_expiration_alerts()`, que busca todos los `fleet.vehicle`. No usarlo como si enviara alertas solo del vehículo abierto.
+
+## 15. Correos de flotilla dependen de destinatarios configurados
+
+Las alertas de `Modificaciones` y `Vencimientos` no fallan si la regla existe sin destinatarios; simplemente no envían correo. Antes de reportar un problema de envío, revisar `barca.fleet.alert.rule.email_names`.

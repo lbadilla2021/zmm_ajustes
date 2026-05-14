@@ -145,4 +145,4 @@ Revisar logs por:
 
 ## Cron de vencimientos de flotilla
 
-`data/cron_fleet_expiration_alerts.xml` crea `ir_cron_send_fleet_expiration_alerts` sobre `fleet.vehicle`. Ejecuta `cron_send_expiration_alerts()` diariamente a las 08:00 para enviar vencimientos próximos de licencia de conducir, permiso de circulación y revisión técnica a la regla `Vencimientos`.
+`data/cron_fleet_expiration_alerts.xml` crea `ir_cron_send_fleet_expiration_alerts` sobre `fleet.vehicle`. Ejecuta `cron_send_expiration_alerts()` diariamente a las 08:00 para enviar vencimientos próximos de licencia de conducir, permiso de circulación y revisión técnica a la regla `Vencimientos`. La implementación busca todos los vehículos, usa la ventana `x_alert_days_before` de cada registro y retorna la cantidad total de ítems enviados; si no hay destinatarios configurados o no hay vencimientos próximos, retorna `0`.

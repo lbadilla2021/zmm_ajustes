@@ -144,6 +144,66 @@ Métodos clave:
 - `_create_alert_for_vehicle()`
 - `run_pm_scheduler()`
 
+## Flujo de alertas documentales de Flotilla
+
+```text
+Cambio en fleet.vehicle.x_doc_fuel_card o x_doc_tag
+        │
+        ▼
+write() captura valores anteriores
+        │
+        ▼
+_send_documentation_change_email() arma resumen por vehículo
+        │
+        ▼
+barca.fleet.alert.rule("Modificaciones") entrega destinatarios
+        │
+        ▼
+mail.mail envía "Modificaciones de documentación de vehículos"
+```
+
+Puntos importantes:
+
+- Solo se observan `x_doc_fuel_card` y `x_doc_tag`.
+- Si el valor final es igual al inicial, no se reporta cambio.
+- Si la regla `Modificaciones` no tiene destinatarios, no se envía correo.
+
+## Flujo de vencimientos de Flotilla
+
+```text
+Botón Enviar Avisos o cron ir_cron_send_fleet_expiration_alerts
+        │
+        ▼
+fleet.vehicle._send_expiration_alerts() busca todos los vehículos
+        │
+        ▼
+_get_expiration_alert_items() compara fechas contra hoy + x_alert_days_before
+        │
+        ▼
+barca.fleet.alert.rule("Vencimientos") entrega destinatarios
+        │
+        ▼
+mail.mail envía "Vencimientos de documentación de flotilla"
+```
+
+Documentos evaluados:
+
+- Licencia de conducir del conductor (`x_driver_license_expiration_date`).
+- Permiso de circulación (`x_doc_circulation_permit_expiry`).
+- Revisión técnica (`x_doc_technical_review_expiry`).
+
+Notas operativas:
+
+- La ventana `x_alert_days_before` es individual por vehículo y se normaliza a mínimo `0`.
+- El botón del formulario no limita la revisión al vehículo actual; usa todos los vehículos.
+- Si no hay vencimientos o destinatarios, el botón muestra advertencia y el cron retorna `0`.
+
+## Flujo de seguro y contratos de Flotilla
+
+La casilla `x_has_insurance_contract` se calcula desde contratos del vehículo, incluyendo registros inactivos (`active_test=False`). Queda marcada cuando existe al menos un `fleet.vehicle.log.contract` relacionado cuyo `cost_subtype_id.name` contiene `seguro`.
+
+Los contratos de flotilla agregan `attachment_ids` para respaldos múltiples, visibles después de notas.
+
 ## Prevención de duplicados
 
 Antes de crear un aviso PM, el módulo busca avisos abiertos para el mismo vehículo:
