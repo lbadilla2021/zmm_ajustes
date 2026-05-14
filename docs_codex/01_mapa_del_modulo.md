@@ -11,6 +11,8 @@ zmm_ajustes/
 │   ├── cron.xml
 │   ├── cron_pm_alerts.xml
 │   ├── maintenance_alert_sequence.xml
+│   ├── maintenance_checklist_items.xml
+│   ├── maintenance_checklist_sequence.xml
 │   └── technical_locations.csv
 ├── models/
 │   ├── __init__.py
@@ -19,6 +21,7 @@ zmm_ajustes/
 │   ├── intervention_type.py
 │   ├── maintenance_activity.py
 │   ├── maintenance_alert.py
+│   ├── maintenance_checklist.py
 │   ├── maintenance_equipment.py
 │   ├── maintenance_kit.py
 │   ├── maintenance_plan.py
@@ -35,6 +38,7 @@ zmm_ajustes/
     ├── intervention_type_views.xml
     ├── maintenance_activity_views.xml
     ├── maintenance_alert_views.xml
+    ├── maintenance_checklist_views.xml
     ├── maintenance_kit_views.xml
     ├── maintenance_plan_views.xml
     ├── maintenance_request_views.xml
@@ -48,14 +52,15 @@ zmm_ajustes/
 
 1. `security/res_groups.xml`
 2. `security/ir.model.access.csv`
-3. Secuencias de avisos y solicitudes simples.
-4. Vistas de catálogos y procesos.
+3. Secuencias de avisos, solicitudes simples y checklists.
+4. Datos/catálogo de checklist y vistas de catálogos/procesos.
 5. Vistas base y menús raíz.
 6. Vistas y menú de solicitud simple.
-7. Vistas de avisos.
-8. Vista extendida de flota.
-9. Cron vacío histórico.
-10. Cron PM real.
+7. Vistas y menú de Checklist.
+8. Vistas de avisos.
+9. Vista extendida de flota.
+10. Cron vacío histórico.
+11. Cron PM real.
 
 Además declara:
 
@@ -77,6 +82,9 @@ Ese hook carga ubicaciones técnicas desde CSV y sincroniza vehículos existente
 | `barca.maintenance.kit` | `maintenance_kit.py` | Kit sugerido de materiales/repuestos. |
 | `barca.maintenance.kit.line` | `maintenance_kit.py` | Productos y cantidades del kit. |
 | `barca.maintenance.request` | `maintenance_request_simple.py` | Solicitud simple de mantención creada por usuarios y fuente opcional de avisos. |
+| `barca.maintenance.checklist` | `maintenance_checklist.py` | Checklist operativo por tipo de vehículo; genera aviso automáticamente al guardar si existe al menos un No. |
+| `barca.maintenance.checklist.line` | `maintenance_checklist.py` | Puntos de control respondidos Sí/No en cada checklist. |
+| `barca.maintenance.checklist.item` | `maintenance_checklist.py` | Catálogo de puntos de control por tipo de vehículo, tipo de control e ítem. |
 | `barca.maintenance.alert` | `maintenance_alert.py` | Aviso de mantención con workflow propio. |
 | `barca.maintenance.alert.line` | `maintenance_alert.py` | Actividades copiadas desde el plan al aviso. |
 
@@ -95,14 +103,17 @@ El menú raíz es `Mantención Barca` (`menu_barca_maintenance_root`).
 
 Submenús principales:
 
-- `Mantenimiento`
+- `Orígenes Avisos`
   - `Planes de Mantenimiento`
   - `Solicitud de Mantención`
+  - `Checklist`
+- `Mantenimiento`
   - `Avisos`
   - `Orden de Trabajo`
   - `Calendario Mantenimiento`
-- `Equipos`
 - `Informes`
+  - `Solicitudes de mantenimiento`
+- `Equipos`
 - `Configuración`
   - `Ubicaciones técnicas`
   - `Tipos de intervención`
@@ -110,6 +121,7 @@ Submenús principales:
   - `Kits`
   - `Categorías de equipos`
   - `Equipos de mantenimiento`
+  - `Checklist`
 
 ## Cron
 
