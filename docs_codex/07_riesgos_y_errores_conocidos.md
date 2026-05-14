@@ -94,25 +94,17 @@ Hay `company_id` en algunos modelos, pero no se observan reglas de registro por 
 
 Si se usará con varias compañías, diseñar `ir.rule` antes de producción.
 
-## 10. CSV con códigos repetidos
+## 10. Importación manual de ubicaciones técnicas
 
-El CSV puede contener padre e hijo con el mismo código y nombre, por ejemplo `MOTOR / MOTOR`.
+Las ubicaciones técnicas ya no se cargan desde un CSV del módulo. Si se importan manualmente, mantener códigos únicos para no generar conflictos lógicos en los XML IDs automáticos creados por `_ensure_external_ids()`.
 
-Puede no fallar por SQL, pero complica XML IDs, imports y trazabilidad.
-
-## 11. `level` computado tratado como dato manual
-
-`hooks.py` entrega `level: 1` y `level: 2`, pero `level` se calcula según `parent_id`.
-
-No basar lógica de negocio en valores manuales de `level`; confiar en el compute.
-
-## 12. Campo `x_downtime_total` no calcula tiempo real
+## 11. Campo `x_downtime_total` no calcula tiempo real
 
 Actualmente `_compute_downtime()` asigna `0.0` siempre.
 
 Si se requiere KPI de tiempo fuera de servicio, implementar cálculo real entre entrada/salida o según eventos de taller.
 
-## 13. `x_odometer_next_service` es fijo +5000
+## 12. `x_odometer_next_service` es fijo +5000
 
 Actualmente se calcula como:
 
@@ -122,7 +114,7 @@ x_odometer_last_service + 5000
 
 Esto no necesariamente refleja planes dinámicos. Si se quiere precisión, debería conectarse con planes activos o próximo PM aplicable.
 
-## 14. `maintenance_type` de OT creada como `corrective`
+## 13. `maintenance_type` de OT creada como `corrective`
 
 Aunque el aviso venga de PM, la OT se crea con:
 

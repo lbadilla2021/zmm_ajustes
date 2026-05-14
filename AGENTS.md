@@ -9,28 +9,41 @@ Estas instrucciones aplican a todo el módulo Odoo `zmm_ajustes`.
 - La definición de **Avisos** está en `views/maintenance_alert_views.xml`.
 - La acción de **Planes de Mantenimiento** está en `views/maintenance_plan_views.xml`.
 - La nueva **Solicitud de Mantención** simple está en `models/maintenance_request_simple.py` y `views/maintenance_request_simple_views.xml`.
+- El **Checklist** operativo está en `models/maintenance_checklist.py` y `views/maintenance_checklist_views.xml`.
+- El reporte **Solicitudes de mantenimiento** del menú **Informes** usa `action_barca_maintenance_request_report` en `views/base_views.xml`.
+- `hooks.py` solo conserva `sync_existing_vehicle_equipment`; ya no existe carga automática de ubicaciones técnicas desde CSV.
 
 ## Memoria funcional vigente
 - Al abrir el módulo **Mantención Barca** o al hacer clic en el menú raíz **Mantención Barca**, debe abrirse **Calendario Mantenimiento** mediante `action_barca_maintenance_calendar`.
 - Los menús principales bajo **Mantención Barca** deben quedar en este orden:
-  1. **Mantenimiento**
-  2. **Equipos**
+  1. **Orígenes Avisos**
+  2. **Mantenimiento**
   3. **Informes**
-  4. **Configuración**
-- Dentro del menú principal **Mantenimiento**, los submenús deben quedar en este orden:
+  4. **Equipos**
+  5. **Configuración**
+- Dentro del menú principal **Orígenes Avisos**, los submenús deben quedar en este orden:
   1. **Planes de Mantenimiento**
   2. **Solicitud de Mantención**
-  3. **Avisos**
-  4. **Orden de Trabajo**
-  5. **Calendario Mantenimiento**
+  3. **Checklist**
+- Dentro del menú principal **Mantenimiento**, los submenús deben quedar en este orden:
+  1. **Avisos**
+  2. **Orden de Trabajo**
+  3. **Calendario Mantenimiento**
+- Dentro del menú principal **Informes**, debe existir **Solicitudes de mantenimiento** mediante `action_barca_maintenance_request_report`.
 - **Avisos** no debe quedar como menú principal; debe depender de `menu_barca_maintenance`.
+- **Planes de Mantenimiento**, **Solicitud de Mantención** y **Checklist** no deben depender de `menu_barca_maintenance`; deben depender de `menu_barca_alert_origins`.
 - La antigua opción basada en `maintenance.request` conserva los XML IDs existentes (`action_barca_maintenance_report`, `menu_barca_reporting_requests`) y se muestra visualmente como **Orden de Trabajo**. No renombrar su modelo técnico ni romper referencias existentes.
-- **Solicitud de Mantención** es el requerimiento simple inicial (`barca.maintenance.request`), no la OT estándar. Debe ubicarse antes de **Avisos** y puede generar un `barca.maintenance.alert` con origen `request`.
+- **Solicitud de Mantención** es el requerimiento simple inicial (`barca.maintenance.request`), no la OT estándar. Debe ubicarse bajo **Orígenes Avisos** y puede generar un `barca.maintenance.alert` con origen `request`.
 - En **Solicitud de Mantención**, la fecha es la fecha actual y queda bloqueada; el equipo de mantenimiento queda bloqueado y se carga automáticamente desde el vehículo; existen los campos **Planta y Lugar detallado** y **Estado del vehículo** (`operativo` / `no_operativo`).
+- **Checklist** (`barca.maintenance.checklist`) es una fuente de avisos bajo **Orígenes Avisos**; sus puntos se cargan desde el catálogo `barca.maintenance.checklist.item` por tipo de vehículo, guarda respuestas **Sí/No**, y al guardar genera automáticamente un aviso si existe al menos un **No**.
+- El catálogo de ítems de Checklist se administra desde **Configuración → Checklist** y debe mostrar/editar tipo de vehículo, tipo de control e ítem de control.
+- Las **Ubicaciones técnicas** (`barca.technical.location`) se crean o importan manualmente después de instalar el módulo desde **Configuración → Ubicaciones técnicas**; no reintroducir dependencia runtime de `data/technical_locations.csv`.
+- El `post_init_hook` vigente es `sync_existing_vehicle_equipment` y solo sincroniza `fleet.vehicle` existentes con `maintenance.equipment`.
 - El menú de equipos debe mostrarse como **Equipos** en plural.
 
 ## Convenciones de cambios
 - Mantener los XML IDs existentes cuando se reorganicen menús para no romper actualizaciones de instalaciones existentes.
 - Validar XML después de editar vistas o menús.
 - Revisar que no se introduzcan XML IDs duplicados en `views/*.xml`.
-- Si se documenta una decisión funcional del módulo, actualizar también los documentos relevantes en `docs_codex/`.
+- Si se documenta una decisión funcional/técnica del módulo, actualizar también los documentos relevantes en `docs_codex/`.
+- No volver a agregar `data/technical_locations.csv` ni lógica de importación automática de ubicaciones técnicas al hook de instalación.

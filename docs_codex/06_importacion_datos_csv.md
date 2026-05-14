@@ -1,32 +1,18 @@
-# 06 — Importación de datos CSV y hook inicial
+# 06 — Importación manual de ubicaciones técnicas
 
-## Archivo CSV
+## Decisión vigente
 
-Archivo:
+El módulo **ya no carga ubicaciones técnicas desde un CSV incluido en el código**.
 
-```text
-data/technical_locations.csv
-```
-
-Separador:
+Las ubicaciones técnicas (`barca.technical.location`) se deben crear o importar manualmente después de instalar el módulo, usando la interfaz de Odoo o el importador estándar sobre el menú:
 
 ```text
-;
+Configuración → Ubicaciones técnicas
 ```
 
-Columnas esperadas:
+El archivo histórico `data/technical_locations.csv` fue eliminado y no debe volver a ser una dependencia de instalación/actualización del módulo.
 
-```text
-CATEGORIA;UBICACION TECNICA;CODIGO UBICACION;SUB UBICACION;CODIGO SUBUBICACION
-```
-
-Ejemplo:
-
-```text
-CAMIONETA;MOTOR;CAM-MOT;SISTEMA DE INYECCIÓN;CAM-MOT-INY
-```
-
-## Hook de carga
+## Hook inicial vigente
 
 Archivo:
 
@@ -34,79 +20,41 @@ Archivo:
 hooks.py
 ```
 
-Función:
+Función declarada en `__manifest__.py`:
 
 ```python
-load_technical_locations(cr, registry)
+'post_init_hook': 'sync_existing_vehicle_equipment'
 ```
 
-Declarada en `__manifest__.py` como:
+Este hook **solo** sincroniza vehículos existentes con `maintenance.equipment`. No crea ubicaciones técnicas.
 
-```python
-'post_init_hook': 'load_technical_locations'
+## Campos sugeridos para importación manual
+
+Para importar ubicaciones técnicas manualmente, preparar un archivo para el importador estándar de Odoo con campos equivalentes a:
+
+```text
+name
+code
+category_id
+parent_code
+kit_id
+estimated_useful_life
+reference_supplier_id
+note
 ```
 
-## Qué hace el hook
+Notas:
 
-1. Abre `data/technical_locations.csv`.
-2. Lee cada fila con `csv.DictReader(delimiter=';')`.
-3. Busca la categoría en `fleet.vehicle.model.category` por nombre exacto.
-4. Si no encuentra categoría, omite la fila y registra warning.
-5. Busca o crea ubicación técnica padre.
-6. Si existe sububicación, busca o crea ubicación técnica hija.
-7. Al final llama `_ensure_external_ids()` sobre todas las ubicaciones.
-8. Ejecuta `sync_existing_vehicle_equipment()`.
-
-## Dependencia crítica
-
-Las categorías de vehículos deben existir previamente en `fleet.vehicle.model.category` con nombre exacto al valor de la columna `CATEGORIA`.
-
-Ejemplo: si el CSV dice `CAMIONETA`, debe existir una categoría con nombre exacto `CAMIONETA`.
-
-## Reglas de creación
-
-### Nodo padre
-
-Se busca por:
-
-```python
-name = UBICACION TECNICA
-category_id = categoría encontrada
-parent_id = False
-```
-
-Si no existe, se crea con:
-
-```python
-name = UBICACION TECNICA
-code = CODIGO UBICACION
-category_id = category.id
-```
-
-### Nodo hijo
-
-Si `SUB UBICACION` viene informado, se busca por:
-
-```python
-name = SUB UBICACION
-category_id = category.id
-parent_id = parent.id
-```
-
-Si no existe, se crea con:
-
-```python
-name = SUB UBICACION
-code = CODIGO SUBUBICACION
-category_id = category.id
-parent_id = parent.id
-```
+- `name` y `code` son obligatorios.
+- `category_id` es obligatorio y debe apuntar a una categoría existente de `fleet.vehicle.model.category`.
+- `parent_code` puede usarse para enlazar una sububicación con una ubicación padre ya creada/importada.
+- Si se usa `parent_code`, importar primero los padres y luego los hijos.
 
 ## XML IDs automáticos
 
 El modelo `barca.technical.location` implementa `_ensure_external_ids()`.
 
-Crea registros en `ir.model.data` con:
+Al crear o actualizar una ubicación técnica, el modelo crea/actualiza registros en `ir.model.data` con:
 
 - `module`: `zmm_ajustes`
 - `name`: código de ubicación técnica
@@ -114,41 +62,22 @@ Crea registros en `ir.model.data` con:
 - `res_id`: ID de la ubicación
 - `noupdate`: True
 
-Esto facilita imports posteriores usando códigos estables.
+Esto permite que las ubicaciones importadas manualmente mantengan referencias estables por código.
 
 ## Cuidado con códigos duplicados
 
-Actualmente `_ensure_external_ids()` usa `code` como nombre XML ID.
+`_ensure_external_ids()` usa `code` como nombre de XML ID.
 
-Si dos ubicaciones distintas tienen el mismo `code`, puede haber conflictos lógicos. El método busca por `module + name + model`, por lo que no crea duplicado exacto, pero si el mismo código se usa en otra ubicación, no creará un XML ID nuevo para la segunda.
-
-Recomendación: mantener `code` único globalmente o ajustar la lógica para incluir categoría en el XML ID.
-
-## Posible problema en CSV recibido
-
-El CSV tiene filas como:
-
-```text
-CAMIONETA;MOTOR;CAM-MOT;MOTOR;CAM-MOT
-```
-
-Esto genera un padre `MOTOR` con código `CAM-MOT` y además intenta crear hijo `MOTOR` bajo `MOTOR` con el mismo código `CAM-MOT`.
-
-No necesariamente falla por la restricción actual, porque el padre y el hijo tienen distinto `parent_id`, pero puede ser conceptualmente confuso y generar códigos repetidos.
-
-Antes de automatizar nuevas cargas, validar si estas filas representan:
-
-- Una ubicación padre que además debe ser seleccionable como actividad.
-- O un duplicado accidental.
+Recomendación: mantener `code` único globalmente. Si se repite el mismo código en ubicaciones distintas, la segunda ubicación no tendrá un XML ID independiente con ese mismo código.
 
 ## Sincronización vehículo-equipo
 
 `sync_existing_vehicle_equipment()` recorre todos los `fleet.vehicle` existentes y crea un `maintenance.equipment` si no hay uno asociado.
 
-Esto es importante porque el flujo de avisos necesita `equipment_id` para crear OT.
+Esto es importante porque los flujos de Aviso → OT necesitan `equipment_id`.
 
 ## Consideración sobre `post_init_hook`
 
-El hook se ejecuta al instalar el módulo. Si solo se actualiza el módulo (`-u zmm_ajustes`), no necesariamente se recarga el CSV.
+El hook se ejecuta al instalar el módulo. Si solo se actualiza el módulo (`-u zmm_ajustes`), no se debe asumir que volverá a ejecutarse.
 
-Si se necesita recargar CSV en ambientes existentes, considerar una acción manual, wizard, script de migración o server action.
+Si se requiere sincronizar vehículos existentes en un ambiente ya instalado, ejecutar una acción manual, script de migración o server action que llame una lógica equivalente a `sync_existing_vehicle_equipment()`.

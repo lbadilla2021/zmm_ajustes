@@ -105,21 +105,14 @@ Si se cambia el nombre del método o del modelo, actualizar el XML.
 `__manifest__.py` declara:
 
 ```python
-'post_init_hook': 'load_technical_locations'
+'post_init_hook': 'sync_existing_vehicle_equipment'
 ```
 
-El hook hace dos cosas:
+El hook solo crea equipos de mantenimiento para vehículos existentes que aún no tengan un `maintenance.equipment` asociado.
 
-1. Carga ubicaciones técnicas desde `data/technical_locations.csv`.
-2. Crea equipos de mantenimiento para vehículos existentes.
+Las ubicaciones técnicas ya no se cargan desde CSV en el `post_init_hook`; deben crearse o importarse manualmente después de instalar el módulo.
 
 Atención: `post_init_hook` se ejecuta al instalar, no necesariamente en cada actualización normal del módulo.
-
-## No forzar campos computados
-
-En `hooks.py` se pasan valores `level: 1` y `level: 2` al crear ubicaciones, pero `level` es un campo computado store en `technical_location.py`.
-
-Si se refactoriza, considerar que `level` debería depender de `parent_id`; no conviene tratarlo como dato manual.
 
 ## `__pycache__`
 
