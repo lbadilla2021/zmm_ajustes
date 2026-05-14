@@ -73,12 +73,12 @@ class BarcaMaintenanceAlert(models.Model):
 
     state = fields.Selection(
         [
-            ("pending_evaluation", "Pendiente evaluación"),
-            ("approved", "Aprobado"),
+            ("pending_evaluation", "Nuevo"),
+            ("approved", "En evaluación"),
+            ("in_progress", "Con OT creada"),
             ("rejected", "Rechazado"),
-            ("in_progress", "En proceso"),
-            ("in_review", "En revisión"),
             ("closed", "Cerrado"),
+            ("in_review", "En revisión (legado)"),
         ],
         string="Estado",
         default="pending_evaluation",
@@ -100,7 +100,10 @@ class BarcaMaintenanceAlert(models.Model):
     close_date = fields.Datetime(string="Fecha de cierre")
 
     evaluated_by_id = fields.Many2one("res.users", string="Evaluado por")
-    approved_by_id = fields.Many2one("res.users", string="Aprobado por")
+    approved_by_id = fields.Many2one(
+        "res.users",
+        string="Tomado para evaluación por",
+    )
     closed_by_id = fields.Many2one("res.users", string="Cerrado por")
 
     maintenance_request_id = fields.Many2one(
@@ -112,7 +115,8 @@ class BarcaMaintenanceAlert(models.Model):
     _allowed_state_transitions = {
         "pending_evaluation": {"approved", "rejected"},
         "approved": {"in_progress", "rejected"},
-        "in_progress": {"in_review"},
+        "in_progress": {"closed"},
+        # Compatibilidad para avisos creados antes del ajuste de flujo.
         "in_review": {"closed"},
     }
 
@@ -141,7 +145,7 @@ class BarcaMaintenanceAlert(models.Model):
         vals["state"] = new_state
         self.with_context(allow_alert_state_write=True).write(vals)
 
-    def action_approve(self):
+    def action_take_for_evaluation(self):
         self._validate_state_transition("approved")
         self._write_state_transition(
             "approved",
@@ -151,6 +155,9 @@ class BarcaMaintenanceAlert(models.Model):
                 "evaluation_date": fields.Datetime.now(),
             },
         )
+
+    def action_approve(self):
+        return self.action_take_for_evaluation()
 
     def action_reject(self):
         self._validate_state_transition("rejected")
@@ -163,18 +170,27 @@ class BarcaMaintenanceAlert(models.Model):
         )
 
     def action_start(self):
-        self._validate_state_transition("in_progress")
-        self._write_state_transition("in_progress")
+        raise ValidationError(
+            "La ejecución se gestiona en la OT asociada, no directamente en el aviso."
+        )
 
     def action_review(self):
-        self._validate_state_transition("in_review")
-        self._write_state_transition(
-            "in_review",
-            {"review_date": fields.Datetime.now()},
+        raise ValidationError(
+            "La revisión se gestiona en la OT asociada, no directamente en el aviso."
         )
 
     def action_close(self):
         self._validate_state_transition("closed")
+        for alert in self:
+            if not alert.maintenance_request_id:
+                raise ValidationError(
+                    "Solo se puede cerrar un aviso que tenga una OT asociada."
+                )
+            if not alert._is_maintenance_request_ready_to_close():
+                raise ValidationError(
+                    "Solo se puede cerrar el aviso cuando la OT esté en "
+                    "Reparado o Desechar."
+                )
         self._write_state_transition(
             "closed",
             {
@@ -185,6 +201,25 @@ class BarcaMaintenanceAlert(models.Model):
         # Actualizar medidores del vehículo con los valores del aviso
         for alert in self:
             alert._update_vehicle_last_service()
+
+    def _is_maintenance_request_ready_to_close(self):
+        self.ensure_one()
+        request = self.maintenance_request_id
+        return bool(request and request.stage_id and request.stage_id.done)
+
+    def action_view_maintenance_request(self):
+        self.ensure_one()
+        if not self.maintenance_request_id:
+            raise ValidationError("El aviso no tiene una OT asociada.")
+        return {
+            "type": "ir.actions.act_window",
+            "name": "OT asociada",
+            "res_model": "maintenance.request",
+            "view_mode": "form",
+            "views": [(False, "form")],
+            "res_id": self.maintenance_request_id.id,
+            "target": "current",
+        }
 
     def _update_vehicle_last_service(self):
         """
@@ -229,7 +264,7 @@ class BarcaMaintenanceAlert(models.Model):
         for alert in self:
             if alert.state != "approved":
                 raise ValidationError(
-                    "Solo se puede crear una OT para avisos en estado Aprobado."
+                    "Solo se puede crear una OT para avisos en estado En evaluación."
                 )
             if alert.maintenance_request_id:
                 raise ValidationError("El aviso ya tiene una OT asociada.")
@@ -266,10 +301,10 @@ class BarcaMaintenanceAlert(models.Model):
                     request_vals["category_id"] = equipment_category.id
 
             request = self.env["maintenance.request"].create(request_vals)
-            alert.with_context(allow_alert_state_write=True).write(
-                {"maintenance_request_id": request.id}
+            alert._write_state_transition(
+                "in_progress",
+                {"maintenance_request_id": request.id},
             )
-            alert.action_start()
 
     # -------------------------------------------------------------------------
     # Constrains y onchange
