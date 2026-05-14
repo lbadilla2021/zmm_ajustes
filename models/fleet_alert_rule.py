@@ -1,6 +1,6 @@
 import re
 
-from odoo import fields, models
+from odoo import api, fields, models
 
 
 class BarcaFleetAlertRule(models.Model):
@@ -36,3 +36,9 @@ class BarcaFleetAlertRule(models.Model):
             for email in re.split(r"[,;\s]+", alert_rule.email_names)
             if email.strip()
         ]
+
+    @api.model
+    def _ensure_default_rules(self):
+        for rule in ("Modificaciones", "Vencimientos"):
+            if not self.sudo().search([("rule", "=", rule)], limit=1):
+                self.sudo().create({"rule": rule})

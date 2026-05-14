@@ -1,10 +1,4 @@
 <?xml version="1.0" encoding="utf-8"?>
-<odoo noupdate="1">
-    <record id="barca_fleet_alert_rule_modificaciones" model="barca.fleet.alert.rule">
-        <field name="rule">Modificaciones</field>
-    </record>
-
-    <record id="barca_fleet_alert_rule_vencimientos" model="barca.fleet.alert.rule">
-        <field name="rule">Vencimientos</field>
-    </record>
+<odoo>
+    <function model="barca.fleet.alert.rule" name="_ensure_default_rules"/>
 </odoo>
