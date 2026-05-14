@@ -196,6 +196,7 @@ class BarcaMaintenanceChecklist(models.Model):
         for record in records:
             if record.checklist_type and not record.line_ids:
                 record._generate_lines_from_type()
+        records._auto_process_after_save()
         return records
 
     def write(self, vals):
@@ -222,6 +223,7 @@ class BarcaMaintenanceChecklist(models.Model):
         if checklist_type_changed:
             for record in self:
                 record._generate_lines_from_type()
+        self._auto_process_after_save()
         return result
 
 
@@ -331,6 +333,44 @@ class BarcaMaintenanceChecklist(models.Model):
             origin_lines.append("Odómetro: %.2f" % self.odometer)
         return "\n".join(origin_lines)
 
+    def _prepare_alert_vals(self):
+        self.ensure_one()
+        description = self.observations or (
+            "Checklist %s con al menos un punto marcado como No." % self.name
+        )
+        return {
+            "source_type": "checklist",
+            "source_reference": self.name,
+            "checklist_id": self.id,
+            "vehicle_id": self.vehicle_id.id,
+            "equipment_id": self.equipment_id.id,
+            "priority": "medium",
+            "description": description,
+            "origin_note": self._prepare_origin_note(),
+            "odometer": self.odometer,
+        }
+
+    def _create_alert_from_checklist(self):
+        self.ensure_one()
+        alert = self.env["barca.maintenance.alert"].create(self._prepare_alert_vals())
+        self.with_context(skip_checklist_auto_process=True).write(
+            {"alert_id": alert.id, "state": "notice_created"}
+        )
+        self.message_post(body="Aviso generado automáticamente al guardar: %s" % alert.name)
+        return alert
+
+    def _auto_process_after_save(self):
+        if self.env.context.get("skip_checklist_auto_process"):
+            return self.env["barca.maintenance.alert"]
+
+        created_alerts = self.env["barca.maintenance.alert"]
+        for checklist in self:
+            if checklist.state != "new" or checklist.alert_id:
+                continue
+            if checklist._has_negative_answers():
+                created_alerts |= checklist._create_alert_from_checklist()
+        return created_alerts
+
     def action_create_alert(self):
         created_alerts = self.env["barca.maintenance.alert"]
         for checklist in self:
@@ -348,28 +388,9 @@ class BarcaMaintenanceChecklist(models.Model):
                 raise ValidationError("El checklist ya tiene un aviso generado.")
             if not checklist._has_negative_answers():
                 raise ValidationError(
-                    "No hay puntos marcados como No. Use Cerrar sin aviso si corresponde."
+                    "No hay puntos marcados como No. Al guardar no se generará aviso."
                 )
-            if not checklist.observations:
-                raise ValidationError(
-                    "Debe completar Observaciones para describir la falla antes de generar el aviso."
-                )
-
-            alert_vals = {
-                "source_type": "checklist",
-                "source_reference": checklist.name,
-                "checklist_id": checklist.id,
-                "vehicle_id": checklist.vehicle_id.id,
-                "equipment_id": checklist.equipment_id.id,
-                "priority": "medium",
-                "description": checklist.observations,
-                "origin_note": checklist._prepare_origin_note(),
-                "odometer": checklist.odometer,
-            }
-            alert = self.env["barca.maintenance.alert"].create(alert_vals)
-            checklist.write({"alert_id": alert.id, "state": "notice_created"})
-            checklist.message_post(body="Aviso generado: %s" % alert.name)
-            created_alerts |= alert
+            created_alerts |= checklist._create_alert_from_checklist()
 
         if len(created_alerts) == 1:
             return self.action_view_alert()

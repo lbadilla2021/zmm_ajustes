@@ -98,23 +98,9 @@
             <form>
                 <header>
                     <button
-                        name="action_create_alert"
-                        string="Generar Aviso"
-                        type="object"
+                        string="Guardar"
+                        special="save"
                         class="oe_highlight"
-                        groups="zmm_ajustes.group_barca_programador,zmm_ajustes.group_barca_admin"
-                        invisible="state != 'new'"
-                    />
-                    <button
-                        name="action_close_no_notice"
-                        string="Cerrar sin aviso"
-                        type="object"
-                        invisible="state != 'new'"
-                    />
-                    <button
-                        name="action_cancel"
-                        string="Cancelar"
-                        type="object"
                         invisible="state != 'new'"
                     />
                     <button
