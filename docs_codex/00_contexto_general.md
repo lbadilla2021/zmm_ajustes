@@ -6,6 +6,7 @@
 
 - `fleet`
 - `hr_fleet`
+- `zhr_ajustes`
 - `maintenance`
 - `stock`
 - `purchase`
@@ -36,7 +37,7 @@ Este módulo no reemplaza completamente `fleet` ni `maintenance`; los extiende. 
 En `__manifest__.py`:
 
 ```python
-'depends': ['fleet', 'hr_fleet', 'maintenance', 'stock', 'purchase', 'mail']
+'depends': ['fleet', 'hr_fleet', 'zhr_ajustes', 'maintenance', 'stock', 'purchase', 'mail']
 ```
 
 Esto significa que cualquier modificación debe considerar compatibilidad con esos módulos estándar.
@@ -46,7 +47,7 @@ Esto significa que cualquier modificación debe considerar compatibilidad con es
 - `models/maintenance_plan.py`: lógica central de planes preventivos y generación de avisos.
 - `models/maintenance_alert.py`: flujo de avisos, estados, creación de OT y cierre.
 - `models/maintenance_request_simple.py`: solicitud simple de mantención que puede originar un aviso.
-- `models/fleet_vehicle.py`: campos extendidos de vehículos, detección de seguro, alertas por cambios documentales y sincronización con equipos.
+- `models/fleet_vehicle.py`: campos extendidos de vehículos, detección de seguro, alertas por cambios documentales/vencimientos y sincronización con equipos.
 - `models/fleet_alert_rule.py`: reglas/listas de distribución para alertas de flotilla.
 - `models/fleet_vehicle_log_contract.py`: adjuntos múltiples para contratos de flotilla.
 - `models/maintenance_equipment.py`: vínculo entre equipo de mantenimiento y vehículo.

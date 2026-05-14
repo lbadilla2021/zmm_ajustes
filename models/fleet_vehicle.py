@@ -1,6 +1,6 @@
 import re
 
-from odoo import api, fields, models
+from odoo import _, api, fields, models
 from odoo.tools import html_escape
 
 
@@ -49,6 +49,11 @@ class FleetVehicle(models.Model):
     x_doc_fuel_card = fields.Char(string="Tarjeta combustible")
     x_doc_tag = fields.Boolean(string="TAG")
     x_alert_days_before = fields.Integer(string="Días alerta vencimiento", default=15)
+    x_driver_license_expiration_date = fields.Date(
+        string="Vencimiento licencia conducir",
+        compute="_compute_driver_license_expiration_date",
+        readonly=True,
+    )
     x_has_insurance_contract = fields.Boolean(
         string="Seguro",
         compute="_compute_has_insurance_contract",
@@ -73,6 +78,30 @@ class FleetVehicle(models.Model):
     def _compute_downtime(self):
         for vehicle in self:
             vehicle.x_downtime_total = 0.0
+
+    @api.depends("driver_id")
+    def _compute_driver_license_expiration_date(self):
+        employee_model = self.env["hr.employee"].sudo()
+        employee_fields = employee_model._fields
+        for vehicle in self:
+            vehicle.x_driver_license_expiration_date = False
+            if not vehicle.driver_id:
+                continue
+
+            domain = []
+            if "work_contact_id" in employee_fields:
+                domain.append(("work_contact_id", "=", vehicle.driver_id.id))
+            if "address_home_id" in employee_fields:
+                if domain:
+                    domain = ["|"] + domain
+                domain.append(("address_home_id", "=", vehicle.driver_id.id))
+            if not domain:
+                continue
+
+            employee = employee_model.search(domain, limit=1)
+            vehicle.x_driver_license_expiration_date = (
+                employee.driver_license_expiration_date if employee else False
+            )
 
     @api.depends("log_contracts.cost_subtype_id")
     def _compute_has_insurance_contract(self):
@@ -159,6 +188,163 @@ class FleetVehicle(models.Model):
                 "auto_delete": False,
             }
         ).send()
+
+    def _get_expiration_alert_items(self):
+        today = fields.Date.context_today(self)
+        items = {
+            "driver_license": [],
+            "circulation_permit": [],
+            "technical_review": [],
+        }
+
+        for vehicle in self:
+            alert_days = max(vehicle.x_alert_days_before or 0, 0)
+            deadline = fields.Date.add(today, days=alert_days)
+
+            if (
+                vehicle.x_driver_license_expiration_date
+                and today <= vehicle.x_driver_license_expiration_date <= deadline
+            ):
+                items["driver_license"].append(
+                    {
+                        "person": vehicle.driver_id.display_name,
+                        "vehicle": vehicle.display_name,
+                        "date": vehicle.x_driver_license_expiration_date,
+                    }
+                )
+
+            if (
+                vehicle.x_doc_circulation_permit_expiry
+                and today <= vehicle.x_doc_circulation_permit_expiry <= deadline
+            ):
+                items["circulation_permit"].append(
+                    {
+                        "vehicle": vehicle.display_name,
+                        "date": vehicle.x_doc_circulation_permit_expiry,
+                    }
+                )
+
+            if (
+                vehicle.x_doc_technical_review_expiry
+                and today <= vehicle.x_doc_technical_review_expiry <= deadline
+            ):
+                items["technical_review"].append(
+                    {
+                        "vehicle": vehicle.display_name,
+                        "date": vehicle.x_doc_technical_review_expiry,
+                    }
+                )
+
+        return items
+
+    def _format_expiration_date(self, expiration_date):
+        return html_escape(fields.Date.to_string(expiration_date))
+
+    def _build_expiration_alert_body(self, items):
+        body_parts = [
+            "<p>Se detectaron los siguientes vencimientos próximos de flotilla:</p>"
+        ]
+
+        if items["driver_license"]:
+            body_parts.append(
+                "<h3>Licencias de conducir</h3><table border='1' cellpadding='4'>"
+            )
+            body_parts.append(
+                "<tr><th>Persona</th><th>Vehículo</th><th>Vencimiento</th></tr>"
+            )
+            for item in items["driver_license"]:
+                body_parts.append(
+                    "<tr><td>%s</td><td>%s</td><td>%s</td></tr>"
+                    % (
+                        html_escape(item["person"]),
+                        html_escape(item["vehicle"]),
+                        self._format_expiration_date(item["date"]),
+                    )
+                )
+            body_parts.append("</table>")
+
+        if items["circulation_permit"]:
+            body_parts.append(
+                "<h3>Permisos de circulación</h3><table border='1' cellpadding='4'>"
+            )
+            body_parts.append("<tr><th>Vehículo</th><th>Vencimiento</th></tr>")
+            for item in items["circulation_permit"]:
+                body_parts.append(
+                    "<tr><td>%s</td><td>%s</td></tr>"
+                    % (
+                        html_escape(item["vehicle"]),
+                        self._format_expiration_date(item["date"]),
+                    )
+                )
+            body_parts.append("</table>")
+
+        if items["technical_review"]:
+            body_parts.append(
+                "<h3>Revisiones técnicas</h3><table border='1' cellpadding='4'>"
+            )
+            body_parts.append("<tr><th>Vehículo</th><th>Vencimiento</th></tr>")
+            for item in items["technical_review"]:
+                body_parts.append(
+                    "<tr><td>%s</td><td>%s</td></tr>"
+                    % (
+                        html_escape(item["vehicle"]),
+                        self._format_expiration_date(item["date"]),
+                    )
+                )
+            body_parts.append("</table>")
+
+        return "".join(body_parts)
+
+    def _send_expiration_alerts(self):
+        vehicles = self.env["fleet.vehicle"].search([])
+        items = vehicles._get_expiration_alert_items()
+        if not any(items.values()):
+            return 0
+
+        recipients = self.env["barca.fleet.alert.rule"]._get_recipients_for_rule(
+            "Vencimientos"
+        )
+        if not recipients:
+            return 0
+
+        email_from = (
+            self.env.user.email_formatted
+            or self.env.company.email_formatted
+            or "no-reply@example.com"
+        )
+        self.env["mail.mail"].sudo().create(
+            {
+                "subject": "Vencimientos de documentación de flotilla",
+                "body_html": vehicles._build_expiration_alert_body(items),
+                "email_from": email_from,
+                "email_to": ", ".join(recipients),
+                "auto_delete": False,
+            }
+        ).send()
+        return sum(len(section_items) for section_items in items.values())
+
+    def action_send_expiration_alerts(self):
+        sent_count = self._send_expiration_alerts()
+        message = _("Avisos enviados: %s") % sent_count
+        if not sent_count:
+            message = _(
+                "No se encontraron vencimientos próximos o no hay destinatarios "
+                "configurados para la regla Vencimientos."
+            )
+        return {
+            "type": "ir.actions.client",
+            "tag": "display_notification",
+            "params": {
+                "title": _("Avisos de vencimiento"),
+                "message": message,
+                "type": "success" if sent_count else "warning",
+                "sticky": False,
+            },
+        }
+
+    @api.model
+    def cron_send_expiration_alerts(self):
+        return self.search([])._send_expiration_alerts()
 
     @api.model_create_multi
     def create(self, vals_list):

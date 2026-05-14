@@ -142,3 +142,7 @@ Revisar logs por:
 - Restricciones SQL.
 - Errores de dominio en vistas.
 - Errores de permisos ACL.
+
+## Cron de vencimientos de flotilla
+
+`data/cron_fleet_expiration_alerts.xml` crea `ir_cron_send_fleet_expiration_alerts` sobre `fleet.vehicle`. Ejecuta `cron_send_expiration_alerts()` diariamente a las 08:00 para enviar vencimientos próximos de licencia de conducir, permiso de circulación y revisión técnica a la regla `Vencimientos`.

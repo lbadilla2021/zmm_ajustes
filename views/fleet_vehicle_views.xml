@@ -12,6 +12,9 @@
                 </div>
             </xpath>
 
+            <xpath expr="//field[@name='driver_id']" position="after">
+                <field name="x_driver_license_expiration_date" readonly="1"/>
+            </xpath>
             <xpath expr="//field[@name='future_driver_id']" position="attributes">
                 <attribute name="invisible">1</attribute>
             </xpath>
@@ -44,6 +47,12 @@
                         <field name="x_doc_fuel_card"/>
                         <field name="x_doc_tag"/>
                         <field name="x_alert_days_before"/>
+                        <button
+                            name="action_send_expiration_alerts"
+                            type="object"
+                            string="Enviar Avisos"
+                            class="btn-primary"
+                        />
                     </group>
                 </page>
             </xpath>

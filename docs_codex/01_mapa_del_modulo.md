@@ -9,6 +9,7 @@ zmm_ajustes/
 ├── hooks.py
 ├── data/
 │   ├── cron.xml
+│   ├── cron_fleet_expiration_alerts.xml
 │   ├── cron_pm_alerts.xml
 │   ├── maintenance_alert_sequence.xml
 │   ├── maintenance_checklist_items.xml
@@ -55,7 +56,7 @@ zmm_ajustes/
 
 1. `security/res_groups.xml`
 2. `security/ir.model.access.csv`
-3. Regla de alertas de flotilla por defecto.
+3. Reglas de alertas de flotilla por defecto (`Modificaciones` y `Vencimientos`).
 4. Secuencias de avisos, solicitudes simples y checklists.
 5. Datos/catálogo de checklist y vistas de catálogos/procesos.
 6. Vistas base y menús raíz.
@@ -64,8 +65,9 @@ zmm_ajustes/
 9. Vistas y menú de Checklist.
 10. Vistas de avisos.
 11. Vista extendida de flota/contratos.
-12. Cron vacío histórico.
-13. Cron PM real.
+12. Cron de vencimientos de flotilla.
+13. Cron vacío histórico.
+14. Cron PM real.
 
 Además declara:
 
@@ -98,7 +100,7 @@ Ese hook solo sincroniza vehículos existentes con `maintenance.equipment`. Las 
 
 | Modelo estándar | Archivo | Extensión |
 |---|---|---|
-| `fleet.vehicle` | `fleet_vehicle.py` | Campos internos, medidores, documentación, taller, detección de seguro; crea/sincroniza `maintenance.equipment` y notifica cambios documentales. |
+| `fleet.vehicle` | `fleet_vehicle.py` | Campos internos, medidores, documentación, taller, detección de seguro y licencia; crea/sincroniza `maintenance.equipment` y notifica cambios documentales/vencimientos. |
 | `fleet.vehicle.log.contract` | `fleet_vehicle_log_contract.py` | Agrega adjuntos múltiples a contratos de flotilla. |
 | `fleet.vehicle.log.services` | `fleet_vehicle_log_services.py` | Agrega campo `name` de compatibilidad. |
 | `maintenance.equipment` | `maintenance_equipment.py` | Agrega `vehicle_id` único. |
@@ -132,6 +134,8 @@ Submenús principales:
   - `Checklist`
 
 ## Cron
+
+`data/cron_fleet_expiration_alerts.xml` crea `ir_cron_send_fleet_expiration_alerts`, programado diariamente a las 08:00, para enviar la nómina de vencimientos a la regla `Vencimientos`.
 
 `data/cron_pm_alerts.xml` crea `ir_cron_generate_pm_alerts`:
 

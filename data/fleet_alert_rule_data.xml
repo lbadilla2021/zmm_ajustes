@@ -3,4 +3,8 @@
     <record id="barca_fleet_alert_rule_modificaciones" model="barca.fleet.alert.rule">
         <field name="rule">Modificaciones</field>
     </record>
+
+    <record id="barca_fleet_alert_rule_vencimientos" model="barca.fleet.alert.rule">
+        <field name="rule">Vencimientos</field>
+    </record>
 </odoo>

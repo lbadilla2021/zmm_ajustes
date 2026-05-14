@@ -58,6 +58,7 @@ Campos agregados:
 - `x_doc_fuel_card`
 - `x_doc_tag`: booleano para indicar si el vehículo cuenta con TAG.
 - `x_alert_days_before`
+- `x_driver_license_expiration_date`: fecha de vigencia de licencia de conducir del empleado asociado al conductor del vehículo, tomada desde `hr.employee.driver_license_expiration_date` provisto por `zhr_ajustes`.
 - `x_has_insurance_contract`: casilla calculada de solo lectura, marcada si existe al menos un contrato del vehículo cuyo tipo contenga `Seguro`/`seguro`.
 
 ### Notas
@@ -67,6 +68,10 @@ Campos agregados:
 ### Alertas documentales
 
 Al modificar o borrar la tarjeta combustible (`x_doc_fuel_card`) o cambiar el booleano TAG (`x_doc_tag`), se crea/envía un correo a la lista de distribución de la regla `Modificaciones` del modelo `barca.fleet.alert.rule`.
+
+### Alertas de vencimiento
+
+El botón `Enviar Avisos` y el cron `ir_cron_send_fleet_expiration_alerts` aplican el mismo criterio: revisan licencia de conducir, permiso de circulación y revisión técnica, usando `x_alert_days_before` como ventana de alerta por vehículo, y envían la nómina a la regla `Vencimientos`.
 
 ### Regla importante
 
@@ -78,7 +83,7 @@ Modelo de configuración para listas de distribución de alertas de flotilla.
 
 Campos principales:
 
-- `rule`: regla textual. Por defecto existe `Modificaciones`.
+- `rule`: regla textual. Por defecto existen `Modificaciones` y `Vencimientos`.
 - `email_names`: nombres de correo/distribución, permitiendo más de uno separado por coma, punto y coma, espacio o salto de línea.
 
 ## `fleet.vehicle.log.contract`
