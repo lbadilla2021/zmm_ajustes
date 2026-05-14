@@ -248,7 +248,7 @@ allow_alert_state_write=True
 
 ## Solicitud de Mantención simple
 
-La nueva `barca.maintenance.request` representa el requerimiento inicial de mantención creado por un usuario autorizado. No reemplaza la OT estándar. Su objetivo es capturar vehículo/equipo, solicitante, prioridad sugerida y descripción de la necesidad.
+La nueva `barca.maintenance.request` representa el requerimiento inicial de mantención creado por un usuario autorizado. No reemplaza la OT estándar. Su objetivo es capturar vehículo/equipo, solicitante, prioridad sugerida, planta y lugar detallado, estado del vehículo y descripción de la necesidad. La fecha de solicitud es la fecha actual y el equipo de mantenimiento queda bloqueado porque se deriva automáticamente del vehículo.
 
 Un programador o administrador puede usar `action_create_alert()` para generar un aviso `barca.maintenance.alert` desde esa solicitud. El aviso queda con `source_type = request`, `source_reference` con el número de solicitud y `source_request_id` con el vínculo técnico al origen.
 

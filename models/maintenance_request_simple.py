@@ -20,6 +20,7 @@ class BarcaMaintenanceRequest(models.Model):
         string="Fecha de solicitud",
         default=fields.Datetime.now,
         required=True,
+        readonly=True,
         tracking=True,
     )
     requested_by_id = fields.Many2one(
@@ -38,6 +39,7 @@ class BarcaMaintenanceRequest(models.Model):
     equipment_id = fields.Many2one(
         "maintenance.equipment",
         string="Equipo de mantenimiento",
+        readonly=True,
         tracking=True,
     )
     priority = fields.Selection(
@@ -48,6 +50,20 @@ class BarcaMaintenanceRequest(models.Model):
         ],
         string="Prioridad sugerida",
         default="medium",
+        required=True,
+        tracking=True,
+    )
+    detailed_location = fields.Text(
+        string="Planta y Lugar detallado",
+        tracking=True,
+    )
+    vehicle_status = fields.Selection(
+        [
+            ("operativo", "Operativo"),
+            ("no_operativo", "No operativo"),
+        ],
+        string="Estado del vehículo",
+        default="operativo",
         required=True,
         tracking=True,
     )
@@ -103,6 +119,7 @@ class BarcaMaintenanceRequest(models.Model):
         equipment_by_vehicle = {}
 
         for vals in vals_list:
+            vals["request_date"] = fields.Datetime.now()
             if vals.get("name", "Nuevo") == "Nuevo":
                 vals["name"] = (
                     self.env["ir.sequence"].next_by_code("barca.maintenance.request")
@@ -110,17 +127,50 @@ class BarcaMaintenanceRequest(models.Model):
                 )
 
             vehicle_id = vals.get("vehicle_id")
-            if vehicle_id and not vals.get("equipment_id"):
+            if vehicle_id:
                 if vehicle_id not in equipment_by_vehicle:
                     equipment = self.env["maintenance.equipment"].search(
                         [("vehicle_id", "=", vehicle_id)],
                         limit=1,
                     )
                     equipment_by_vehicle[vehicle_id] = equipment.id
-                if equipment_by_vehicle[vehicle_id]:
-                    vals["equipment_id"] = equipment_by_vehicle[vehicle_id]
+                vals["equipment_id"] = equipment_by_vehicle[vehicle_id] or False
 
         return super().create(vals_list)
+
+    def _get_equipment_for_vehicle(self, vehicle_id):
+        if not vehicle_id:
+            return False
+        return self.env["maintenance.equipment"].search(
+            [("vehicle_id", "=", vehicle_id)],
+            limit=1,
+        )
+
+    def _prepare_origin_note(self):
+        self.ensure_one()
+        origin_lines = [
+            "Solicitud de Mantención %s creada por %s."
+            % (self.name, self.requested_by_id.name)
+        ]
+        if self.detailed_location:
+            origin_lines.append("Planta y Lugar detallado: %s" % self.detailed_location)
+        if self.vehicle_status:
+            status_label = dict(self._fields["vehicle_status"].selection).get(
+                self.vehicle_status,
+                self.vehicle_status,
+            )
+            origin_lines.append("Estado del vehículo: %s" % status_label)
+        return "\n".join(origin_lines)
+
+    def write(self, vals):
+        vals = dict(vals)
+        vals.pop("request_date", None)
+        vals.pop("equipment_id", None)
+
+        if vals.get("vehicle_id"):
+            equipment = self._get_equipment_for_vehicle(vals["vehicle_id"])
+            vals["equipment_id"] = equipment.id
+        return super().write(vals)
 
     def action_cancel(self):
         for request in self:
@@ -149,8 +199,7 @@ class BarcaMaintenanceRequest(models.Model):
                 "equipment_id": request.equipment_id.id,
                 "priority": request.priority,
                 "description": request.description,
-                "origin_note": "Solicitud de Mantención %s creada por %s."
-                % (request.name, request.requested_by_id.name),
+                "origin_note": request._prepare_origin_note(),
             }
             alert = self.env["barca.maintenance.alert"].create(alert_vals)
             request.write({"alert_id": alert.id, "state": "alert_created"})

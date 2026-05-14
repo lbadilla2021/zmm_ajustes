@@ -9,7 +9,9 @@
                 <field name="request_date"/>
                 <field name="requested_by_id"/>
                 <field name="vehicle_id"/>
+                <field name="detailed_location" optional="show"/>
                 <field name="priority"/>
+                <field name="vehicle_status"/>
                 <field name="state"/>
                 <field name="alert_id"/>
             </list>
@@ -48,15 +50,19 @@
                     <group col="2">
                         <group>
                             <field name="name" readonly="1"/>
-                            <field name="request_date" readonly="state != 'draft'"/>
+                            <field name="request_date" readonly="1"/>
                             <field name="requested_by_id" readonly="state != 'draft'"/>
                             <field name="priority" readonly="state != 'draft'"/>
+                            <field name="vehicle_status" readonly="state != 'draft'"/>
                         </group>
                         <group>
                             <field name="vehicle_id" readonly="state != 'draft'"/>
-                            <field name="equipment_id" readonly="state != 'draft'"/>
+                            <field name="equipment_id" readonly="1"/>
                             <field name="alert_id" readonly="1"/>
                         </group>
+                    </group>
+                    <group string="Ubicación">
+                        <field name="detailed_location" nolabel="1" readonly="state != 'draft'"/>
                     </group>
                     <group string="Necesidad reportada">
                         <field name="description" nolabel="1" readonly="state != 'draft'"/>
@@ -79,7 +85,9 @@
                 <field name="name"/>
                 <field name="requested_by_id"/>
                 <field name="vehicle_id"/>
+                <field name="detailed_location"/>
                 <field name="priority"/>
+                <field name="vehicle_status"/>
                 <field name="state"/>
                 <filter name="draft" string="Nuevas" domain="[('state', '=', 'draft')]"/>
                 <filter name="alert_created" string="Aviso creado" domain="[('state', '=', 'alert_created')]"/>
@@ -89,6 +97,7 @@
                     <filter name="group_by_vehicle" string="Vehículo" domain="[]" context="{'group_by': 'vehicle_id'}"/>
                     <filter name="group_by_requested_by" string="Solicitante" domain="[]" context="{'group_by': 'requested_by_id'}"/>
                     <filter name="group_by_priority" string="Prioridad" domain="[]" context="{'group_by': 'priority'}"/>
+                    <filter name="group_by_vehicle_status" string="Estado del vehículo" domain="[]" context="{'group_by': 'vehicle_status'}"/>
                 </group>
             </search>
         </field>

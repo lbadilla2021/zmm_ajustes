@@ -224,11 +224,13 @@ Solicitud simple de mantención. Representa el requerimiento inicial generado po
 Campos principales:
 
 - `name`: secuencia `SM-00001`.
-- `request_date`
+- `request_date`: fecha actual, bloqueada para edición manual.
 - `requested_by_id`
 - `vehicle_id`
-- `equipment_id`
+- `equipment_id`: bloqueado para edición manual, se carga automáticamente desde el vehículo.
 - `priority`
+- `detailed_location`: Planta y Lugar detallado.
+- `vehicle_status`: `operativo`, `no_operativo`.
 - `description`
 - `state`: `draft` (Nueva), `alert_created`, `cancelled`.
 - `alert_id`: aviso generado desde la solicitud.
