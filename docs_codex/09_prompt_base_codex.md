@@ -33,13 +33,14 @@ Reglas críticas:
 3. No escribir directamente `state` en `barca.maintenance.alert`; usar acciones.
 4. Validar que todo campo XML exista en Python.
 5. Mantener la relación 1:1 `fleet.vehicle` ↔ `maintenance.equipment`.
-6. Mantener compatibilidad con CSV de ubicaciones técnicas y XML IDs por código.
+6. Las ubicaciones técnicas se crean/importan manualmente; no reintroducir carga runtime desde CSV. Mantener XML IDs automáticos por código.
 7. No romper seguridad por grupos Barca.
 8. No hacer refactors grandes si la tarea pide un ajuste puntual.
 9. Todo cambio debe ser compatible con actualización del módulo mediante `-u zmm_ajustes`.
 10. `maintenance.request` se usa funcionalmente como **Orden de Trabajo**; no cambiar innecesariamente su modelo técnico ni los XML IDs existentes asociados a la opción de OT.
 11. `barca.maintenance.request` es la **Solicitud de Mantención** simple: requerimiento inicial de usuario, con fecha actual bloqueada, equipo bloqueado/autocargado desde vehículo, Planta y Lugar detallado, Estado del vehículo (`operativo` / `no_operativo`) y capacidad de generar un aviso con `source_type = request`.
-12. El menú **Mantenimiento** debe mantener el orden: Planes de Mantenimiento, Solicitud de Mantención, Avisos, Orden de Trabajo, Calendario Mantenimiento.
+12. `barca.maintenance.checklist` es el **Checklist** operativo: se ubica bajo **Orígenes Avisos**, carga líneas desde `barca.maintenance.checklist.item` por tipo de vehículo, guarda respuestas Sí/No y al guardar genera automáticamente aviso con `source_type = checklist` si existe al menos un No.
+13. Menús principales bajo **Mantención Barca**: Orígenes Avisos, Mantenimiento, Informes, Equipos, Configuración. Bajo **Orígenes Avisos**: Planes de Mantenimiento, Solicitud de Mantención, Checklist. Bajo **Mantenimiento**: Avisos, Orden de Trabajo, Calendario Mantenimiento. Bajo **Informes**: Solicitudes de mantenimiento.
 
 Tarea específica:
 

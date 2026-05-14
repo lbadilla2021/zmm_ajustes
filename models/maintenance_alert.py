@@ -45,6 +45,11 @@ class BarcaMaintenanceAlert(models.Model):
         string="Solicitud de Mantención origen",
         index=True,
     )
+    checklist_id = fields.Many2one(
+        "barca.maintenance.checklist",
+        string="Checklist origen",
+        index=True,
+    )
 
     vehicle_id = fields.Many2one(
         "fleet.vehicle",

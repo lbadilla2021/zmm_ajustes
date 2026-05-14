@@ -91,15 +91,24 @@ Archivo: `views/base_views.xml` y `views/maintenance_alert_views.xml`.
 
 `Mantención Barca` visible para todos los grupos Barca.
 
-### Mantenimiento
+### Orígenes Avisos
 
 Visible para todos los grupos Barca.
 
 Submenús:
 
 - `Planes de Mantenimiento`: Programador, Admin.
+- `Solicitud de Mantención`: Conductor, Programador, Ejecutor, Bodega, Admin.
+- `Checklist`: Conductor, Programador, Ejecutor, Bodega, Admin.
+
+### Mantenimiento
+
+Visible para todos los grupos Barca.
+
+Submenús:
+
 - `Avisos`: Conductor, Programador, Ejecutor, Bodega, Admin.
-- `Solicitudes de Mantenimiento`: Programador, Admin.
+- `Orden de Trabajo`: Programador, Admin.
 - `Calendario Mantenimiento`: Programador, Admin.
 
 ### Equipos
@@ -109,6 +118,10 @@ Visible para Programador, Ejecutor, Admin.
 ### Informes
 
 Visible para Programador, Admin.
+
+Submenús de informes:
+
+- Solicitudes de mantenimiento: Programador, Admin.
 
 ### Configuración
 
@@ -122,6 +135,7 @@ Submenús de configuración:
 - Kits: Bodega, Programador, Admin.
 - Categorías de equipos: Admin.
 - Equipos de mantenimiento: Admin.
+- Checklist: Admin.
 
 ## Botones de aviso por rol
 

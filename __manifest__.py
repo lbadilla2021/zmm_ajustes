@@ -9,6 +9,8 @@
         'security/ir.model.access.csv',
         'data/maintenance_alert_sequence.xml',
         'data/maintenance_request_simple_sequence.xml',
+        'data/maintenance_checklist_sequence.xml',
+        'data/maintenance_checklist_items.xml',
         'views/technical_location_views.xml',
         'views/intervention_type_views.xml',
         'views/maintenance_activity_views.xml',
@@ -17,6 +19,7 @@
         'views/maintenance_request_views.xml',
         'views/base_views.xml',
         'views/maintenance_request_simple_views.xml',
+        'views/maintenance_checklist_views.xml',
         'views/maintenance_alert_views.xml',
         'views/fleet_vehicle_views.xml',
         'data/cron.xml',
@@ -24,5 +27,5 @@
     ],
     'installable': True,
     'application': True,
-    'post_init_hook': 'load_technical_locations',
+    'post_init_hook': 'sync_existing_vehicle_equipment',
 }
