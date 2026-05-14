@@ -27,5 +27,5 @@
     ],
     'installable': True,
     'application': True,
-    'post_init_hook': 'load_technical_locations',
+    'post_init_hook': 'sync_existing_vehicle_equipment',
 }

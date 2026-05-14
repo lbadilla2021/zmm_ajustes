@@ -62,13 +62,12 @@
 - [ ] Probar vehículo sin equipo asociado.
 - [ ] Probar plan sin líneas.
 
-## Si se toca importación CSV
+## Si se toca importación manual de ubicaciones técnicas
 
-- [ ] Mantener separador `;` o documentar cambio.
-- [ ] Mantener nombres de columnas o migrar `hooks.py`.
+- [ ] No reintroducir dependencia runtime de `data/technical_locations.csv`.
 - [ ] Revisar categorías exactas en `fleet.vehicle.model.category`.
-- [ ] Validar códigos únicos.
-- [ ] Revisar creación de XML IDs.
+- [ ] Validar códigos únicos para XML IDs automáticos.
+- [ ] Revisar creación de XML IDs mediante `_ensure_external_ids()`.
 - [ ] No asumir que `post_init_hook` se ejecutará en actualización.
 
 ## Pruebas mínimas sugeridas

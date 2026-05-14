@@ -51,7 +51,7 @@ Esto significa que cualquier modificación debe considerar compatibilidad con es
 - `models/maintenance_activity.py`: catálogo de actividades por categoría y ubicación.
 - `models/maintenance_plan_line.py`: actividades incluidas en cada plan.
 - `models/maintenance_kit.py`: kits de materiales asociados a mantención.
-- `hooks.py`: carga inicial CSV de ubicaciones técnicas y sincronización de equipos existentes.
+- `hooks.py`: sincronización inicial de equipos de mantenimiento para vehículos existentes. Las ubicaciones técnicas se crean o importan manualmente después de instalar el módulo.
 
 ## Criterio para Codex
 
@@ -60,7 +60,7 @@ Cuando se trabaje en este módulo, no basta con modificar un archivo aislado. Ca
 - Python models.
 - XML views.
 - Seguridad y grupos.
-- Datos CSV / hooks.
+- Datos del módulo / hooks.
 - Cron.
 - Menús y acciones.
 - Compatibilidad Odoo 18.

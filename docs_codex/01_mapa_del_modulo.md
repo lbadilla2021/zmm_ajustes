@@ -12,8 +12,7 @@ zmm_ajustes/
 │   ├── cron_pm_alerts.xml
 │   ├── maintenance_alert_sequence.xml
 │   ├── maintenance_checklist_items.xml
-│   ├── maintenance_checklist_sequence.xml
-│   └── technical_locations.csv
+│   └── maintenance_checklist_sequence.xml
 ├── models/
 │   ├── __init__.py
 │   ├── fleet_vehicle.py
@@ -65,10 +64,10 @@ zmm_ajustes/
 Además declara:
 
 ```python
-'post_init_hook': 'load_technical_locations'
+'post_init_hook': 'sync_existing_vehicle_equipment'
 ```
 
-Ese hook carga ubicaciones técnicas desde CSV y sincroniza vehículos existentes con `maintenance.equipment`.
+Ese hook solo sincroniza vehículos existentes con `maintenance.equipment`. Las ubicaciones técnicas se crean o importan manualmente después de instalar el módulo.
 
 ## Modelos propios
 

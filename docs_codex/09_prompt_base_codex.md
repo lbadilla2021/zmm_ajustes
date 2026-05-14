@@ -33,7 +33,7 @@ Reglas críticas:
 3. No escribir directamente `state` en `barca.maintenance.alert`; usar acciones.
 4. Validar que todo campo XML exista en Python.
 5. Mantener la relación 1:1 `fleet.vehicle` ↔ `maintenance.equipment`.
-6. Mantener compatibilidad con CSV de ubicaciones técnicas y XML IDs por código.
+6. Las ubicaciones técnicas se crean/importan manualmente; no reintroducir carga runtime desde CSV. Mantener XML IDs automáticos por código.
 7. No romper seguridad por grupos Barca.
 8. No hacer refactors grandes si la tarea pide un ajuste puntual.
 9. Todo cambio debe ser compatible con actualización del módulo mediante `-u zmm_ajustes`.
