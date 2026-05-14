@@ -1,3 +1,5 @@
+import re
+
 from odoo import api, fields, models
 
 
@@ -5,8 +7,13 @@ class FleetVehicle(models.Model):
     _inherit = "fleet.vehicle"
 
     # Identificación
-    x_internal_code = fields.Char(string="Código interno")
-    x_engine_code = fields.Char(string="Código motor")
+    x_internal_code = fields.Char(
+        string="Código interno",
+        compute="_compute_internal_code",
+        store=True,
+        readonly=True,
+    )
+    x_engine_code = fields.Char(string="Número de Motor")
 
     # Medición
     x_odometer_last_service = fields.Float(string="Odómetro último servicio")
@@ -39,11 +46,17 @@ class FleetVehicle(models.Model):
     )
     x_doc_padron = fields.Char(string="Padrón")
     x_doc_fuel_card = fields.Char(string="Tarjeta combustible")
-    x_doc_tag = fields.Char(string="TAG")
+    x_doc_tag = fields.Boolean(string="TAG")
     x_alert_days_before = fields.Integer(string="Días alerta vencimiento", default=15)
 
     # Notas
     x_maintenance_note = fields.Text(string="Notas de mantención")
+
+    @api.depends("license_plate")
+    def _compute_internal_code(self):
+        for vehicle in self:
+            digits = "".join(re.findall(r"\d", vehicle.license_plate or ""))
+            vehicle.x_internal_code = digits[-2:] if len(digits) >= 2 else False
 
     @api.depends("x_odometer_last_service")
     def _compute_next_service(self):
