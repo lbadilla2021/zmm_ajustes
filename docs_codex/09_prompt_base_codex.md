@@ -20,11 +20,11 @@ Antes de proponer o aplicar cambios, lee obligatoriamente:
 
 Contexto funcional:
 
-El módulo gestiona mantención de flota/equipos para Barca SpA. Extiende `fleet.vehicle`, `maintenance.equipment` y `maintenance.request`, y agrega modelos propios para ubicaciones técnicas, actividades, planes preventivos, líneas de plan, kits, avisos y líneas de aviso.
+El módulo gestiona mantención de flota/equipos para Barca SpA. Extiende `fleet.vehicle`, `maintenance.equipment` y `maintenance.request`, y agrega modelos propios para ubicaciones técnicas, actividades, planes preventivos, líneas de plan, kits, solicitudes simples de mantención, avisos y líneas de aviso.
 
 Flujo principal:
 
-Plan PM → evaluación por km/días/horas → aviso de mantención → aprobación/rechazo → creación de OT `maintenance.request` → ejecución → revisión → cierre → actualización de medidores del vehículo.
+Solicitud de Mantención simple / checklist / Plan PM → aviso de mantención → aprobación/rechazo → creación de OT `maintenance.request` → ejecución → revisión → cierre → actualización de medidores del vehículo cuando aplique.
 
 Reglas críticas:
 
@@ -37,6 +37,9 @@ Reglas críticas:
 7. No romper seguridad por grupos Barca.
 8. No hacer refactors grandes si la tarea pide un ajuste puntual.
 9. Todo cambio debe ser compatible con actualización del módulo mediante `-u zmm_ajustes`.
+10. `maintenance.request` se usa funcionalmente como **Orden de Trabajo**; no cambiar innecesariamente su modelo técnico ni los XML IDs existentes asociados a la opción de OT.
+11. `barca.maintenance.request` es la **Solicitud de Mantención** simple: requerimiento inicial de usuario, con fecha actual bloqueada, equipo bloqueado/autocargado desde vehículo, Planta y Lugar detallado, Estado del vehículo (`operativo` / `no_operativo`) y capacidad de generar un aviso con `source_type = request`.
+12. El menú **Mantenimiento** debe mantener el orden: Planes de Mantenimiento, Solicitud de Mantención, Avisos, Orden de Trabajo, Calendario Mantenimiento.
 
 Tarea específica:
 
