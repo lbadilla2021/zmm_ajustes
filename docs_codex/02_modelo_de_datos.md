@@ -57,9 +57,9 @@ Campos agregados:
 - `x_doc_padron`
 - `x_doc_fuel_card`
 - `x_doc_tag`: booleano para indicar si el vehículo cuenta con TAG.
-- `x_alert_days_before`
-- `x_driver_license_expiration_date`: fecha de vigencia de licencia de conducir del empleado asociado al conductor del vehículo, tomada desde `hr.employee.driver_license_expiration_date` provisto por `zhr_ajustes`.
-- `x_has_insurance_contract`: casilla calculada de solo lectura, marcada si existe al menos un contrato del vehículo cuyo tipo contenga `Seguro`/`seguro`.
+- `x_alert_days_before`: ventana de días por vehículo para considerar próximos vencimientos documentales. Si viene negativo, la lógica lo trata como `0`.
+- `x_driver_license_expiration_date`: fecha de vigencia de licencia de conducir del empleado asociado al conductor del vehículo, tomada desde `hr.employee.driver_license_expiration_date` provisto por `zhr_ajustes`. La búsqueda del empleado usa `work_contact_id` y/o `address_home_id` según existan en la base.
+- `x_has_insurance_contract`: casilla calculada de solo lectura, marcada si existe al menos un contrato activo o inactivo del vehículo cuyo subtipo de costo contenga `seguro`.
 
 ### Notas
 
@@ -67,11 +67,24 @@ Campos agregados:
 
 ### Alertas documentales
 
-Al modificar o borrar la tarjeta combustible (`x_doc_fuel_card`) o cambiar el booleano TAG (`x_doc_tag`), se crea/envía un correo a la lista de distribución de la regla `Modificaciones` del modelo `barca.fleet.alert.rule`.
+Al modificar o borrar la tarjeta combustible (`x_doc_fuel_card`) o cambiar el booleano TAG (`x_doc_tag`), se crea/envía un correo a la lista de distribución de la regla `Modificaciones` del modelo `barca.fleet.alert.rule`. El correo resume cambios por vehículo en formato valor anterior → valor nuevo. Si la regla no tiene destinatarios, no se envía correo.
 
 ### Alertas de vencimiento
 
-El botón `Enviar Avisos` y el cron `ir_cron_send_fleet_expiration_alerts` aplican el mismo criterio: revisan licencia de conducir, permiso de circulación y revisión técnica, usando `x_alert_days_before` como ventana de alerta por vehículo, y envían la nómina a la regla `Vencimientos`.
+El botón `Enviar Avisos` y el cron `ir_cron_send_fleet_expiration_alerts` aplican el mismo criterio: revisan licencia de conducir, permiso de circulación y revisión técnica, usando `x_alert_days_before` como ventana de alerta por vehículo, y envían la nómina a la regla `Vencimientos`. La revisión siempre se ejecuta sobre todos los vehículos, no solo sobre el registro abierto desde el botón. Si no hay vencimientos próximos o no hay destinatarios, el botón muestra una notificación de advertencia.
+
+### Vista de Flotilla
+
+`views/fleet_vehicle_views.xml` hereda `fleet.fleet_vehicle_view_form` y `hr_fleet.fleet_vehicle_view_form_inherit_hr`. En el formulario de vehículo:
+
+- Muestra `x_internal_code` bajo la patente.
+- Muestra `x_driver_license_expiration_date` después del conductor.
+- Oculta `future_driver_id`, `plan_to_change_car`, `order_date`, `manager_id` y `mobility_card`.
+- Reubica `location` después de `next_assignation_date`.
+- Muestra `x_operating_hours` junto al bloque de odómetro.
+- Muestra `x_engine_code` y `x_has_insurance_contract` después del VIN.
+- Reemplaza la pestaña fiscal estándar por **Documentación**.
+- Agrega la pestaña **Taller** con último servicio, horas último servicio y fechas de entrada/salida a taller.
 
 ### Regla importante
 
@@ -83,8 +96,13 @@ Modelo de configuración para listas de distribución de alertas de flotilla.
 
 Campos principales:
 
-- `rule`: regla textual. Por defecto existen `Modificaciones` y `Vencimientos`.
-- `email_names`: nombres de correo/distribución, permitiendo más de uno separado por coma, punto y coma, espacio o salto de línea.
+- `rule`: regla textual. Por defecto existen `Modificaciones` y `Vencimientos`; `data/fleet_alert_rule_data.xml` ejecuta `_ensure_default_rules()` para asegurar ambas.
+- `email_names`: correos/listas de distribución, permitiendo más de uno separado por coma, punto y coma, espacio o salto de línea.
+
+Reglas productivas vigentes:
+
+- `Modificaciones`: destinatarios de cambios en tarjeta combustible y TAG.
+- `Vencimientos`: destinatarios de licencias, permisos de circulación y revisiones técnicas por vencer.
 
 ## `fleet.vehicle.log.contract`
 
@@ -92,7 +110,15 @@ Extensión del contrato estándar de flotilla.
 
 Agrega:
 
-- `attachment_ids`: adjuntos múltiples del contrato.
+- `attachment_ids`: adjuntos múltiples del contrato, expuestos en la vista de contrato después del campo de notas con widget `many2many_binary`.
+
+## `fleet.vehicle.log.services`
+
+Extensión mínima del historial estándar de servicios de flotilla.
+
+Agrega:
+
+- `name`: campo `Char` de compatibilidad para vistas de búsqueda o componentes que esperan un campo técnico `name` en `fleet.vehicle.log.services`.
 
 ## `maintenance.equipment`
 

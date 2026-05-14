@@ -11,9 +11,11 @@ zmm_ajustes/
 │   ├── cron.xml
 │   ├── cron_fleet_expiration_alerts.xml
 │   ├── cron_pm_alerts.xml
+│   ├── fleet_alert_rule_data.xml
 │   ├── maintenance_alert_sequence.xml
 │   ├── maintenance_checklist_items.xml
-│   └── maintenance_checklist_sequence.xml
+│   ├── maintenance_checklist_sequence.xml
+│   └── maintenance_request_simple_sequence.xml
 ├── models/
 │   ├── __init__.py
 │   ├── fleet_alert_rule.py
@@ -57,15 +59,15 @@ zmm_ajustes/
 1. `security/res_groups.xml`
 2. `security/ir.model.access.csv`
 3. Reglas de alertas de flotilla por defecto (`Modificaciones` y `Vencimientos`).
-4. Secuencias de avisos, solicitudes simples y checklists.
-5. Datos/catálogo de checklist y vistas de catálogos/procesos.
-6. Vistas base y menús raíz.
-7. Vistas de alertas de flotilla.
-8. Vistas y menú de solicitud simple.
-9. Vistas y menú de Checklist.
-10. Vistas de avisos.
-11. Vista extendida de flota/contratos.
-12. Cron de vencimientos de flotilla.
+4. Cron de vencimientos de flotilla.
+5. Secuencias de avisos, solicitudes simples y checklists.
+6. Datos/catálogo de checklist y vistas de catálogos/procesos.
+7. Vistas base y menús raíz.
+8. Vistas de alertas de flotilla.
+9. Vistas y menú de solicitud simple.
+10. Vistas y menú de Checklist.
+11. Vistas de avisos.
+12. Vista extendida de flota/contratos.
 13. Cron vacío histórico.
 14. Cron PM real.
 

@@ -135,8 +135,15 @@ Submenús de configuración:
 - Kits: Bodega, Programador, Admin.
 - Categorías de equipos: Admin.
 - Equipos de mantenimiento: Admin.
-- Alertas: Admin en Mantención Barca; Fleet Manager/Admin en la configuración de Flotilla.
+- Alertas: Admin en Mantención Barca; Fleet Manager/Admin en la configuración de Flotilla. Este menú administra `barca.fleet.alert.rule`, incluyendo las reglas `Modificaciones` y `Vencimientos`.
 - Checklist: Admin.
+
+### Alertas de flotilla
+
+ACL de `barca.fleet.alert.rule`:
+
+- `group_barca_admin`: lectura, escritura, creación y eliminación.
+- `fleet.fleet_group_manager`: lectura, escritura, creación y eliminación desde la configuración estándar de Flotilla.
 
 ## Botones de aviso por rol
 
