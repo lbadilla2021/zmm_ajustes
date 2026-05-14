@@ -46,3 +46,7 @@ Dentro del menú principal **Mantenimiento**, el orden vigente es:
 ## Validaciones recomendadas
 
 Después de cambiar menús o vistas XML, ejecutar una validación de parseo XML y una revisión de IDs duplicados en `views/*.xml`.
+
+## Submenús de Configuración relacionados con Checklist
+
+El catálogo de puntos de control se administra desde **Configuración → Checklist** (`menu_barca_maintenance_checklist_item`). La vista lista mantiene las tres columnas funcionales requeridas para cargar los puntos: Tipo de vehículo, Tipo de Control e Ítem de Control. Estos registros alimentan automáticamente las líneas del formulario operativo **Mantención → Checklist** según el tipo de vehículo seleccionado.

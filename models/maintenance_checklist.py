@@ -17,7 +17,7 @@ class BarcaMaintenanceChecklistItem(models.Model):
 
     checklist_type = fields.Selection(
         CHECKLIST_TYPE_SELECTION,
-        string="Tipo de checklist",
+        string="Tipo de vehículo",
         required=True,
         index=True,
     )
