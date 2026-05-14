@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_fleet_vehicle_log_contract_form_inherit_barca_attachments" model="ir.ui.view">
+        <field name="name">fleet.vehicle.log.contract.form.inherit.barca.attachments</field>
+        <field name="model">fleet.vehicle.log.contract</field>
+        <field name="inherit_id" ref="fleet.fleet_vehicle_log_contract_view_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//field[@name='notes']" position="after">
+                <separator string="Adjuntos"/>
+                <field name="attachment_ids" widget="many2many_binary" nolabel="1"/>
+            </xpath>
+        </field>
+    </record>
+</odoo>
