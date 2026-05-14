@@ -9,3 +9,4 @@ from . import maintenance_equipment
 from . import maintenance_kit
 from . import maintenance_alert
 from . import maintenance_request
+from . import maintenance_request_simple
