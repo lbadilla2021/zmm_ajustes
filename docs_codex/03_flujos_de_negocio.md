@@ -17,7 +17,7 @@ Aviso de mantención
         └── Cerrado
         │
         ▼
-OT / Solicitud maintenance.request
+Orden de Trabajo / maintenance.request
 ```
 
 ## Creación de planes
@@ -185,7 +185,7 @@ Campos copiados:
 
 ## Workflow del aviso
 
-El aviso representa una necesidad detectada, alerta o requerimiento inicial. La ejecución formal del trabajo se gestiona en la Solicitud de Mantención / OT estándar `maintenance.request`, no directamente en el aviso.
+El aviso representa una necesidad detectada, alerta o requerimiento inicial. La ejecución formal del trabajo se gestiona en la Orden de Trabajo estándar `maintenance.request`, no directamente en el aviso.
 
 Estados funcionales:
 
@@ -195,7 +195,7 @@ Nuevo
   └─ Rechazar → Rechazado
 
 En evaluación
-  ├─ Generar OT → Con OT creada + crea Solicitud de Mantención / OT
+  ├─ Generar OT → Con OT creada + crea Orden de Trabajo
   └─ Rechazar → Rechazado
 
 Con OT creada
@@ -246,9 +246,15 @@ No se debe escribir `state` directamente. El método `write()` bloquea cambios m
 allow_alert_state_write=True
 ```
 
+## Solicitud de Mantención simple
+
+La nueva `barca.maintenance.request` representa el requerimiento inicial de mantención creado por un usuario autorizado. No reemplaza la OT estándar. Su objetivo es capturar vehículo/equipo, solicitante, prioridad sugerida, planta y lugar detallado, estado del vehículo y descripción de la necesidad. La fecha de solicitud es la fecha actual y el equipo de mantenimiento queda bloqueado porque se deriva automáticamente del vehículo.
+
+Un programador o administrador puede usar `action_create_alert()` para generar un aviso `barca.maintenance.alert` desde esa solicitud. El aviso queda con `source_type = request`, `source_reference` con el número de solicitud y `source_request_id` con el vínculo técnico al origen.
+
 ## Creación de OT
 
-Desde un aviso en evaluación se puede crear una OT estándar `maintenance.request`.
+Desde un aviso en evaluación se puede crear una OT estándar `maintenance.request`, visible funcionalmente como Orden de Trabajo.
 
 Reglas:
 

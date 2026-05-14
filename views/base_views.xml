@@ -7,7 +7,7 @@
     </record>
 
     <record id="action_barca_maintenance_report" model="ir.actions.act_window">
-        <field name="name">Solicitudes de Mantenimiento</field>
+        <field name="name">Órdenes de Trabajo</field>
         <field name="res_model">maintenance.request</field>
         <field name="view_mode">kanban,list,form,calendar,pivot,graph,activity</field>
         <field name="context">{'search_default_active': True}</field>
@@ -59,7 +59,7 @@
 
     <menuitem
         id="menu_barca_reporting_requests"
-        name="Solicitudes de Mantenimiento"
+        name="Orden de Trabajo"
         parent="menu_barca_maintenance"
         action="action_barca_maintenance_report"
         sequence="30"

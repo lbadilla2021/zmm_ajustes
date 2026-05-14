@@ -19,6 +19,7 @@ fleet.vehicle.model.category
         └── fleet.vehicle
                   └── maintenance.equipment
 
+barca.maintenance.request ──puede originar──> barca.maintenance.alert
 barca.maintenance.plan ──genera──> barca.maintenance.alert
 barca.maintenance.alert ──contiene──> barca.maintenance.alert.line
 barca.maintenance.alert ──crea──> maintenance.request
@@ -215,6 +216,27 @@ Reglas:
 - Al cambiar ubicación técnica, limpia actividad incompatible.
 - Al elegir actividad, copia duración estimada si la línea no tiene duración propia.
 
+
+## `barca.maintenance.request`
+
+Solicitud simple de mantención. Representa el requerimiento inicial generado por un usuario, supervisor u otro solicitante antes de la evaluación técnica.
+
+Campos principales:
+
+- `name`: secuencia `SM-00001`.
+- `request_date`: fecha actual, bloqueada para edición manual.
+- `requested_by_id`
+- `vehicle_id`
+- `equipment_id`: bloqueado para edición manual, se carga automáticamente desde el vehículo.
+- `priority`
+- `detailed_location`: Planta y Lugar detallado.
+- `vehicle_status`: `operativo`, `no_operativo`.
+- `description`
+- `state`: `draft` (Nueva), `alert_created`, `cancelled`.
+- `alert_id`: aviso generado desde la solicitud.
+
+Una solicitud simple puede generar un `barca.maintenance.alert` con `source_type == 'request'`, `source_reference` igual al número de solicitud y `source_request_id` como vínculo trazable.
+
 ## `barca.maintenance.alert`
 
 Aviso de mantención.
@@ -226,6 +248,7 @@ Campos principales:
 - `origin_note`
 - `source_type`: `pm`, `checklist`, `request`.
 - `source_reference`
+- `source_request_id`
 - `pm_id`
 - `vehicle_id`
 - `equipment_id`
@@ -313,6 +336,6 @@ Constraint:
 
 Extensión en `models/maintenance_request.py`.
 
-La Solicitud de Mantención estándar de Odoo se trata funcionalmente como la OT. Su ciclo de programación, ejecución, revisión y cierre queda separado del ciclo del aviso `barca.maintenance.alert`.
+La Solicitud de Mantención estándar de Odoo se renombra funcionalmente como Orden de Trabajo. Su ciclo de programación, ejecución, revisión y cierre queda separado del ciclo del aviso `barca.maintenance.alert`.
 
 El aviso asociado queda en estado técnico `in_progress` / funcional `Con OT creada` hasta que el usuario lo cierre explícitamente. El cierre del aviso solo se permite si la OT asociada está en una etapa terminada (`stage_id.done`), equivalente funcionalmente a Reparado o Desechar.
