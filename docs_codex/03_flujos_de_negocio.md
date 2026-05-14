@@ -252,6 +252,15 @@ La nueva `barca.maintenance.request` representa el requerimiento inicial de mant
 
 Un programador o administrador puede usar `action_create_alert()` para generar un aviso `barca.maintenance.alert` desde esa solicitud. El aviso queda con `source_type = request`, `source_reference` con el número de solicitud y `source_request_id` con el vínculo técnico al origen.
 
+
+## Checklist
+
+El modelo `barca.maintenance.checklist` crea un formulario inicial similar a la Solicitud de Mantención simple, pero agrega tipo de vehículo, hora de carga de combustible, odómetro, observaciones y líneas de puntos de control. Al seleccionar `checklist_type`, el sistema regenera las líneas desde `barca.maintenance.checklist.item` y evita mezclar puntos de distintos tipos.
+
+Al guardar un checklist en estado `new`, el sistema evalúa automáticamente las líneas. Si existe al menos una línea marcada como `no`, crea un `barca.maintenance.alert` con `source_type = checklist`, `source_reference` igual al número del checklist y `checklist_id` como vínculo técnico al origen. La descripción del aviso se toma desde `observations` cuando existe; si está vacía se usa un texto automático del checklist. Los puntos de control no se copian al aviso.
+
+Si no existe ningún punto marcado como `no`, el guardado solo conserva los datos del checklist y no genera aviso. La vista operativa mantiene un único botón explícito **Guardar**; la generación de aviso ya no requiere presionar una acción separada.
+
 ## Creación de OT
 
 Desde un aviso en evaluación se puede crear una OT estándar `maintenance.request`, visible funcionalmente como Orden de Trabajo.
