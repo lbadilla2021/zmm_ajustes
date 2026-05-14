@@ -10,3 +10,5 @@ from . import maintenance_kit
 from . import maintenance_alert
 from . import maintenance_request
 from . import maintenance_request_simple
+
+from . import maintenance_checklist
