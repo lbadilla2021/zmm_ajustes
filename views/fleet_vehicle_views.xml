@@ -33,6 +33,7 @@
             </xpath>
             <xpath expr="//field[@name='vin_sn']" position="after">
                 <field name="x_engine_code"/>
+                <field name="x_has_insurance_contract" readonly="1"/>
             </xpath>
 
             <xpath expr="//page[@name='page_tax_info']" position="replace">
@@ -56,6 +57,17 @@
                         <field name="x_last_exit_date"/>
                     </group>
                 </page>
+            </xpath>
+        </field>
+    </record>
+
+    <record id="view_fleet_vehicle_form_inherit_hr_hide_mobility_card" model="ir.ui.view">
+        <field name="name">fleet.vehicle.form.inherit.hr.hide.mobility.card</field>
+        <field name="model">fleet.vehicle</field>
+        <field name="inherit_id" ref="hr_fleet.fleet_vehicle_view_form_inherit_hr"/>
+        <field name="arch" type="xml">
+            <xpath expr="//field[@name='mobility_card']" position="attributes">
+                <attribute name="invisible">1</attribute>
             </xpath>
         </field>
     </record>

@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo noupdate="1">
+    <record id="barca_fleet_alert_rule_modificaciones" model="barca.fleet.alert.rule">
+        <field name="rule">Modificaciones</field>
+    </record>
+</odoo>

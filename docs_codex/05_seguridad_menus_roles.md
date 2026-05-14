@@ -135,6 +135,7 @@ Submenús de configuración:
 - Kits: Bodega, Programador, Admin.
 - Categorías de equipos: Admin.
 - Equipos de mantenimiento: Admin.
+- Alertas: Admin en Mantención Barca; Fleet Manager/Admin en la configuración de Flotilla.
 - Checklist: Admin.
 
 ## Botones de aviso por rol
