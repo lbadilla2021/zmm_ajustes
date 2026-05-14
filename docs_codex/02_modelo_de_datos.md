@@ -34,8 +34,8 @@ Campos agregados:
 
 ### Identificación
 
-- `x_internal_code`
-- `x_engine_code`
+- `x_internal_code`: calculado automáticamente desde los dos últimos dígitos de la matrícula del vehículo; se muestra como texto no editable.
+- `x_engine_code`: número de motor del vehículo.
 
 ### Medición
 
@@ -56,7 +56,7 @@ Campos agregados:
 - `x_doc_technical_review_expiry`
 - `x_doc_padron`
 - `x_doc_fuel_card`
-- `x_doc_tag`
+- `x_doc_tag`: booleano para indicar si el vehículo cuenta con TAG.
 - `x_alert_days_before`
 
 ### Notas
