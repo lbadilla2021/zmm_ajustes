@@ -110,6 +110,10 @@ Visible para Programador, Ejecutor, Admin.
 
 Visible para Programador, Admin.
 
+Submenús de informes:
+
+- Solicitudes de mantenimiento: Programador, Admin.
+
 ### Configuración
 
 Visible solo para Admin.
