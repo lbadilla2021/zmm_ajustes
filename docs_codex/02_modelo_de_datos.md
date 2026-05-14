@@ -20,6 +20,7 @@ fleet.vehicle.model.category
                   └── maintenance.equipment
 
 barca.maintenance.request ──puede originar──> barca.maintenance.alert
+barca.maintenance.checklist ──puede originar──> barca.maintenance.alert
 barca.maintenance.plan ──genera──> barca.maintenance.alert
 barca.maintenance.alert ──contiene──> barca.maintenance.alert.line
 barca.maintenance.alert ──crea──> maintenance.request
@@ -237,6 +238,32 @@ Campos principales:
 
 Una solicitud simple puede generar un `barca.maintenance.alert` con `source_type == 'request'`, `source_reference` igual al número de solicitud y `source_request_id` como vínculo trazable.
 
+
+## `barca.maintenance.checklist`
+
+Checklist operativo basado funcionalmente en la Solicitud de Mantención simple. Representa una nueva fuente de avisos sin usar ni modificar la OT estándar `maintenance.request`.
+
+Campos principales:
+
+- `name`: secuencia `CHK-00001`.
+- `requested_by_id`: usuario solicitante.
+- `vehicle_id`: vehículo/equipo operacional evaluado.
+- `equipment_id`: equipo de mantenimiento derivado automáticamente desde el vehículo.
+- `checklist_date`: fecha actual, bloqueada para edición manual.
+- `detailed_location`: Planta y lugar detallado.
+- `vehicle_status`: `operativo`, `no_operativo`.
+- `fuel_load_time`: hora de carga de combustible.
+- `odometer`: odómetro al momento del checklist.
+- `observations`: descripción de la falla usada al generar aviso.
+- `checklist_type`: `checklist_camion`, `checklist_camion_equipo_ap`, `checklist_camion_equipo_av`, `checklist_vehiculo`.
+- `line_ids`: puntos de control generados desde el catálogo por tipo de vehículo.
+- `alert_id`: aviso generado desde el checklist.
+- `state`: `new`, `notice_created`, `closed_no_notice`, `cancelled`.
+
+Una línea `barca.maintenance.checklist.line` guarda `control_type`, `control_item`, `yes`, `no` y `sequence`. Los booleanos `yes` y `no` son excluyentes por onchange, normalización en `create()`/`write()` y constraint.
+
+El catálogo `barca.maintenance.checklist.item` almacena los puntos de control por `checklist_type`, `control_type`, `control_item` y `sequence`. El archivo Excel original de ítems no está versionado en el repositorio; `data/maintenance_checklist_items.xml` queda como punto estable de carga mediante XML IDs para incorporar esas filas sin depender del `.xlsx` en runtime.
+
 ## `barca.maintenance.alert`
 
 Aviso de mantención.
@@ -249,6 +276,7 @@ Campos principales:
 - `source_type`: `pm`, `checklist`, `request`.
 - `source_reference`
 - `source_request_id`
+- `checklist_id`
 - `pm_id`
 - `vehicle_id`
 - `equipment_id`
