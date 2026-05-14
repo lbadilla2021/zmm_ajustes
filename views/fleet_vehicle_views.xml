@@ -36,12 +36,13 @@
             </xpath>
 
             <xpath expr="//page[@name='page_tax_info']" position="replace">
-                <page string="Información Fiscal" name="page_tax_info">
+                <page string="Documentación" name="page_tax_info">
                     <group>
-                        <group string="Documentación">
-                            <field name="x_doc_circulation_permit_expiry"/>
-                            <field name="x_doc_technical_review_expiry"/>
-                        </group>
+                        <field name="x_doc_circulation_permit_expiry"/>
+                        <field name="x_doc_technical_review_expiry"/>
+                        <field name="x_doc_fuel_card"/>
+                        <field name="x_doc_tag"/>
+                        <field name="x_alert_days_before"/>
                     </group>
                 </page>
             </xpath>
@@ -57,11 +58,6 @@
                         <field name="x_last_entry_date"/>
                         <field name="x_last_exit_date"/>
                         <field name="x_downtime_total"/>
-                    </group>
-                    <group string="Documentación">
-                        <field name="x_doc_fuel_card"/>
-                        <field name="x_doc_tag"/>
-                        <field name="x_alert_days_before"/>
                     </group>
                     <group string="Notas">
                         <field name="x_maintenance_note"/>
