@@ -194,9 +194,9 @@
     <menuitem
         id="menu_barca_maintenance_checklist"
         name="Checklist"
-        parent="menu_barca_maintenance"
+        parent="menu_barca_alert_origins"
         action="action_barca_maintenance_checklist"
-        sequence="20"
+        sequence="30"
         groups="zmm_ajustes.group_barca_conductor,zmm_ajustes.group_barca_programador,zmm_ajustes.group_barca_ejecutor,zmm_ajustes.group_barca_bodega,zmm_ajustes.group_barca_admin"
     />
 </odoo>

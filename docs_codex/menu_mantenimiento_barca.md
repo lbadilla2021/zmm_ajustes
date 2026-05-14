@@ -14,10 +14,21 @@ Bajo el menú raíz **Mantención Barca**, el orden vigente de menús principale
 
 | Secuencia | Menú | XML ID | Acción |
 | --- | --- | --- | --- |
+| 5 | Orígenes Avisos | `menu_barca_alert_origins` | Sin acción directa |
 | 10 | Mantenimiento | `menu_barca_maintenance` | Sin acción directa |
 | 20 | Equipos | `menu_barca_equipment` | `action_barca_equipment` |
 | 30 | Informes | `menu_barca_reporting` | Sin acción directa |
 | 40 | Configuración | `menu_barca_configuraciones` | Sin acción directa |
+
+## Submenús de Orígenes Avisos
+
+Dentro del menú principal **Orígenes Avisos**, el orden vigente es:
+
+| Secuencia | Submenú | XML ID | Acción | Archivo |
+| --- | --- | --- | --- | --- |
+| 10 | Planes de Mantenimiento | `menu_barca_maintenance_plan` | `action_barca_maintenance_plan` | `views/base_views.xml` / `views/maintenance_plan_views.xml` |
+| 20 | Solicitud de Mantención | `menu_barca_maintenance_simple_request` | `action_barca_maintenance_simple_request` | `views/maintenance_request_simple_views.xml` |
+| 30 | Checklist | `menu_barca_maintenance_checklist` | `action_barca_maintenance_checklist` | `views/maintenance_checklist_views.xml` |
 
 ## Submenús de Mantenimiento
 
@@ -25,9 +36,6 @@ Dentro del menú principal **Mantenimiento**, el orden vigente es:
 
 | Secuencia | Submenú | XML ID | Acción | Archivo |
 | --- | --- | --- | --- | --- |
-| 10 | Planes de Mantenimiento | `menu_barca_maintenance_plan` | `action_barca_maintenance_plan` | `views/base_views.xml` / `views/maintenance_plan_views.xml` |
-| 15 | Solicitud de Mantención | `menu_barca_maintenance_simple_request` | `action_barca_maintenance_simple_request` | `views/maintenance_request_simple_views.xml` |
-| 20 | Checklist | `menu_barca_maintenance_checklist` | `action_barca_maintenance_checklist` | `views/maintenance_checklist_views.xml` |
 | 25 | Avisos | `menu_barca_maintenance_alert` | `action_barca_maintenance_alert` | `views/maintenance_alert_views.xml` |
 | 30 | Orden de Trabajo | `menu_barca_reporting_requests` | `action_barca_maintenance_report` | `views/base_views.xml` |
 | 40 | Calendario Mantenimiento | `menu_barca_reporting_calendar` | `action_barca_maintenance_calendar` | `views/base_views.xml` |
@@ -35,10 +43,9 @@ Dentro del menú principal **Mantenimiento**, el orden vigente es:
 ## Reglas funcionales que no se deben perder
 
 - **Avisos** debe estar dentro de **Mantenimiento** y no como menú principal.
-- La **Solicitud de Mantención** simple es el requerimiento inicial de usuario y debe ubicarse antes de **Checklist** y **Avisos**.
-- **Checklist** debe ubicarse dentro de **Mantenimiento** como nueva fuente de avisos, entre **Solicitud de Mantención** y **Avisos**.
+- **Planes de Mantenimiento**, **Solicitud de Mantención** y **Checklist** deben ubicarse bajo **Orígenes Avisos** como fuentes de avisos.
+- **Avisos** permanece dentro de **Mantenimiento** para continuar el flujo hacia OT.
 - La antigua opción basada en `maintenance.request` conserva su XML ID y modelo técnico, pero se muestra como **Orden de Trabajo**.
-- **Planes de Mantenimiento** debe estar dentro de **Mantenimiento** como primer submenú.
 - **Calendario Mantenimiento** debe mantenerse dentro de **Mantenimiento** y además como acción por defecto del menú raíz.
 - El menú principal de equipos debe llamarse **Equipos**.
 - Mantener los XML IDs existentes ayuda a que las actualizaciones del módulo no creen menús duplicados ni pierdan referencias existentes.
