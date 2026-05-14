@@ -34,8 +34,8 @@ Campos agregados:
 
 ### Identificación
 
-- `x_internal_code`
-- `x_engine_code`
+- `x_internal_code`: calculado automáticamente desde los dos últimos dígitos de la matrícula del vehículo; se muestra como texto no editable.
+- `x_engine_code`: número de motor del vehículo.
 
 ### Medición
 
@@ -56,16 +56,38 @@ Campos agregados:
 - `x_doc_technical_review_expiry`
 - `x_doc_padron`
 - `x_doc_fuel_card`
-- `x_doc_tag`
+- `x_doc_tag`: booleano para indicar si el vehículo cuenta con TAG.
 - `x_alert_days_before`
+- `x_has_insurance_contract`: casilla calculada de solo lectura, marcada si existe al menos un contrato del vehículo cuyo tipo contenga `Seguro`/`seguro`.
 
 ### Notas
 
 - `x_maintenance_note`
 
+### Alertas documentales
+
+Al modificar o borrar la tarjeta combustible (`x_doc_fuel_card`) o cambiar el booleano TAG (`x_doc_tag`), se crea/envía un correo a la lista de distribución de la regla `Modificaciones` del modelo `barca.fleet.alert.rule`.
+
 ### Regla importante
 
 Al crear un vehículo, el módulo crea automáticamente un `maintenance.equipment` asociado. Al cambiar el nombre del vehículo, sincroniza el nombre del equipo asociado.
+
+## `barca.fleet.alert.rule`
+
+Modelo de configuración para listas de distribución de alertas de flotilla.
+
+Campos principales:
+
+- `rule`: regla textual. Por defecto existe `Modificaciones`.
+- `email_names`: nombres de correo/distribución, permitiendo más de uno separado por coma, punto y coma, espacio o salto de línea.
+
+## `fleet.vehicle.log.contract`
+
+Extensión del contrato estándar de flotilla.
+
+Agrega:
+
+- `attachment_ids`: adjuntos múltiples del contrato.
 
 ## `maintenance.equipment`
 

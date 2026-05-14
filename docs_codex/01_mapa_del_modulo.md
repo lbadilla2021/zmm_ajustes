@@ -15,7 +15,9 @@ zmm_ajustes/
 │   └── maintenance_checklist_sequence.xml
 ├── models/
 │   ├── __init__.py
+│   ├── fleet_alert_rule.py
 │   ├── fleet_vehicle.py
+│   ├── fleet_vehicle_log_contract.py
 │   ├── fleet_vehicle_log_services.py
 │   ├── intervention_type.py
 │   ├── maintenance_activity.py
@@ -33,6 +35,8 @@ zmm_ajustes/
 │   └── res_groups.xml
 └── views/
     ├── base_views.xml
+    ├── fleet_alert_rule_views.xml
+    ├── fleet_vehicle_log_contract_views.xml
     ├── fleet_vehicle_views.xml
     ├── intervention_type_views.xml
     ├── maintenance_activity_views.xml
@@ -51,15 +55,17 @@ zmm_ajustes/
 
 1. `security/res_groups.xml`
 2. `security/ir.model.access.csv`
-3. Secuencias de avisos, solicitudes simples y checklists.
-4. Datos/catálogo de checklist y vistas de catálogos/procesos.
-5. Vistas base y menús raíz.
-6. Vistas y menú de solicitud simple.
-7. Vistas y menú de Checklist.
-8. Vistas de avisos.
-9. Vista extendida de flota.
-10. Cron vacío histórico.
-11. Cron PM real.
+3. Regla de alertas de flotilla por defecto.
+4. Secuencias de avisos, solicitudes simples y checklists.
+5. Datos/catálogo de checklist y vistas de catálogos/procesos.
+6. Vistas base y menús raíz.
+7. Vistas de alertas de flotilla.
+8. Vistas y menú de solicitud simple.
+9. Vistas y menú de Checklist.
+10. Vistas de avisos.
+11. Vista extendida de flota/contratos.
+12. Cron vacío histórico.
+13. Cron PM real.
 
 Además declara:
 
@@ -86,12 +92,14 @@ Ese hook solo sincroniza vehículos existentes con `maintenance.equipment`. Las 
 | `barca.maintenance.checklist.item` | `maintenance_checklist.py` | Catálogo de puntos de control por tipo de vehículo, tipo de control e ítem. |
 | `barca.maintenance.alert` | `maintenance_alert.py` | Aviso de mantención con workflow propio. |
 | `barca.maintenance.alert.line` | `maintenance_alert.py` | Actividades copiadas desde el plan al aviso. |
+| `barca.fleet.alert.rule` | `fleet_alert_rule.py` | Listas de distribución por regla para alertas de flotilla. |
 
 ## Modelos estándar extendidos
 
 | Modelo estándar | Archivo | Extensión |
 |---|---|---|
-| `fleet.vehicle` | `fleet_vehicle.py` | Campos internos, medidores, documentación, taller; crea/sincroniza `maintenance.equipment`. |
+| `fleet.vehicle` | `fleet_vehicle.py` | Campos internos, medidores, documentación, taller, detección de seguro; crea/sincroniza `maintenance.equipment` y notifica cambios documentales. |
+| `fleet.vehicle.log.contract` | `fleet_vehicle_log_contract.py` | Agrega adjuntos múltiples a contratos de flotilla. |
 | `fleet.vehicle.log.services` | `fleet_vehicle_log_services.py` | Agrega campo `name` de compatibilidad. |
 | `maintenance.equipment` | `maintenance_equipment.py` | Agrega `vehicle_id` único. |
 | `maintenance.request` | `maintenance_request.py` | Modelo estándar mantenido como Orden de Trabajo operativa. |
@@ -120,6 +128,7 @@ Submenús principales:
   - `Kits`
   - `Categorías de equipos`
   - `Equipos de mantenimiento`
+  - `Alertas` (también disponible en la configuración del módulo Flotilla)
   - `Checklist`
 
 ## Cron
