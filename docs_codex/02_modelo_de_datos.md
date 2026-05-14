@@ -84,7 +84,7 @@ El botón `Enviar Avisos` y el cron `ir_cron_send_fleet_expiration_alerts` aplic
 - Muestra `x_operating_hours` junto al bloque de odómetro.
 - Muestra `x_engine_code` y `x_has_insurance_contract` después del VIN.
 - Reemplaza la pestaña fiscal estándar por **Documentación**.
-- Agrega la pestaña **Taller** con último servicio, horas último servicio y fechas de entrada/salida a taller.
+- Agrega la pestaña **Taller** con último servicio, horas último servicio y fechas de entrada/salida a taller, todos visibles en solo lectura para usuarios de Flotilla.
 
 ### Regla importante
 
@@ -127,6 +127,14 @@ Extensión en `models/maintenance_equipment.py`.
 Agrega:
 
 - `vehicle_id`: Many2one hacia `fleet.vehicle`, con `ondelete='cascade'`.
+- `x_odometer_last_service`: odómetro del último servicio del vehículo, relacionado y solo lectura.
+- `x_hours_last_service`: horas de operación del último servicio del vehículo, relacionado y solo lectura.
+- `x_last_entry_date`: última entrada a taller del vehículo, relacionada y solo lectura.
+- `x_last_exit_date`: última salida a taller del vehículo, relacionada y solo lectura.
+- `x_current_odometer`: último odómetro actual del vehículo, relacionado y solo lectura.
+- `x_current_operating_hours`: horas de operación actuales del vehículo, relacionadas y solo lectura.
+
+La vista de equipos agrega una pestaña **Contadores** con dos bloques: **Taller** para los cuatro contadores históricos de taller y **Actual** para odómetro y horas de operación vigentes.
 
 Restricción SQL:
 

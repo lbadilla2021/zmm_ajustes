@@ -45,6 +45,31 @@
         <field name="view_mode">list,kanban,form</field>
     </record>
 
+    <record id="view_barca_equipment_form_inherit_counters" model="ir.ui.view">
+        <field name="name">maintenance.equipment.form.inherit.barca.counters</field>
+        <field name="model">maintenance.equipment</field>
+        <field name="inherit_id" ref="maintenance.hr_equipment_view_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//sheet/notebook" position="inside">
+                <page string="Contadores" name="barca_counters">
+                    <group>
+                        <group string="Taller">
+                            <field name="x_odometer_last_service"/>
+                            <field name="x_hours_last_service"/>
+                            <field name="x_last_entry_date"/>
+                            <field name="x_last_exit_date"/>
+                        </group>
+                        <group string="Actual">
+                            <field name="x_current_odometer"/>
+                            <field name="x_current_operating_hours"/>
+                        </group>
+                    </group>
+                </page>
+            </xpath>
+        </field>
+    </record>
+
+
     <menuitem
         id="menu_barca_maintenance_root"
         name="Mantención Barca"
