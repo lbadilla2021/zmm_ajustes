@@ -179,6 +179,7 @@ class BarcaMaintenanceChecklist(models.Model):
         equipment_by_vehicle = {}
         for vals in vals_list:
             vals["checklist_date"] = fields.Date.context_today(self)
+            vals["line_ids"] = self._sanitize_line_commands(vals.get("line_ids"))
             if vals.get("name", "Nuevo") == "Nuevo":
                 vals["name"] = (
                     self.env["ir.sequence"].next_by_code("barca.maintenance.checklist")
@@ -202,20 +203,70 @@ class BarcaMaintenanceChecklist(models.Model):
         vals.pop("checklist_date", None)
         vals.pop("equipment_id", None)
 
-        if vals.get("vehicle_id"):
-            equipment = self._get_equipment_for_vehicle(vals["vehicle_id"])
-            vals["equipment_id"] = equipment.id
+        if "line_ids" in vals:
+            vals["line_ids"] = self._sanitize_line_commands(vals.get("line_ids"))
 
         checklist_type_changed = "checklist_type" in vals
-        result = super().write(vals)
         if checklist_type_changed:
             for record in self:
                 if record.state != "new":
                     raise ValidationError(
                         "Solo se puede cambiar el tipo de vehículo en estado Nuevo."
                     )
+
+        if vals.get("vehicle_id"):
+            equipment = self._get_equipment_for_vehicle(vals["vehicle_id"])
+            vals["equipment_id"] = equipment.id
+
+        result = super().write(vals)
+        if checklist_type_changed:
+            for record in self:
                 record._generate_lines_from_type()
         return result
+
+
+    def _sanitize_line_commands(self, commands):
+        """Discard empty inline rows and complete generated line values.
+
+        In editable one2many lists, the web client can send a create command for
+        the placeholder row even when the user did not create a real checklist
+        point. That empty command used to hit required readonly fields on
+        `barca.maintenance.checklist.line` and raised the error reported in the
+        UI for `control_type`. Checklist lines must come from the item catalog,
+        so empty create commands are ignored and template-based commands are
+        completed from the catalog before saving.
+        """
+        sanitized_commands = []
+        for command in commands or []:
+            if not isinstance(command, (list, tuple)) or not command:
+                sanitized_commands.append(command)
+                continue
+
+            operation = command[0]
+            if operation != 0:
+                sanitized_commands.append(command)
+                continue
+
+            values = dict(command[2] or {}) if len(command) > 2 else {}
+            if not any(
+                values.get(field_name)
+                for field_name in ("item_template_id", "control_type", "control_item")
+            ):
+                continue
+
+            item = self.env["barca.maintenance.checklist.item"]
+            item_template_id = values.get("item_template_id")
+            if item_template_id:
+                item = self.env["barca.maintenance.checklist.item"].browse(
+                    item_template_id
+                )
+            if item:
+                values.setdefault("control_type", item.control_type)
+                values.setdefault("control_item", item.control_item)
+                values.setdefault("sequence", item.sequence)
+
+            sanitized_commands.append((0, 0, values))
+        return sanitized_commands
 
     def _get_equipment_for_vehicle(self, vehicle_id):
         if not vehicle_id:
@@ -390,8 +441,8 @@ class BarcaMaintenanceChecklistLine(models.Model):
         string="Ítem de control origen",
         ondelete="set null",
     )
-    control_type = fields.Char(string="Tipo de Control", required=True, readonly=True)
-    control_item = fields.Char(string="Ítem de Control", required=True, readonly=True)
+    control_type = fields.Char(string="Tipo de Control", readonly=True)
+    control_item = fields.Char(string="Ítem de Control", readonly=True)
     yes = fields.Boolean(string="Sí")
     no = fields.Boolean(string="No")
     sequence = fields.Integer(string="Secuencia", default=10)
