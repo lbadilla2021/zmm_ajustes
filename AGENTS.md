@@ -1,27 +1,31 @@
-# AGENTS.md — Guía obligatoria para IA/Codex
+# AGENTS.md
 
-Este repositorio contiene el módulo personalizado `zmm_ajustes` de Odoo 18 Community para la gestión de mantención de Barca SpA.
+## Alcance
+Estas instrucciones aplican a todo el módulo Odoo `zmm_ajustes`.
 
-Antes de modificar código, leer en este orden:
+## Contexto del módulo
+- El módulo se llama **Barca Mantenimiento** y su menú raíz visible en Odoo es **Mantención Barca**.
+- La definición principal de acciones y menús está en `views/base_views.xml`.
+- La definición de **Avisos** está en `views/maintenance_alert_views.xml`.
+- La acción de **Planes de Mantenimiento** está en `views/maintenance_plan_views.xml`.
 
-1. `docs_codex/00_contexto_general.md`
-2. `docs_codex/01_mapa_del_modulo.md`
-3. `docs_codex/02_modelo_de_datos.md`
-4. `docs_codex/03_flujos_de_negocio.md`
-5. `docs_codex/04_reglas_tecnicas_odoo18.md`
-6. `docs_codex/05_seguridad_menus_roles.md`
-7. `docs_codex/06_importacion_datos_csv.md`
-8. `docs_codex/07_riesgos_y_errores_conocidos.md`
-9. `docs_codex/08_checklist_antes_de_cambiar.md`
+## Memoria funcional vigente
+- Al abrir el módulo **Mantención Barca** o al hacer clic en el menú raíz **Mantención Barca**, debe abrirse **Calendario Mantenimiento** mediante `action_barca_maintenance_calendar`.
+- Los menús principales bajo **Mantención Barca** deben quedar en este orden:
+  1. **Mantenimiento**
+  2. **Equipos**
+  3. **Informes**
+  4. **Configuración**
+- Dentro del menú principal **Mantenimiento**, los submenús deben quedar en este orden:
+  1. **Planes de Mantenimiento**
+  2. **Avisos**
+  3. **Solicitudes de Mantenimiento**
+  4. **Calendario Mantenimiento**
+- **Avisos** no debe quedar como menú principal; debe depender de `menu_barca_maintenance`.
+- El menú de equipos debe mostrarse como **Equipos** en plural.
 
-Reglas críticas:
-
-- No asumir modelos de Odoo antiguos. El módulo es para Odoo 18.
-- No usar `fleet.vehicle.cost`; en Odoo 18 este modelo no debe ser usado.
-- Validar siempre que cada campo usado en XML exista en Python.
-- No cambiar estados de `barca.maintenance.alert` escribiendo directamente `state`; usar acciones del modelo.
-- No romper la relación automática `fleet.vehicle` ↔ `maintenance.equipment`.
-- No eliminar campos `x_` de `fleet.vehicle`; son base para triggers y cierre de avisos PM.
-- No cambiar el sentido del flujo PM: Plan → Aviso → OT `maintenance.request` → Revisión → Cierre.
-- Toda mejora debe mantener compatibilidad con datos ya cargados por CSV y con los XML IDs generados para ubicaciones técnicas.
-- Los cambios deben ser mínimos, explícitos y compatibles con actualización del módulo (`-u zmm_ajustes`).
+## Convenciones de cambios
+- Mantener los XML IDs existentes cuando se reorganicen menús para no romper actualizaciones de instalaciones existentes.
+- Validar XML después de editar vistas o menús.
+- Revisar que no se introduzcan XML IDs duplicados en `views/*.xml`.
+- Si se documenta una decisión funcional del módulo, actualizar también los documentos relevantes en `docs_codex/`.
