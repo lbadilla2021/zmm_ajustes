@@ -24,6 +24,7 @@ zmm_ajustes/
 │   ├── maintenance_plan.py
 │   ├── maintenance_plan_line.py
 │   ├── maintenance_request.py
+│   ├── maintenance_request_simple.py
 │   └── technical_location.py
 ├── security/
 │   ├── ir.model.access.csv
@@ -37,6 +38,7 @@ zmm_ajustes/
     ├── maintenance_kit_views.xml
     ├── maintenance_plan_views.xml
     ├── maintenance_request_views.xml
+    ├── maintenance_request_simple_views.xml
     └── technical_location_views.xml
 ```
 
@@ -46,13 +48,14 @@ zmm_ajustes/
 
 1. `security/res_groups.xml`
 2. `security/ir.model.access.csv`
-3. Secuencia de avisos.
+3. Secuencias de avisos y solicitudes simples.
 4. Vistas de catálogos y procesos.
-5. Vistas base y menús.
-6. Vistas de avisos.
-7. Vista extendida de flota.
-8. Cron vacío histórico.
-9. Cron PM real.
+5. Vistas base y menús raíz.
+6. Vistas y menú de solicitud simple.
+7. Vistas de avisos.
+8. Vista extendida de flota.
+9. Cron vacío histórico.
+10. Cron PM real.
 
 Además declara:
 
@@ -73,6 +76,7 @@ Ese hook carga ubicaciones técnicas desde CSV y sincroniza vehículos existente
 | `barca.maintenance.plan.line` | `maintenance_plan_line.py` | Líneas de actividades del plan. |
 | `barca.maintenance.kit` | `maintenance_kit.py` | Kit sugerido de materiales/repuestos. |
 | `barca.maintenance.kit.line` | `maintenance_kit.py` | Productos y cantidades del kit. |
+| `barca.maintenance.request` | `maintenance_request_simple.py` | Solicitud simple de mantención creada por usuarios y fuente opcional de avisos. |
 | `barca.maintenance.alert` | `maintenance_alert.py` | Aviso de mantención con workflow propio. |
 | `barca.maintenance.alert.line` | `maintenance_alert.py` | Actividades copiadas desde el plan al aviso. |
 
@@ -83,7 +87,7 @@ Ese hook carga ubicaciones técnicas desde CSV y sincroniza vehículos existente
 | `fleet.vehicle` | `fleet_vehicle.py` | Campos internos, medidores, documentación, taller; crea/sincroniza `maintenance.equipment`. |
 | `fleet.vehicle.log.services` | `fleet_vehicle_log_services.py` | Agrega campo `name` de compatibilidad. |
 | `maintenance.equipment` | `maintenance_equipment.py` | Agrega `vehicle_id` único. |
-| `maintenance.request` | `maintenance_request.py` | Al cerrarse una OT asociada, mueve aviso en proceso a revisión. |
+| `maintenance.request` | `maintenance_request.py` | Modelo estándar mantenido como Orden de Trabajo operativa. |
 
 ## Menú principal
 
@@ -93,8 +97,9 @@ Submenús principales:
 
 - `Mantenimiento`
   - `Planes de Mantenimiento`
+  - `Solicitud de Mantención`
   - `Avisos`
-  - `Solicitudes de Mantenimiento`
+  - `Orden de Trabajo`
   - `Calendario Mantenimiento`
 - `Equipos`
 - `Informes`
