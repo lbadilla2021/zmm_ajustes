@@ -16,8 +16,8 @@ Bajo el menú raíz **Mantención Barca**, el orden vigente de menús principale
 | --- | --- | --- | --- |
 | 5 | Orígenes Avisos | `menu_barca_alert_origins` | Sin acción directa |
 | 10 | Mantenimiento | `menu_barca_maintenance` | Sin acción directa |
+| 15 | Informes | `menu_barca_reporting` | Sin acción directa |
 | 20 | Equipos | `menu_barca_equipment` | `action_barca_equipment` |
-| 30 | Informes | `menu_barca_reporting` | Sin acción directa |
 | 40 | Configuración | `menu_barca_configuraciones` | Sin acción directa |
 
 ## Submenús de Orígenes Avisos
@@ -29,6 +29,14 @@ Dentro del menú principal **Orígenes Avisos**, el orden vigente es:
 | 10 | Planes de Mantenimiento | `menu_barca_maintenance_plan` | `action_barca_maintenance_plan` | `views/base_views.xml` / `views/maintenance_plan_views.xml` |
 | 20 | Solicitud de Mantención | `menu_barca_maintenance_simple_request` | `action_barca_maintenance_simple_request` | `views/maintenance_request_simple_views.xml` |
 | 30 | Checklist | `menu_barca_maintenance_checklist` | `action_barca_maintenance_checklist` | `views/maintenance_checklist_views.xml` |
+
+## Submenús de Informes
+
+Dentro del menú principal **Informes**, el orden vigente es:
+
+| Secuencia | Submenú | XML ID | Acción | Archivo |
+| --- | --- | --- | --- | --- |
+| 10 | Solicitudes de mantenimiento | `menu_barca_reporting_maintenance_requests` | `action_barca_maintenance_request_report` | `views/base_views.xml` |
 
 ## Submenús de Mantenimiento
 
