@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo noupdate="1">
+    <!--
+        Catálogo de ítems de control del checklist.
+        El archivo .xlsx mencionado en la tarea no está presente en el repositorio ni
+        en /workspace al momento de implementar; por eso no se incorporan filas
+        inventadas. Cuando se entregue el Excel, convertir cada fila a un <record>
+        con XML ID estable y campos: checklist_type, control_type, control_item y
+        sequence.
+    -->
+</odoo>
