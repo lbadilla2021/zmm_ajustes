@@ -76,6 +76,7 @@
                         <group>
                             <field name="source_type"/>
                             <field name="source_reference"/>
+                            <field name="source_request_id" readonly="1"/>
                             <field name="pm_id" readonly="1"/>
                         </group>
                         <group>

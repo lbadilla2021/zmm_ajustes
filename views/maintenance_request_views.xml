@@ -11,7 +11,7 @@
         <field name="inherit_id" ref="maintenance.hr_equipment_request_view_form"/>
         <field name="arch" type="xml">
             <xpath expr="//field[@name='name']" position="attributes">
-                <attribute name="placeholder">Solicitud de mantenimiento</attribute>
+                <attribute name="placeholder">Orden de Trabajo</attribute>
             </xpath>
         </field>
     </record>

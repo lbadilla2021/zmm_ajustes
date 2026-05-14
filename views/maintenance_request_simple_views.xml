@@ -1,0 +1,120 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_barca_maintenance_request_tree" model="ir.ui.view">
+        <field name="name">barca.maintenance.request.tree</field>
+        <field name="model">barca.maintenance.request</field>
+        <field name="arch" type="xml">
+            <list default_order="request_date desc,id desc">
+                <field name="name"/>
+                <field name="request_date"/>
+                <field name="requested_by_id"/>
+                <field name="vehicle_id"/>
+                <field name="detailed_location" optional="show"/>
+                <field name="priority"/>
+                <field name="vehicle_status"/>
+                <field name="state"/>
+                <field name="alert_id"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_barca_maintenance_request_form" model="ir.ui.view">
+        <field name="name">barca.maintenance.request.form</field>
+        <field name="model">barca.maintenance.request</field>
+        <field name="arch" type="xml">
+            <form>
+                <header>
+                    <button
+                        name="action_create_alert"
+                        string="Generar aviso"
+                        type="object"
+                        class="oe_highlight"
+                        groups="zmm_ajustes.group_barca_programador,zmm_ajustes.group_barca_admin"
+                        invisible="state != 'draft'"
+                    />
+                    <button
+                        name="action_view_alert"
+                        string="Ver aviso"
+                        type="object"
+                        invisible="not alert_id"
+                    />
+                    <button
+                        name="action_cancel"
+                        string="Cancelar"
+                        type="object"
+                        invisible="state != 'draft'"
+                    />
+                    <field name="state" widget="statusbar" statusbar_visible="draft,alert_created,cancelled"/>
+                </header>
+                <sheet>
+                    <group col="2">
+                        <group>
+                            <field name="name" readonly="1"/>
+                            <field name="request_date" readonly="1"/>
+                            <field name="requested_by_id" readonly="state != 'draft'"/>
+                            <field name="priority" readonly="state != 'draft'"/>
+                            <field name="vehicle_status" readonly="state != 'draft'"/>
+                        </group>
+                        <group>
+                            <field name="vehicle_id" readonly="state != 'draft'"/>
+                            <field name="equipment_id" readonly="1"/>
+                            <field name="alert_id" readonly="1"/>
+                        </group>
+                    </group>
+                    <group string="Ubicación">
+                        <field name="detailed_location" nolabel="1" readonly="state != 'draft'"/>
+                    </group>
+                    <group string="Necesidad reportada">
+                        <field name="description" nolabel="1" readonly="state != 'draft'"/>
+                    </group>
+                </sheet>
+                <chatter>
+                    <field name="message_follower_ids"/>
+                    <field name="activity_ids"/>
+                    <field name="message_ids"/>
+                </chatter>
+            </form>
+        </field>
+    </record>
+
+    <record id="view_barca_maintenance_request_search" model="ir.ui.view">
+        <field name="name">barca.maintenance.request.search</field>
+        <field name="model">barca.maintenance.request</field>
+        <field name="arch" type="xml">
+            <search>
+                <field name="name"/>
+                <field name="requested_by_id"/>
+                <field name="vehicle_id"/>
+                <field name="detailed_location"/>
+                <field name="priority"/>
+                <field name="vehicle_status"/>
+                <field name="state"/>
+                <filter name="draft" string="Nuevas" domain="[('state', '=', 'draft')]"/>
+                <filter name="alert_created" string="Aviso creado" domain="[('state', '=', 'alert_created')]"/>
+                <filter name="cancelled" string="Canceladas" domain="[('state', '=', 'cancelled')]"/>
+                <group expand="0" string="Agrupar por">
+                    <filter name="group_by_state" string="Estado" domain="[]" context="{'group_by': 'state'}"/>
+                    <filter name="group_by_vehicle" string="Vehículo" domain="[]" context="{'group_by': 'vehicle_id'}"/>
+                    <filter name="group_by_requested_by" string="Solicitante" domain="[]" context="{'group_by': 'requested_by_id'}"/>
+                    <filter name="group_by_priority" string="Prioridad" domain="[]" context="{'group_by': 'priority'}"/>
+                    <filter name="group_by_vehicle_status" string="Estado del vehículo" domain="[]" context="{'group_by': 'vehicle_status'}"/>
+                </group>
+            </search>
+        </field>
+    </record>
+
+    <record id="action_barca_maintenance_simple_request" model="ir.actions.act_window">
+        <field name="name">Solicitudes de Mantención</field>
+        <field name="res_model">barca.maintenance.request</field>
+        <field name="view_mode">list,form</field>
+    </record>
+
+    <menuitem
+        id="menu_barca_maintenance_simple_request"
+        name="Solicitud de Mantención"
+        parent="menu_barca_maintenance"
+        action="action_barca_maintenance_simple_request"
+        sequence="15"
+        groups="zmm_ajustes.group_barca_conductor,zmm_ajustes.group_barca_programador,zmm_ajustes.group_barca_ejecutor,zmm_ajustes.group_barca_bodega,zmm_ajustes.group_barca_admin"
+    />
+</odoo>

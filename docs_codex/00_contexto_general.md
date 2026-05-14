@@ -10,7 +10,7 @@
 - `purchase`
 - `mail`
 
-El módulo está orientado a gestionar mantención preventiva y correctiva de vehículos/equipos mediante categorías de vehículos, ubicaciones técnicas, actividades, planes preventivos, avisos de mantención, kits/materiales y órdenes de trabajo basadas en `maintenance.request`.
+El módulo está orientado a gestionar mantención preventiva y correctiva de vehículos/equipos mediante categorías de vehículos, ubicaciones técnicas, actividades, planes preventivos, avisos de mantención, kits/materiales y solicitudes simples de mantención, avisos técnicos y órdenes de trabajo basadas en `maintenance.request`.
 
 ## Enfoque funcional
 
@@ -21,9 +21,9 @@ El módulo busca que Barca pueda estructurar su mantenimiento así:
 3. Definir actividades de mantención asociadas a categoría + ubicación técnica.
 4. Crear planes de mantención preventiva con triggers por kilómetros, días u horas.
 5. Evaluar automáticamente los planes mediante cron o manualmente desde el formulario.
-6. Generar avisos de mantención (`barca.maintenance.alert`).
-7. Aprobar, rechazar, ejecutar, revisar y cerrar avisos.
-8. Crear órdenes de trabajo (`maintenance.request`) desde avisos aprobados.
+6. Crear solicitudes simples de mantención (`barca.maintenance.request`) cuando un usuario reporta una necesidad.
+7. Generar avisos de mantención (`barca.maintenance.alert`) desde solicitudes simples, checklist o planes preventivos.
+8. Aprobar/rechazar avisos y crear órdenes de trabajo (`maintenance.request`) desde avisos aprobados.
 9. Actualizar medidores del vehículo al cerrar avisos PM.
 
 ## Principio de diseño
@@ -44,6 +44,7 @@ Esto significa que cualquier modificación debe considerar compatibilidad con es
 
 - `models/maintenance_plan.py`: lógica central de planes preventivos y generación de avisos.
 - `models/maintenance_alert.py`: flujo de avisos, estados, creación de OT y cierre.
+- `models/maintenance_request_simple.py`: solicitud simple de mantención que puede originar un aviso.
 - `models/fleet_vehicle.py`: campos extendidos de vehículos y sincronización con equipos.
 - `models/maintenance_equipment.py`: vínculo entre equipo de mantenimiento y vehículo.
 - `models/technical_location.py`: árbol de ubicaciones técnicas.
