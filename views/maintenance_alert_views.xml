@@ -22,8 +22,8 @@
             <form>
                 <header>
                     <button
-                        name="action_approve"
-                        string="Aprobar"
+                        name="action_take_for_evaluation"
+                        string="Tomar para evaluación"
                         type="object"
                         class="oe_highlight"
                         groups="zmm_ajustes.group_barca_programador,zmm_ajustes.group_barca_admin"
@@ -37,39 +37,32 @@
                         invisible="state not in ['pending_evaluation', 'approved']"
                     />
                     <button
-                        name="action_start"
-                        string="Iniciar ejecución"
+                        name="action_create_maintenance_request"
+                        string="Generar OT"
                         type="object"
                         class="oe_highlight"
-                        groups="zmm_ajustes.group_barca_ejecutor,zmm_ajustes.group_barca_programador"
-                        invisible="state != 'approved'"
-                    />
-                    <button
-                        name="action_create_maintenance_request"
-                        string="Crear OT"
-                        type="object"
                         groups="zmm_ajustes.group_barca_programador,zmm_ajustes.group_barca_admin"
                         invisible="state != 'approved' or maintenance_request_id"
                     />
                     <button
-                        name="action_review"
-                        string="Enviar a revisión"
+                        name="action_view_maintenance_request"
+                        string="Ver OT"
                         type="object"
-                        groups="zmm_ajustes.group_barca_ejecutor"
-                        invisible="state != 'in_progress'"
+                        groups="zmm_ajustes.group_barca_programador,zmm_ajustes.group_barca_admin,zmm_ajustes.group_barca_ejecutor"
+                        invisible="state != 'in_progress' or not maintenance_request_id"
                     />
                     <button
                         name="action_close"
-                        string="Cerrar"
+                        string="Cerrar aviso"
                         type="object"
                         class="oe_highlight"
                         groups="zmm_ajustes.group_barca_programador,zmm_ajustes.group_barca_admin"
-                        invisible="state != 'in_review'"
+                        invisible="state != 'in_progress'"
                     />
                     <field
                         name="state"
                         widget="statusbar"
-                        statusbar_visible="pending_evaluation,approved,rejected,in_progress,in_review,closed"
+                        statusbar_visible="pending_evaluation,approved,in_progress,rejected,closed"
                     />
                 </header>
                 <sheet>
@@ -167,10 +160,10 @@
                 <field name="state"/>
                 <field name="priority"/>
 
-                <filter name="pending_evaluation" string="Pendiente evaluación" domain="[('state', '=', 'pending_evaluation')]"/>
-                <filter name="approved" string="Aprobado" domain="[('state', '=', 'approved')]"/>
-                <filter name="in_progress" string="En proceso" domain="[('state', '=', 'in_progress')]"/>
-                <filter name="in_review" string="En revisión" domain="[('state', '=', 'in_review')]"/>
+                <filter name="pending_evaluation" string="Nuevo" domain="[('state', '=', 'pending_evaluation')]"/>
+                <filter name="approved" string="En evaluación" domain="[('state', '=', 'approved')]"/>
+                <filter name="in_progress" string="Con OT creada" domain="[('state', '=', 'in_progress')]"/>
+                <filter name="rejected" string="Rechazado" domain="[('state', '=', 'rejected')]"/>
                 <filter name="closed" string="Cerrado" domain="[('state', '=', 'closed')]"/>
 
                 <group expand="0" string="Agrupar por">

@@ -313,11 +313,6 @@ Constraint:
 
 Extensión en `models/maintenance_request.py`.
 
-Al escribir en una solicitud de mantenimiento, si cambian campos como:
+La Solicitud de Mantención estándar de Odoo se trata funcionalmente como la OT. Su ciclo de programación, ejecución, revisión y cierre queda separado del ciclo del aviso `barca.maintenance.alert`.
 
-- `stage_id`
-- `close_date`
-- `kanban_state`
-- `maintenance_status`
-
-el módulo busca avisos `barca.maintenance.alert` asociados en estado `in_progress`. Si la solicitud queda en una etapa plegada (`stage_id.fold`), llama `alerts.action_review()` para pasar el aviso a `in_review`.
+El aviso asociado queda en estado técnico `in_progress` / funcional `Con OT creada` hasta que el usuario lo cierre explícitamente. El cierre del aviso solo se permite si la OT asociada está en una etapa terminada (`stage_id.done`), equivalente funcionalmente a Reparado o Desechar.

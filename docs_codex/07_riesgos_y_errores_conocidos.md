@@ -62,11 +62,11 @@ Esto es intencional, pero puede sorprender si existen varios planes vencidos par
 
 El cron ordena por menor trigger.
 
-## 6. Cierre de OT y paso a revisión
+## 6. Cierre de OT y cierre del aviso
 
-El paso automático a `in_review` depende de que la etapa de `maintenance.request` tenga `fold=True`.
+La OT gestiona programación, ejecución y revisión. El aviso no pasa automáticamente a `in_review` cuando cambia la OT.
 
-Si el usuario cierra la OT de otra manera o las etapas no están configuradas como plegadas, puede que el aviso no avance automáticamente.
+El aviso permanece en `Con OT creada` y debe cerrarse explícitamente. `action_close()` valida que exista una OT asociada y que la OT esté en una etapa terminada (`stage_id.done`), equivalente funcionalmente a Reparado o Desechar.
 
 ## 7. Equipo de mantenimiento requerido para crear OT
 
