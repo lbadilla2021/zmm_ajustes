@@ -185,10 +185,34 @@ Campos copiados:
 
 ## Workflow del aviso
 
-Estados:
+El aviso representa una necesidad detectada, alerta o requerimiento inicial. La ejecución formal del trabajo se gestiona en la Solicitud de Mantención / OT estándar `maintenance.request`, no directamente en el aviso.
+
+Estados funcionales:
 
 ```text
-pending_evaluation → approved → in_progress → in_review → closed
+Nuevo
+  ├─ Tomar para evaluación → En evaluación
+  └─ Rechazar → Rechazado
+
+En evaluación
+  ├─ Generar OT → Con OT creada + crea Solicitud de Mantención / OT
+  └─ Rechazar → Rechazado
+
+Con OT creada
+  ├─ Ver OT
+  └─ Cerrar aviso → Cerrado, solo si la OT está en una etapa terminada
+
+Rechazado
+  └─ Sin acciones operativas normales
+
+Cerrado
+  └─ Sin acciones operativas normales
+```
+
+Valores técnicos de estado:
+
+```text
+pending_evaluation → approved → in_progress → closed
 pending_evaluation → rejected
 approved → rejected
 ```
@@ -199,19 +223,20 @@ Transiciones permitidas declaradas en `_allowed_state_transitions`:
 {
     'pending_evaluation': {'approved', 'rejected'},
     'approved': {'in_progress', 'rejected'},
-    'in_progress': {'in_review'},
-    'in_review': {'closed'},
+    'in_progress': {'closed'},
+    'in_review': {'closed'},  # compatibilidad con avisos antiguos
 }
 ```
 
-Acciones:
+Acciones operativas normales:
 
-- `action_approve()`
+- `action_take_for_evaluation()`
 - `action_reject()`
-- `action_start()`
-- `action_review()`
-- `action_close()`
 - `action_create_maintenance_request()`
+- `action_view_maintenance_request()`
+- `action_close()`
+
+`action_start()` y `action_review()` no se usan como acciones operativas del aviso; la programación, ejecución y revisión pertenecen a la OT.
 
 Regla crítica:
 
@@ -223,11 +248,11 @@ allow_alert_state_write=True
 
 ## Creación de OT
 
-Desde un aviso aprobado se puede crear una OT estándar `maintenance.request`.
+Desde un aviso en evaluación se puede crear una OT estándar `maintenance.request`.
 
 Reglas:
 
-- El aviso debe estar en estado `approved`.
+- El aviso debe estar en estado técnico `approved` / funcional `En evaluación`.
 - No debe tener ya `maintenance_request_id`.
 - Debe existir `equipment_id`.
 
@@ -242,13 +267,11 @@ Valores creados:
 Después de crear la OT:
 
 1. Guarda `maintenance_request_id` en el aviso.
-2. Llama `action_start()` y pasa el aviso a `in_progress`.
+2. Pasa el aviso a estado técnico `in_progress` / funcional `Con OT creada`.
 
-## Paso automático a revisión desde OT
+## Relación entre aviso y OT
 
-En `maintenance_request.py`, si una OT asociada cambia a una etapa plegada (`stage_id.fold`), el aviso asociado en `in_progress` pasa a `in_review`.
-
-Esto conecta el cierre operativo de la OT con el control del aviso Barca.
+La OT gestiona su propio ciclo de programación, ejecución, revisión y cierre. Cambiar la etapa de la OT no mueve automáticamente el aviso a revisión. El aviso permanece en `Con OT creada` hasta que el usuario lo cierre explícitamente con `action_close()`.
 
 ## Cierre del aviso PM
 
