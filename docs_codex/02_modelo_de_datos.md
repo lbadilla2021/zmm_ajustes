@@ -238,7 +238,7 @@ Campos principales:
 - `trigger_hours_start`
 - `advance_km`
 - `advance_days`
-- `kit_id`
+- `kit_id`: campo legado de kit sugerido en encabezado, mantenido por compatibilidad. No es el mecanismo principal de planificación de materiales.
 - `active`
 - `line_count`
 
@@ -270,6 +270,9 @@ Campos:
 - `activity_id`
 - `estimated_duration`
 - `note`
+- `material_line_ids`: materiales, repuestos o kits asociados directamente a la actividad.
+- `material_count`: contador visible de materiales asociados.
+- `material_summary`: resumen visible con hasta tres productos y sufijo `(+N)` si existen más.
 
 Reglas:
 
@@ -277,6 +280,29 @@ Reglas:
 - `activity_id` debe corresponder a la categoría del plan.
 - Al cambiar ubicación técnica, limpia actividad incompatible.
 - Al elegir actividad, copia duración estimada si la línea no tiene duración propia.
+- La grilla de actividades del plan muestra `material_count` y `material_summary` para identificar rápidamente si la actividad tiene repuestos, materiales o kits asociados.
+
+## `barca.maintenance.plan.line.material`
+
+Línea de material, repuesto o kit asociado a una actividad específica del plan (`barca.maintenance.plan.line`).
+
+Campos:
+
+- `sequence`
+- `plan_line_id`
+- `product_id`: producto de Odoo (`product.product`), mostrado funcionalmente como **Repuesto / Kit / Material**.
+- `product_uom_id`: unidad de medida estimada.
+- `quantity`: cantidad estimada.
+- `note`
+
+Reglas:
+
+- Al seleccionar `product_id`, se propone `product_uom_id` desde la unidad de medida del producto.
+- `quantity` debe ser mayor que cero.
+- `product_id` es obligatorio.
+- Si se informa `product_uom_id`, debe corresponder a una unidad de medida existente.
+
+Importante: para esta lógica nueva, un kit es un `product.product` íntegro ya existente en el maestro de productos. No se explotan kits en componentes y no se usa `barca.maintenance.kit.line` para los materiales por actividad del plan.
 
 
 ## `barca.maintenance.request`
@@ -383,7 +409,7 @@ Estas líneas se copian desde `barca.maintenance.plan.line` al crear aviso desde
 
 ## `barca.maintenance.kit`
 
-Kit de materiales/repuestos.
+Kit de materiales/repuestos legado. Se mantiene por compatibilidad con datos y vistas existentes; la planificación nueva de materiales/repuestos/kits por actividad del plan utiliza `barca.maintenance.plan.line.material` con productos `product.product`.
 
 Campos:
 
