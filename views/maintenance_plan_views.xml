@@ -16,6 +16,37 @@
         </field>
     </record>
 
+    <record id="view_barca_maintenance_plan_line_material_list" model="ir.ui.view">
+        <field name="name">barca.maintenance.plan.line.material.list</field>
+        <field name="model">barca.maintenance.plan.line.material</field>
+        <field name="arch" type="xml">
+            <list editable="bottom">
+                <field name="sequence" widget="handle"/>
+                <field name="product_id"/>
+                <field name="quantity"/>
+                <field name="product_uom_id"/>
+                <field name="note"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_barca_maintenance_plan_line_material_form" model="ir.ui.view">
+        <field name="name">barca.maintenance.plan.line.material.form</field>
+        <field name="model">barca.maintenance.plan.line.material</field>
+        <field name="arch" type="xml">
+            <form string="Material / Repuesto / Kit">
+                <sheet>
+                    <group>
+                        <field name="product_id"/>
+                        <field name="quantity"/>
+                        <field name="product_uom_id"/>
+                        <field name="note"/>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
     <record id="view_barca_maintenance_plan_form" model="ir.ui.view">
         <field name="name">barca.maintenance.plan.form</field>
         <field name="model">barca.maintenance.plan</field>
@@ -78,6 +109,8 @@
                                         options="{'no_create': True}"
                                     />
                                     <field name="estimated_duration" string="Duración (hrs)"/>
+                                    <field name="material_count" readonly="1"/>
+                                    <field name="material_summary" readonly="1"/>
                                     <field name="note" optional="show"/>
                                     <!-- Campo oculto necesario para domain dinámico -->
                                     <field name="category_id" column_invisible="1"/>
@@ -110,6 +143,8 @@
                                                             options="{'no_create': True}"
                                                         />
                                                         <field name="estimated_duration" string="Duración (hrs)"/>
+                                                        <field name="material_count" readonly="1"/>
+                                                        <field name="material_summary" readonly="1"/>
                                                     </group>
                                                 </group>
                                                 <group>
@@ -117,6 +152,7 @@
                                                 </group>
                                             </page>
                                             <page string="Materiales / Repuestos / Kits" name="materials">
+                                                <separator string="Productos asociados a esta actividad"/>
                                                 <field name="material_line_ids">
                                                     <list editable="bottom">
                                                         <field name="sequence" widget="handle"/>
@@ -125,6 +161,16 @@
                                                         <field name="product_uom_id"/>
                                                         <field name="note"/>
                                                     </list>
+                                                    <form string="Material / Repuesto / Kit">
+                                                        <sheet>
+                                                            <group>
+                                                                <field name="product_id"/>
+                                                                <field name="quantity"/>
+                                                                <field name="product_uom_id"/>
+                                                                <field name="note"/>
+                                                            </group>
+                                                        </sheet>
+                                                    </form>
                                                 </field>
                                             </page>
                                         </notebook>

@@ -49,6 +49,8 @@ En esta implementación, un kit se trata como un producto íntegro del maestro d
 
 El campo `kit_id` del encabezado de `barca.maintenance.plan` queda como campo legado de compatibilidad y ya no es el mecanismo principal para planificar materiales/repuestos/kits.
 
+En el formulario del plan, la grilla principal de actividades muestra **N° materiales** y **Materiales** para que el usuario vea inmediatamente qué actividades tienen productos asociados. El resumen lista hasta tres productos y agrega `(+N)` cuando hay más de tres.
+
 ## Triggers del plan
 
 El plan puede disparar por cualquiera de estas condiciones:

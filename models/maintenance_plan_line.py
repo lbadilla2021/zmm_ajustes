@@ -60,6 +60,46 @@ class BarcaMaintenancePlanLine(models.Model):
         string="Materiales / Repuestos / Kits",
     )
 
+    material_count = fields.Integer(
+        string="N° materiales",
+        compute="_compute_material_count",
+        store=True,
+    )
+
+    material_summary = fields.Char(
+        string="Materiales",
+        compute="_compute_material_summary",
+        store=True,
+    )
+
+    @api.depends("material_line_ids.product_id")
+    def _compute_material_count(self):
+        for rec in self:
+            rec.material_count = len(rec.material_line_ids)
+
+    @api.depends(
+        "material_line_ids.sequence",
+        "material_line_ids.product_id",
+        "material_line_ids.product_id.name",
+    )
+    def _compute_material_summary(self):
+        for rec in self:
+            product_names = [
+                line.product_id.display_name
+                for line in rec.material_line_ids.sorted(lambda line: line.sequence)
+                if line.product_id
+            ]
+            if not product_names:
+                rec.material_summary = False
+                continue
+
+            summary_names = product_names[:3]
+            summary = ", ".join(summary_names)
+            remaining = len(product_names) - len(summary_names)
+            if remaining > 0:
+                summary = "%s (+%s)" % (summary, remaining)
+            rec.material_summary = summary
+
     @api.onchange("technical_location_id")
     def _onchange_technical_location_id(self):
         """Al cambiar la ubicación técnica, limpiar la actividad si ya no es
