@@ -33,11 +33,22 @@ La función `_get_plan_vehicles()` une los vehículos específicos con los vehí
 El plan debe tener líneas (`plan_line_ids`). Si no tiene líneas, el cron o la acción manual lo omiten. Cada línea de actividad puede tener sus propios materiales, repuestos o kits en `material_line_ids`.
 
 
-## Materiales, repuestos y kits por actividad del plan
+## Materiales, repuestos y kits por actividad
 
-Los materiales de mantenimiento preventivo se definen a nivel de actividad del plan (`barca.maintenance.plan.line`), no en el encabezado del plan.
+Los materiales de mantenimiento preventivo se definen a nivel de actividad. No se registran materiales en el encabezado del plan ni en el encabezado del aviso.
 
-El maestro de actividades (`barca.maintenance.activity`) puede mantener una propuesta de productos en `material_line_ids`. Al seleccionar esa actividad en una línea del plan, la propuesta se copia a materiales propios del plan; luego el plan puede mantener, cambiar, agregar o eliminar materiales sin modificar el maestro.
+El diseño vigente separa tres niveles:
+
+```text
+Actividad maestra
+  → propone materiales estándar
+Actividad del plan
+  → guarda materiales específicos del plan
+Actividad del aviso
+  → guarda materiales evaluables/editables
+```
+
+El maestro de actividades (`barca.maintenance.activity`) puede mantener una propuesta de productos en `material_template_line_ids`. Al seleccionar esa actividad en una línea del plan, la propuesta se copia a materiales propios del plan; luego el plan puede mantener, cambiar, agregar o eliminar materiales sin modificar el maestro.
 
 Cada actividad del plan puede registrar una o más líneas `barca.maintenance.plan.line.material` con:
 
@@ -52,6 +63,10 @@ En esta implementación, un kit se trata como un producto íntegro del maestro d
 El campo `kit_id` del encabezado de `barca.maintenance.plan` queda como campo legado de compatibilidad y ya no es el mecanismo principal para planificar materiales/repuestos/kits.
 
 En el formulario del plan, la grilla principal de actividades muestra **N° materiales** y **Materiales** para que el usuario vea inmediatamente qué actividades tienen productos asociados. Además, la pestaña **Materiales por actividad** permite editar los datos estructurados del plan en una sola grilla: actividad del plan, producto, cantidad, UdM y observación. El resumen lista hasta tres productos y agrega `(+N)` cuando hay más de tres.
+
+Cuando un plan genera un aviso, los materiales de cada actividad del plan se copian a materiales propios de la actividad del aviso (`barca.maintenance.alert.line.material`). La copia mantiene producto, unidad, cantidad estimada, secuencia, nota y referencia al material del plan, pero crea registros nuevos. Por eso, cambiar materiales del plan después no modifica avisos ya generados.
+
+En el aviso, cada actividad muestra **N° materiales** y **Materiales** en la grilla de actividades. Al abrir una actividad del aviso, la pestaña **Materiales / Repuestos / Kits** permite editar producto, cantidad estimada, unidad de medida y observación. El disponible mostrado es una referencia simple tomada desde `product_id.qty_available`; todavía no existe lógica por bodega, reservas, compras, consumos ni movimientos de inventario.
 
 ## Triggers del plan
 
@@ -254,6 +269,8 @@ Al crear aviso desde plan:
 - Crea `barca.maintenance.alert`.
 - Copia cada `barca.maintenance.plan.line` a `barca.maintenance.alert.line`.
 - Conserva trazabilidad mediante `plan_line_id`.
+- Copia cada `barca.maintenance.plan.line.material` de la actividad del plan a una línea nueva `barca.maintenance.alert.line.material` dentro de la actividad del aviso.
+- Conserva trazabilidad del material mediante `plan_line_material_id`, sin reutilizar el registro del plan.
 
 Campos copiados:
 
@@ -263,6 +280,15 @@ Campos copiados:
 - `estimated_duration`
 - `note`
 - `sequence`
+
+Campos de materiales copiados por cada actividad:
+
+- `sequence`
+- `plan_line_material_id`
+- `product_id`
+- `product_uom_id`
+- `estimated_quantity`
+- `note`
 
 ## Workflow del aviso
 
