@@ -52,9 +52,9 @@ Esto significa que cualquier modificación debe considerar compatibilidad con es
 - `models/fleet_vehicle_log_contract.py`: adjuntos múltiples para contratos de flotilla.
 - `models/maintenance_equipment.py`: vínculo entre equipo de mantenimiento y vehículo.
 - `models/technical_location.py`: árbol de ubicaciones técnicas.
-- `models/maintenance_activity.py`: catálogo de actividades por categoría y ubicación.
-- `models/maintenance_plan_line.py`: actividades incluidas en cada plan.
-- `models/maintenance_kit.py`: kits de materiales asociados a mantención.
+- `models/maintenance_activity.py`: catálogo de actividades por categoría y ubicación, con propuesta maestra de materiales/repuestos/kits.
+- `models/maintenance_plan_line.py`: actividades incluidas en cada plan y productos/repuestos/kits asociados a cada actividad.
+- `models/maintenance_kit.py`: kits de materiales asociados a mantención en lógica legada.
 - `hooks.py`: sincronización inicial de equipos de mantenimiento para vehículos existentes. Las ubicaciones técnicas se crean o importan manualmente después de instalar el módulo.
 
 ## Criterio para Codex

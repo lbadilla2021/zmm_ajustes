@@ -1,5 +1,36 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
+    <record id="view_barca_maintenance_activity_material_list" model="ir.ui.view">
+        <field name="name">barca.maintenance.activity.material.list</field>
+        <field name="model">barca.maintenance.activity.material</field>
+        <field name="arch" type="xml">
+            <list editable="bottom" open_form_view="1">
+                <field name="sequence" widget="handle"/>
+                <field name="product_id"/>
+                <field name="quantity"/>
+                <field name="product_uom_id"/>
+                <field name="note"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_barca_maintenance_activity_material_form" model="ir.ui.view">
+        <field name="name">barca.maintenance.activity.material.form</field>
+        <field name="model">barca.maintenance.activity.material</field>
+        <field name="arch" type="xml">
+            <form string="Material / Repuesto / Kit propuesto">
+                <sheet>
+                    <group>
+                        <field name="product_id"/>
+                        <field name="quantity"/>
+                        <field name="product_uom_id"/>
+                        <field name="note"/>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
     <record id="view_barca_maintenance_activity_list" model="ir.ui.view">
         <field name="name">barca.maintenance.activity.list</field>
         <field name="model">barca.maintenance.activity</field>
@@ -11,6 +42,8 @@
                 <field name="technical_location_id"/>
                 <field name="technical_location_code" string="Código ubic. técnica"/>
                 <field name="estimated_duration"/>
+                <field name="material_count" readonly="1" optional="show"/>
+                <field name="material_summary" readonly="1" optional="show"/>
                 <field name="active" optional="show"/>
             </list>
         </field>
@@ -37,9 +70,37 @@
                             <field name="estimated_duration"/>
                         </group>
                     </group>
-                    <group string="Instrucciones técnicas">
-                        <field name="note" nolabel="1"/>
-                    </group>
+                    <notebook>
+                        <page string="Instrucciones técnicas" name="technical_instructions">
+                            <field name="note" nolabel="1"/>
+                        </page>
+                        <page string="Materiales / Repuestos / Kits" name="materials">
+                            <separator string="Propuesta de productos para nuevos planes"/>
+                            <group>
+                                <field name="material_count" readonly="1"/>
+                                <field name="material_summary" readonly="1"/>
+                            </group>
+                            <field name="material_line_ids">
+                                <list editable="bottom" open_form_view="1">
+                                    <field name="sequence" widget="handle"/>
+                                    <field name="product_id"/>
+                                    <field name="quantity"/>
+                                    <field name="product_uom_id"/>
+                                    <field name="note"/>
+                                </list>
+                                <form string="Material / Repuesto / Kit propuesto">
+                                    <sheet>
+                                        <group>
+                                            <field name="product_id"/>
+                                            <field name="quantity"/>
+                                            <field name="product_uom_id"/>
+                                            <field name="note"/>
+                                        </group>
+                                    </sheet>
+                                </form>
+                            </field>
+                        </page>
+                    </notebook>
                 </sheet>
             </form>
         </field>

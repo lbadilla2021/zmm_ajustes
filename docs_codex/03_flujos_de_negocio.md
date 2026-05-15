@@ -30,7 +30,28 @@ Un plan (`barca.maintenance.plan`) puede aplicar por:
 
 La función `_get_plan_vehicles()` une los vehículos específicos con los vehículos de la categoría.
 
-El plan debe tener líneas (`plan_line_ids`). Si no tiene líneas, el cron o la acción manual lo omiten.
+El plan debe tener líneas (`plan_line_ids`). Si no tiene líneas, el cron o la acción manual lo omiten. Cada línea de actividad puede tener sus propios materiales, repuestos o kits en `material_line_ids`.
+
+
+## Materiales, repuestos y kits por actividad del plan
+
+Los materiales de mantenimiento preventivo se definen a nivel de actividad del plan (`barca.maintenance.plan.line`), no en el encabezado del plan.
+
+El maestro de actividades (`barca.maintenance.activity`) puede mantener una propuesta de productos en `material_line_ids`. Al seleccionar esa actividad en una línea del plan, la propuesta se copia a materiales propios del plan; luego el plan puede mantener, cambiar, agregar o eliminar materiales sin modificar el maestro.
+
+Cada actividad del plan puede registrar una o más líneas `barca.maintenance.plan.line.material` con:
+
+- Secuencia.
+- Producto `product.product`, visible como **Repuesto / Kit / Material**.
+- Cantidad estimada.
+- Unidad de medida.
+- Observación.
+
+En esta implementación, un kit se trata como un producto íntegro del maestro de productos de Odoo (`product.product`). No se explota en componentes y no participa `barca.maintenance.kit.line` en la nueva lógica de materiales por actividad.
+
+El campo `kit_id` del encabezado de `barca.maintenance.plan` queda como campo legado de compatibilidad y ya no es el mecanismo principal para planificar materiales/repuestos/kits.
+
+En el formulario del plan, la grilla principal de actividades muestra **N° materiales** y **Materiales** para que el usuario vea inmediatamente qué actividades tienen productos asociados. Además, la pestaña **Materiales por actividad** permite editar los datos estructurados del plan en una sola grilla: actividad del plan, producto, cantidad, UdM y observación. El resumen lista hasta tres productos y agrega `(+N)` cuando hay más de tres.
 
 ## Triggers del plan
 

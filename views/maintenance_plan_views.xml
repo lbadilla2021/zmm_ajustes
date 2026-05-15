@@ -16,6 +16,41 @@
         </field>
     </record>
 
+    <record id="view_barca_maintenance_plan_line_material_list" model="ir.ui.view">
+        <field name="name">barca.maintenance.plan.line.material.list</field>
+        <field name="model">barca.maintenance.plan.line.material</field>
+        <field name="arch" type="xml">
+            <list editable="bottom" open_form_view="1">
+                <field name="sequence" widget="handle"/>
+                <field name="plan_id" optional="hide"/>
+                <field name="plan_line_id"/>
+                <field name="product_id"/>
+                <field name="quantity"/>
+                <field name="product_uom_id"/>
+                <field name="note"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_barca_maintenance_plan_line_material_form" model="ir.ui.view">
+        <field name="name">barca.maintenance.plan.line.material.form</field>
+        <field name="model">barca.maintenance.plan.line.material</field>
+        <field name="arch" type="xml">
+            <form string="Material / Repuesto / Kit">
+                <sheet>
+                    <group>
+                        <field name="plan_id"/>
+                        <field name="plan_line_id" domain="[('plan_id', '=', plan_id)]"/>
+                        <field name="product_id"/>
+                        <field name="quantity"/>
+                        <field name="product_uom_id"/>
+                        <field name="note"/>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
     <record id="view_barca_maintenance_plan_form" model="ir.ui.view">
         <field name="name">barca.maintenance.plan.form</field>
         <field name="model">barca.maintenance.plan</field>
@@ -58,7 +93,7 @@
                                     'default_category_id': category_id
                                 }"
                             >
-                                <list editable="bottom">
+                                <list editable="bottom" open_form_view="1">
                                     <field name="sequence" widget="handle"/>
                                     <field
                                         name="technical_location_id"
@@ -78,10 +113,112 @@
                                         options="{'no_create': True}"
                                     />
                                     <field name="estimated_duration" string="Duración (hrs)"/>
+                                    <field name="material_count" readonly="1"/>
+                                    <field name="material_summary" readonly="1"/>
                                     <field name="note" optional="show"/>
                                     <!-- Campo oculto necesario para domain dinámico -->
                                     <field name="category_id" column_invisible="1"/>
                                 </list>
+                                <form string="Actividad del plan">
+                                    <sheet>
+                                        <notebook>
+                                            <page string="Datos de actividad" name="activity_data">
+                                                <group>
+                                                    <group>
+                                                        <field name="sequence"/>
+                                                        <field name="category_id" readonly="1"/>
+                                                        <field
+                                                            name="technical_location_id"
+                                                            domain="[('category_id', '=?', category_id)]"
+                                                            options="{'no_create': True}"
+                                                        />
+                                                        <field
+                                                            name="activity_id"
+                                                            domain="[
+                                                                ('category_id', '=?', category_id),
+                                                                ('technical_location_id', '=?', technical_location_id)
+                                                            ]"
+                                                            options="{'no_create': True}"
+                                                        />
+                                                    </group>
+                                                    <group>
+                                                        <field
+                                                            name="intervention_type_id"
+                                                            options="{'no_create': True}"
+                                                        />
+                                                        <field name="estimated_duration" string="Duración (hrs)"/>
+                                                        <field name="material_count" readonly="1"/>
+                                                        <field name="material_summary" readonly="1"/>
+                                                    </group>
+                                                </group>
+                                                <group>
+                                                    <field name="note"/>
+                                                </group>
+                                            </page>
+                                            <page string="Materiales / Repuestos / Kits" name="materials">
+                                                <separator string="Productos asociados a esta actividad"/>
+                                                <field name="material_line_ids">
+                                                    <list editable="bottom" open_form_view="1">
+                                                        <field name="sequence" widget="handle"/>
+                                                        <field name="plan_id" column_invisible="1"/>
+                                                        <field name="product_id"/>
+                                                        <field name="quantity"/>
+                                                        <field name="product_uom_id"/>
+                                                        <field name="note"/>
+                                                    </list>
+                                                    <form string="Material / Repuesto / Kit">
+                                                        <sheet>
+                                                            <group>
+                                                                <field name="plan_id" invisible="1"/>
+                                                                <field name="product_id"/>
+                                                                <field name="quantity"/>
+                                                                <field name="product_uom_id"/>
+                                                                <field name="note"/>
+                                                            </group>
+                                                        </sheet>
+                                                    </form>
+                                                </field>
+                                            </page>
+                                        </notebook>
+                                    </sheet>
+                                </form>
+                            </field>
+                        </page>
+
+                        <!-- ================================================ -->
+                        <!-- TAB 2: MATERIALES POR ACTIVIDAD                   -->
+                        <!-- ================================================ -->
+                        <page string="Materiales por actividad" name="activity_materials">
+                            <separator string="Repuestos, kits y materiales estructurados por actividad"/>
+                            <field name="material_line_ids">
+                                <list editable="bottom" open_form_view="1">
+                                    <field name="sequence" widget="handle"/>
+                                    <field
+                                        name="plan_line_id"
+                                        string="Actividad"
+                                        domain="[('plan_id', '=', parent.id)]"
+                                    />
+                                    <field name="product_id"/>
+                                    <field name="quantity"/>
+                                    <field name="product_uom_id"/>
+                                    <field name="note"/>
+                                </list>
+                                <form string="Material / Repuesto / Kit del plan">
+                                    <sheet>
+                                        <group>
+                                            <field name="plan_id" invisible="1"/>
+                                            <field
+                                                name="plan_line_id"
+                                                string="Actividad"
+                                                domain="[('plan_id', '=', plan_id)]"
+                                            />
+                                            <field name="product_id"/>
+                                            <field name="quantity"/>
+                                            <field name="product_uom_id"/>
+                                            <field name="note"/>
+                                        </group>
+                                    </sheet>
+                                </form>
                             </field>
                         </page>
 
@@ -110,12 +247,13 @@
                         </page>
 
                         <!-- ================================================ -->
-                        <!-- TAB 4: MATERIALES / KITS                          -->
+                        <!-- TAB 4: CAMPO LEGADO                                -->
                         <!-- ================================================ -->
-                        <page string="Materiales/Kits" name="materials">
-                            <group>
+                        <page string="Campo legado" name="legacy_fields">
+                            <group string="Compatibilidad">
                                 <field
                                     name="kit_id"
+                                    string="Kit sugerido legado"
                                     domain="[('active', '=', True), ('category_id', '=?', category_id)]"
                                 />
                             </group>
