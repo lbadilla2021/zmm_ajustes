@@ -37,7 +37,9 @@ El plan debe tener líneas (`plan_line_ids`). Si no tiene líneas, el cron o la 
 
 Los materiales de mantenimiento preventivo se definen a nivel de actividad del plan (`barca.maintenance.plan.line`), no en el encabezado del plan.
 
-Cada actividad puede registrar una o más líneas `barca.maintenance.plan.line.material` con:
+El maestro de actividades (`barca.maintenance.activity`) puede mantener una propuesta de productos en `material_line_ids`. Al seleccionar esa actividad en una línea del plan, la propuesta se copia a materiales propios del plan; luego el plan puede mantener, cambiar, agregar o eliminar materiales sin modificar el maestro.
+
+Cada actividad del plan puede registrar una o más líneas `barca.maintenance.plan.line.material` con:
 
 - Secuencia.
 - Producto `product.product`, visible como **Repuesto / Kit / Material**.

@@ -208,6 +208,9 @@ Campos:
 - `technical_location_code`
 - `estimated_duration`
 - `note`
+- `material_line_ids`: propuesta maestra de materiales, repuestos o kits para nuevos planes.
+- `material_count`: contador visible de materiales propuestos.
+- `material_summary`: resumen visible de materiales propuestos.
 
 Restricción SQL:
 
@@ -218,6 +221,26 @@ unique(name, category_id, technical_location_id)
 Constraint Python:
 
 - La categoría de la ubicación técnica debe coincidir con la categoría de la actividad.
+
+## `barca.maintenance.activity.material`
+
+Línea maestra de material, repuesto o kit propuesto para una actividad de mantención. Sirve como plantilla para nuevas líneas de plan; al seleccionarse la actividad en un plan, sus materiales se copian a `barca.maintenance.plan.line.material`.
+
+Campos:
+
+- `sequence`
+- `activity_id`
+- `product_id`: producto de Odoo (`product.product`), mostrado como **Repuesto / Kit / Material**.
+- `product_uom_id`
+- `quantity`
+- `note`
+
+Reglas:
+
+- Al seleccionar `product_id`, se propone `product_uom_id` desde la unidad de medida del producto.
+- `quantity` debe ser mayor que cero.
+- `product_id` es obligatorio.
+- Estos registros son la propuesta maestra; editar materiales copiados en un plan no modifica la actividad maestra.
 
 ## `barca.maintenance.plan`
 
@@ -281,28 +304,7 @@ Reglas:
 - Al cambiar ubicación técnica, limpia actividad incompatible.
 - Al elegir actividad, copia duración estimada si la línea no tiene duración propia.
 - La grilla de actividades del plan muestra `material_count` y `material_summary` para identificar rápidamente si la actividad tiene repuestos, materiales o kits asociados.
-
-## `barca.maintenance.plan.line.material`
-
-Línea de material, repuesto o kit asociado a una actividad específica del plan (`barca.maintenance.plan.line`).
-
-Campos:
-
-- `sequence`
-- `plan_line_id`
-- `product_id`: producto de Odoo (`product.product`), mostrado funcionalmente como **Repuesto / Kit / Material**.
-- `product_uom_id`: unidad de medida estimada.
-- `quantity`: cantidad estimada.
-- `note`
-
-Reglas:
-
-- Al seleccionar `product_id`, se propone `product_uom_id` desde la unidad de medida del producto.
-- `quantity` debe ser mayor que cero.
-- `product_id` es obligatorio.
-- Si se informa `product_uom_id`, debe corresponder a una unidad de medida existente.
-
-Importante: para esta lógica nueva, un kit es un `product.product` íntegro ya existente en el maestro de productos. No se explotan kits en componentes y no se usa `barca.maintenance.kit.line` para los materiales por actividad del plan.
+- Al seleccionar una actividad con materiales maestros propuestos, se copian como líneas propias del plan si la línea aún no tiene materiales. Desde ese momento pueden modificarse o eliminarse sin afectar el maestro de actividades.
 
 ## `barca.maintenance.plan.line.material`
 

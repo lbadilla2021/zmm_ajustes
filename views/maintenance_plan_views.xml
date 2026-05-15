@@ -20,7 +20,7 @@
         <field name="name">barca.maintenance.plan.line.material.list</field>
         <field name="model">barca.maintenance.plan.line.material</field>
         <field name="arch" type="xml">
-            <list editable="bottom">
+            <list editable="bottom" open_form_view="1">
                 <field name="sequence" widget="handle"/>
                 <field name="product_id"/>
                 <field name="quantity"/>
@@ -89,7 +89,7 @@
                                     'default_category_id': category_id
                                 }"
                             >
-                                <list editable="bottom">
+                                <list editable="bottom" open_form_view="1">
                                     <field name="sequence" widget="handle"/>
                                     <field
                                         name="technical_location_id"
@@ -154,7 +154,7 @@
                                             <page string="Materiales / Repuestos / Kits" name="materials">
                                                 <separator string="Productos asociados a esta actividad"/>
                                                 <field name="material_line_ids">
-                                                    <list editable="bottom">
+                                                    <list editable="bottom" open_form_view="1">
                                                         <field name="sequence" widget="handle"/>
                                                         <field name="product_id"/>
                                                         <field name="quantity"/>

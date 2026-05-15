@@ -1,4 +1,4 @@
-from odoo import api, fields, models
+from odoo import Command, api, fields, models
 from odoo.exceptions import ValidationError
 
 
@@ -117,11 +117,38 @@ class BarcaMaintenancePlanLine(models.Model):
             }
         }
 
+    def _prepare_material_commands_from_activity(self):
+        self.ensure_one()
+        return [
+            Command.create(
+                {
+                    "sequence": material.sequence,
+                    "product_id": material.product_id.id,
+                    "product_uom_id": material.product_uom_id.id,
+                    "quantity": material.quantity,
+                    "note": material.note,
+                }
+            )
+            for material in self.activity_id.material_line_ids
+        ]
+
     @api.onchange("activity_id")
     def _onchange_activity_id(self):
         if self.activity_id and self.activity_id.estimated_duration \
                 and not self.estimated_duration:
             self.estimated_duration = self.activity_id.estimated_duration
+        if self.activity_id and self.activity_id.material_line_ids \
+                and not self.material_line_ids:
+            self.material_line_ids = self._prepare_material_commands_from_activity()
+
+    @api.model_create_multi
+    def create(self, vals_list):
+        records = super().create(vals_list)
+        for record, vals in zip(records, vals_list):
+            if "material_line_ids" in vals or not record.activity_id.material_line_ids:
+                continue
+            record.material_line_ids = record._prepare_material_commands_from_activity()
+        return records
 
     @api.constrains("activity_id", "technical_location_id")
     def _check_activity_location_consistency(self):

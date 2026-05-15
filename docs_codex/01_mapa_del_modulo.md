@@ -86,6 +86,7 @@ Ese hook solo sincroniza vehículos existentes con `maintenance.equipment`. Las 
 | `barca.technical.location` | `technical_location.py` | Árbol de ubicaciones técnicas por categoría de vehículo. |
 | `barca.intervention.type` | `intervention_type.py` | Catálogo simple de tipos de intervención. |
 | `barca.maintenance.activity` | `maintenance_activity.py` | Actividades de mantención por categoría y ubicación técnica. |
+| `barca.maintenance.activity.material` | `maintenance_activity.py` | Propuesta maestra de productos/repuestos/kits (`product.product`) por actividad. |
 | `barca.maintenance.plan` | `maintenance_plan.py` | Plan preventivo con triggers por km, días y horas. |
 | `barca.maintenance.plan.line` | `maintenance_plan_line.py` | Líneas de actividades del plan. |
 | `barca.maintenance.plan.line.material` | `maintenance_plan_line.py` | Productos/repuestos/kits íntegros (`product.product`) asociados a cada actividad del plan. |
