@@ -34,15 +34,12 @@ class BarcaMaintenanceActivity(models.Model):
         domain="[('category_id', '=', category_id)]",
     )
 
-    # Campo relacionado para exponer el código de la ubicación técnica en vistas
-    # y exportaciones sin necesidad de navegar la relación manualmente.
     technical_location_code = fields.Char(
         string="Código ubic. técnica",
         related="technical_location_id.code",
         store=True,
         readonly=True,
     )
-
 
     estimated_duration = fields.Float(
         string="Duración estimada (hrs)",
@@ -51,50 +48,56 @@ class BarcaMaintenanceActivity(models.Model):
 
     note = fields.Text(string="Instrucciones técnicas")
 
-    material_line_ids = fields.One2many(
+    material_template_line_ids = fields.One2many(
         "barca.maintenance.activity.material",
         "activity_id",
-        string="Materiales / Repuestos / Kits propuestos",
+        string="Materiales / Repuestos / Kits estándar",
     )
 
     material_count = fields.Integer(
         string="N° materiales",
         compute="_compute_material_count",
-        store=True,
     )
 
     material_summary = fields.Char(
-        string="Materiales propuestos",
+        string="Materiales estándar",
         compute="_compute_material_summary",
-        store=True,
     )
 
-    @api.depends("material_line_ids.product_id")
+    @api.depends("material_template_line_ids")
     def _compute_material_count(self):
         for rec in self:
-            rec.material_count = len(rec.material_line_ids)
+            rec.material_count = len(rec.material_template_line_ids)
 
     @api.depends(
-        "material_line_ids.sequence",
-        "material_line_ids.product_id",
-        "material_line_ids.product_id.name",
+        "material_template_line_ids.sequence",
+        "material_template_line_ids.product_id",
+        "material_template_line_ids.product_id.display_name",
+        "material_template_line_ids.quantity",
+        "material_template_line_ids.product_uom_id",
     )
     def _compute_material_summary(self):
         for rec in self:
-            product_names = [
-                line.product_id.display_name
-                for line in rec.material_line_ids.sorted(lambda line: line.sequence)
-                if line.product_id
-            ]
-            if not product_names:
+            lines = rec.material_template_line_ids.sorted(lambda line: line.sequence)
+            parts = []
+
+            for line in lines[:3]:
+                if not line.product_id:
+                    continue
+
+                qty = line.quantity or 0.0
+                uom = line.product_uom_id.name or line.product_id.uom_id.name or ""
+                parts.append("%s x %s %s" % (line.product_id.display_name, qty, uom))
+
+            if not parts:
                 rec.material_summary = False
                 continue
 
-            summary_names = product_names[:3]
-            summary = ", ".join(summary_names)
-            remaining = len(product_names) - len(summary_names)
+            remaining = len(lines) - len(parts)
+            summary = ", ".join(parts)
             if remaining > 0:
                 summary = "%s (+%s)" % (summary, remaining)
+
             rec.material_summary = summary
 
     @api.constrains("category_id", "technical_location_id")
@@ -113,7 +116,7 @@ class BarcaMaintenanceActivity(models.Model):
 
 class BarcaMaintenanceActivityMaterial(models.Model):
     _name = "barca.maintenance.activity.material"
-    _description = "Material, repuesto o kit propuesto por actividad"
+    _description = "Material, repuesto o kit estándar por actividad"
     _order = "sequence, id"
 
     sequence = fields.Integer(string="Secuencia", default=10)
@@ -136,10 +139,18 @@ class BarcaMaintenanceActivityMaterial(models.Model):
     product_uom_id = fields.Many2one(
         "uom.uom",
         string="UdM",
+        required=True,
+    )
+
+    product_uom_category_id = fields.Many2one(
+        "uom.category",
+        string="Categoría UdM",
+        related="product_id.uom_id.category_id",
+        readonly=True,
     )
 
     quantity = fields.Float(
-        string="Cantidad estimada",
+        string="Cantidad estándar",
         required=True,
         default=1.0,
     )
@@ -155,16 +166,19 @@ class BarcaMaintenanceActivityMaterial(models.Model):
     def _check_quantity_positive(self):
         for rec in self:
             if rec.quantity <= 0:
-                raise ValidationError("La cantidad estimada debe ser mayor que cero.")
+                raise ValidationError("La cantidad estándar debe ser mayor que cero.")
 
-    @api.constrains("product_id")
-    def _check_product_id(self):
+    @api.constrains("product_id", "product_uom_id")
+    def _check_product_and_uom(self):
         for rec in self:
             if not rec.product_id:
                 raise ValidationError("Debe definir un Repuesto / Kit / Material.")
 
-    @api.constrains("product_uom_id")
-    def _check_product_uom_id_exists(self):
-        for rec in self:
-            if rec.product_uom_id and not rec.product_uom_id.exists():
-                raise ValidationError("La UdM seleccionada debe existir.")
+            if not rec.product_uom_id:
+                raise ValidationError("Debe definir una unidad de medida.")
+
+            if rec.product_uom_id.category_id != rec.product_id.uom_id.category_id:
+                raise ValidationError(
+                    "La unidad de medida debe pertenecer a la misma categoría "
+                    "que la unidad del producto."
+                )

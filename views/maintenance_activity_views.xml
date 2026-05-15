@@ -80,20 +80,28 @@
                                 <field name="material_count" readonly="1"/>
                                 <field name="material_summary" readonly="1"/>
                             </group>
-                            <field name="material_line_ids">
+                            <field name="material_template_line_ids">
                                 <list editable="bottom" open_form_view="1">
                                     <field name="sequence" widget="handle"/>
                                     <field name="product_id"/>
                                     <field name="quantity"/>
-                                    <field name="product_uom_id"/>
+                                    <field
+                                        name="product_uom_id"
+                                        domain="[('category_id', '=', product_uom_category_id)]"
+                                    />
+                                    <field name="product_uom_category_id" column_invisible="1"/>
                                     <field name="note"/>
                                 </list>
-                                <form string="Material / Repuesto / Kit propuesto">
+                                <form string="Material / Repuesto / Kit estándar">
                                     <sheet>
                                         <group>
                                             <field name="product_id"/>
+                                            <field
+                                                name="product_uom_id"
+                                                domain="[('category_id', '=', product_uom_category_id)]"
+                                            />
+                                            <field name="product_uom_category_id" invisible="1"/>
                                             <field name="quantity"/>
-                                            <field name="product_uom_id"/>
                                             <field name="note"/>
                                         </group>
                                     </sheet>

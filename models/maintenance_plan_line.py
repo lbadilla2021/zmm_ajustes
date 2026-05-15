@@ -17,7 +17,6 @@ class BarcaMaintenancePlanLine(models.Model):
         index=True,
     )
 
-    # Heredado del plan para poder usarlo en domain de los campos de la línea
     category_id = fields.Many2one(
         "fleet.vehicle.model.category",
         related="plan_id.category_id",
@@ -57,22 +56,20 @@ class BarcaMaintenancePlanLine(models.Model):
     material_line_ids = fields.One2many(
         "barca.maintenance.plan.line.material",
         "plan_line_id",
-        string="Materiales / Repuestos / Kits",
+        string="Materiales / Repuestos / Kits del plan",
     )
 
     material_count = fields.Integer(
         string="N° materiales",
         compute="_compute_material_count",
-        store=True,
     )
 
     material_summary = fields.Char(
         string="Materiales",
         compute="_compute_material_summary",
-        store=True,
     )
 
-    @api.depends("material_line_ids.product_id")
+    @api.depends("material_line_ids")
     def _compute_material_count(self):
         for rec in self:
             rec.material_count = len(rec.material_line_ids)
@@ -80,34 +77,41 @@ class BarcaMaintenancePlanLine(models.Model):
     @api.depends(
         "material_line_ids.sequence",
         "material_line_ids.product_id",
-        "material_line_ids.product_id.name",
+        "material_line_ids.product_id.display_name",
+        "material_line_ids.quantity",
+        "material_line_ids.product_uom_id",
     )
     def _compute_material_summary(self):
         for rec in self:
-            product_names = [
-                line.product_id.display_name
-                for line in rec.material_line_ids.sorted(lambda line: line.sequence)
-                if line.product_id
-            ]
-            if not product_names:
+            lines = rec.material_line_ids.sorted(lambda line: line.sequence)
+            parts = []
+
+            for line in lines[:3]:
+                if not line.product_id:
+                    continue
+
+                qty = line.quantity or 0.0
+                uom = line.product_uom_id.name or line.product_id.uom_id.name or ""
+                parts.append("%s x %s %s" % (line.product_id.display_name, qty, uom))
+
+            if not parts:
                 rec.material_summary = False
                 continue
 
-            summary_names = product_names[:3]
-            summary = ", ".join(summary_names)
-            remaining = len(product_names) - len(summary_names)
+            remaining = len(lines) - len(parts)
+            summary = ", ".join(parts)
             if remaining > 0:
                 summary = "%s (+%s)" % (summary, remaining)
+
             rec.material_summary = summary
 
     @api.onchange("technical_location_id")
     def _onchange_technical_location_id(self):
-        """Al cambiar la ubicación técnica, limpiar la actividad si ya no es
-        compatible y proponer el dominio correcto."""
         if self.activity_id and (
             self.activity_id.technical_location_id != self.technical_location_id
         ):
             self.activity_id = False
+
         return {
             "domain": {
                 "activity_id": [
@@ -117,38 +121,82 @@ class BarcaMaintenancePlanLine(models.Model):
             }
         }
 
-    def _prepare_material_commands_from_activity(self):
-        self.ensure_one()
-        return [
-            Command.create(
-                {
-                    "sequence": material.sequence,
-                    "product_id": material.product_id.id,
-                    "product_uom_id": material.product_uom_id.id,
-                    "quantity": material.quantity,
-                    "note": material.note,
-                }
-            )
-            for material in self.activity_id.material_line_ids
-        ]
-
     @api.onchange("activity_id")
     def _onchange_activity_id(self):
-        if self.activity_id and self.activity_id.estimated_duration \
-                and not self.estimated_duration:
-            self.estimated_duration = self.activity_id.estimated_duration
-        if self.activity_id and self.activity_id.material_line_ids \
-                and not self.material_line_ids:
-            self.material_line_ids = self._prepare_material_commands_from_activity()
+        for rec in self:
+            if rec.activity_id and rec.activity_id.estimated_duration:
+                rec.estimated_duration = rec.activity_id.estimated_duration
 
-    @api.model_create_multi
-    def create(self, vals_list):
-        records = super().create(vals_list)
-        for record, vals in zip(records, vals_list):
-            if "material_line_ids" in vals or not record.activity_id.material_line_ids:
-                continue
-            record.material_line_ids = record._prepare_material_commands_from_activity()
-        return records
+            if rec.activity_id and rec.activity_id.material_template_line_ids:
+                return {
+                    "warning": {
+                        "title": "Materiales estándar disponibles",
+                        "message": (
+                            "La actividad seleccionada tiene materiales estándar. "
+                            "Abra la línea de actividad y use el botón "
+                            "'Cargar materiales estándar' para copiarlos al plan."
+                        ),
+                    }
+                }
+
+        return {}
+
+    def _prepare_material_commands_from_activity(self):
+        self.ensure_one()
+
+        commands = []
+        for material in self.activity_id.material_template_line_ids.sorted(
+            lambda line: line.sequence
+        ):
+            commands.append(
+                Command.create(
+                    {
+                        "sequence": material.sequence,
+                        "product_id": material.product_id.id,
+                        "product_uom_id": material.product_uom_id.id,
+                        "quantity": material.quantity,
+                        "note": material.note,
+                    }
+                )
+            )
+
+        return commands
+
+    def action_load_activity_materials(self):
+        for rec in self:
+            if not rec.activity_id:
+                raise ValidationError(
+                    "Debe seleccionar una actividad antes de cargar materiales estándar."
+                )
+
+            if not rec.activity_id.material_template_line_ids:
+                raise ValidationError(
+                    "La actividad seleccionada no tiene materiales estándar definidos."
+                )
+
+            if rec.material_line_ids:
+                raise ValidationError(
+                    "Esta actividad del plan ya tiene materiales asociados. "
+                    "Elimine o ajuste manualmente las líneas existentes antes de "
+                    "cargar los materiales estándar."
+                )
+
+            rec.write(
+                {
+                    "material_line_ids": rec._prepare_material_commands_from_activity()
+                }
+            )
+
+        return {
+            "type": "ir.actions.client",
+            "tag": "display_notification",
+            "params": {
+                "title": "Materiales cargados",
+                "message": "Se copiaron los materiales estándar de la actividad al plan.",
+                "type": "success",
+                "sticky": False,
+            },
+        }
 
     @api.constrains("activity_id", "technical_location_id")
     def _check_activity_location_consistency(self):
@@ -184,21 +232,21 @@ class BarcaMaintenancePlanLineMaterial(models.Model):
 
     sequence = fields.Integer(string="Secuencia", default=10)
 
-    plan_id = fields.Many2one(
-        "barca.maintenance.plan",
-        string="Plan",
-        required=True,
-        ondelete="cascade",
-        index=True,
-    )
-
     plan_line_id = fields.Many2one(
         "barca.maintenance.plan.line",
         string="Actividad del plan",
         required=True,
         ondelete="cascade",
         index=True,
-        domain="[('plan_id', '=', plan_id)]",
+    )
+
+    plan_id = fields.Many2one(
+        "barca.maintenance.plan",
+        string="Plan",
+        related="plan_line_id.plan_id",
+        store=True,
+        readonly=True,
+        index=True,
     )
 
     product_id = fields.Many2one(
@@ -211,6 +259,14 @@ class BarcaMaintenancePlanLineMaterial(models.Model):
     product_uom_id = fields.Many2one(
         "uom.uom",
         string="UdM",
+        required=True,
+    )
+
+    product_uom_category_id = fields.Many2one(
+        "uom.category",
+        string="Categoría UdM",
+        related="product_id.uom_id.category_id",
+        readonly=True,
     )
 
     quantity = fields.Float(
@@ -221,32 +277,10 @@ class BarcaMaintenancePlanLineMaterial(models.Model):
 
     note = fields.Text(string="Observación")
 
-    @api.model_create_multi
-    def create(self, vals_list):
-        for vals in vals_list:
-            if vals.get("plan_line_id") and not vals.get("plan_id"):
-                line = self.env["barca.maintenance.plan.line"].browse(vals["plan_line_id"])
-                vals["plan_id"] = line.plan_id.id
-        return super().create(vals_list)
-
-    @api.onchange("plan_line_id")
-    def _onchange_plan_line_id(self):
-        for rec in self:
-            if rec.plan_line_id:
-                rec.plan_id = rec.plan_line_id.plan_id
-
     @api.onchange("product_id")
     def _onchange_product_id(self):
         for rec in self:
             rec.product_uom_id = rec.product_id.uom_id if rec.product_id else False
-
-    @api.constrains("plan_id", "plan_line_id")
-    def _check_plan_line_belongs_to_plan(self):
-        for rec in self:
-            if rec.plan_id and rec.plan_line_id and rec.plan_line_id.plan_id != rec.plan_id:
-                raise ValidationError(
-                    "La actividad seleccionada debe pertenecer al plan del material."
-                )
 
     @api.constrains("quantity")
     def _check_quantity_positive(self):
@@ -254,14 +288,17 @@ class BarcaMaintenancePlanLineMaterial(models.Model):
             if rec.quantity <= 0:
                 raise ValidationError("La cantidad estimada debe ser mayor que cero.")
 
-    @api.constrains("product_id")
-    def _check_product_id(self):
+    @api.constrains("product_id", "product_uom_id")
+    def _check_product_and_uom(self):
         for rec in self:
             if not rec.product_id:
                 raise ValidationError("Debe definir un Repuesto / Kit / Material.")
 
-    @api.constrains("product_uom_id")
-    def _check_product_uom_id_exists(self):
-        for rec in self:
-            if rec.product_uom_id and not rec.product_uom_id.exists():
-                raise ValidationError("La UdM seleccionada debe existir.")
+            if not rec.product_uom_id:
+                raise ValidationError("Debe definir una unidad de medida.")
+
+            if rec.product_uom_id.category_id != rec.product_id.uom_id.category_id:
+                raise ValidationError(
+                    "La unidad de medida debe pertenecer a la misma categoría "
+                    "que la unidad del producto."
+                )

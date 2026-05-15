@@ -155,24 +155,38 @@
                                                     <field name="note"/>
                                                 </group>
                                             </page>
-                                            <page string="Materiales / Repuestos / Kits" name="materials">
-                                                <separator string="Productos asociados a esta actividad"/>
+                                           <page string="Materiales / Repuestos / Kits" name="materials">
+                                                <separator string="Productos específicos de esta actividad del plan"/>
+
+                                                <button
+                                                    name="action_load_activity_materials"
+                                                    type="object"
+                                                    string="Cargar materiales estándar"
+                                                    class="btn-secondary"
+                                                />
+
                                                 <field name="material_line_ids">
                                                     <list editable="bottom" open_form_view="1">
                                                         <field name="sequence" widget="handle"/>
-                                                        <field name="plan_id" column_invisible="1"/>
                                                         <field name="product_id"/>
                                                         <field name="quantity"/>
-                                                        <field name="product_uom_id"/>
+                                                        <field
+                                                            name="product_uom_id"
+                                                            domain="[('category_id', '=', product_uom_category_id)]"
+                                                        />
+                                                        <field name="product_uom_category_id" column_invisible="1"/>
                                                         <field name="note"/>
                                                     </list>
-                                                    <form string="Material / Repuesto / Kit">
+                                                    <form string="Material / Repuesto / Kit del plan">
                                                         <sheet>
                                                             <group>
-                                                                <field name="plan_id" invisible="1"/>
                                                                 <field name="product_id"/>
+                                                                <field
+                                                                    name="product_uom_id"
+                                                                    domain="[('category_id', '=', product_uom_category_id)]"
+                                                                />
+                                                                <field name="product_uom_category_id" invisible="1"/>
                                                                 <field name="quantity"/>
-                                                                <field name="product_uom_id"/>
                                                                 <field name="note"/>
                                                             </group>
                                                         </sheet>
@@ -185,42 +199,6 @@
                             </field>
                         </page>
 
-                        <!-- ================================================ -->
-                        <!-- TAB 2: MATERIALES POR ACTIVIDAD                   -->
-                        <!-- ================================================ -->
-                        <page string="Materiales por actividad" name="activity_materials">
-                            <separator string="Repuestos, kits y materiales estructurados por actividad"/>
-                            <field name="material_line_ids">
-                                <list editable="bottom" open_form_view="1">
-                                    <field name="sequence" widget="handle"/>
-                                    <field
-                                        name="plan_line_id"
-                                        string="Actividad"
-                                        domain="[('plan_id', '=', parent.id)]"
-                                    />
-                                    <field name="product_id"/>
-                                    <field name="quantity"/>
-                                    <field name="product_uom_id"/>
-                                    <field name="note"/>
-                                </list>
-                                <form string="Material / Repuesto / Kit del plan">
-                                    <sheet>
-                                        <group>
-                                            <field name="plan_id" invisible="1"/>
-                                            <field
-                                                name="plan_line_id"
-                                                string="Actividad"
-                                                domain="[('plan_id', '=', plan_id)]"
-                                            />
-                                            <field name="product_id"/>
-                                            <field name="quantity"/>
-                                            <field name="product_uom_id"/>
-                                            <field name="note"/>
-                                        </group>
-                                    </sheet>
-                                </form>
-                            </field>
-                        </page>
 
                         <!-- ================================================ -->
                         <!-- TAB 2: TRIGGERS                                   -->

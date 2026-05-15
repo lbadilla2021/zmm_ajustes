@@ -46,11 +46,6 @@ class BarcaMaintenancePlan(models.Model):
         string="Actividades del plan",
     )
 
-    material_line_ids = fields.One2many(
-        "barca.maintenance.plan.line.material",
-        "plan_id",
-        string="Materiales / Repuestos / Kits por actividad",
-    )
 
     trigger_km = fields.Float(string="Intervalo km")
     trigger_days = fields.Integer(string="Intervalo días")
