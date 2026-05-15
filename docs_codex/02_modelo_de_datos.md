@@ -253,6 +253,7 @@ Campos principales:
 - `vehicle_ids`
 - `company_id`
 - `plan_line_ids`
+- `material_line_ids`: vista plana de materiales/repuestos/kits del plan agrupables por actividad.
 - `trigger_km`
 - `trigger_days`
 - `trigger_hours`
@@ -313,7 +314,8 @@ Línea de material, repuesto o kit asociado a una actividad específica del plan
 Campos:
 
 - `sequence`
-- `plan_line_id`
+- `plan_id`: plan al que pertenece el material, usado para editar todos los materiales estructurados desde el formulario del plan.
+- `plan_line_id`: actividad específica del plan.
 - `product_id`: producto de Odoo (`product.product`), mostrado funcionalmente como **Repuesto / Kit / Material**.
 - `product_uom_id`: unidad de medida estimada.
 - `quantity`: cantidad estimada.
@@ -325,6 +327,7 @@ Reglas:
 - `quantity` debe ser mayor que cero.
 - `product_id` es obligatorio.
 - Si se informa `product_uom_id`, debe corresponder a una unidad de medida existente.
+- `plan_line_id` debe pertenecer al `plan_id` del material.
 
 Importante: para esta lógica nueva, un kit es un `product.product` íntegro ya existente en el maestro de productos. No se explotan kits en componentes y no se usa `barca.maintenance.kit.line` para los materiales por actividad del plan.
 

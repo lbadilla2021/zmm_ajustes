@@ -184,12 +184,21 @@ class BarcaMaintenancePlanLineMaterial(models.Model):
 
     sequence = fields.Integer(string="Secuencia", default=10)
 
+    plan_id = fields.Many2one(
+        "barca.maintenance.plan",
+        string="Plan",
+        required=True,
+        ondelete="cascade",
+        index=True,
+    )
+
     plan_line_id = fields.Many2one(
         "barca.maintenance.plan.line",
         string="Actividad del plan",
         required=True,
         ondelete="cascade",
         index=True,
+        domain="[('plan_id', '=', plan_id)]",
     )
 
     product_id = fields.Many2one(
@@ -212,10 +221,32 @@ class BarcaMaintenancePlanLineMaterial(models.Model):
 
     note = fields.Text(string="Observación")
 
+    @api.model_create_multi
+    def create(self, vals_list):
+        for vals in vals_list:
+            if vals.get("plan_line_id") and not vals.get("plan_id"):
+                line = self.env["barca.maintenance.plan.line"].browse(vals["plan_line_id"])
+                vals["plan_id"] = line.plan_id.id
+        return super().create(vals_list)
+
+    @api.onchange("plan_line_id")
+    def _onchange_plan_line_id(self):
+        for rec in self:
+            if rec.plan_line_id:
+                rec.plan_id = rec.plan_line_id.plan_id
+
     @api.onchange("product_id")
     def _onchange_product_id(self):
         for rec in self:
             rec.product_uom_id = rec.product_id.uom_id if rec.product_id else False
+
+    @api.constrains("plan_id", "plan_line_id")
+    def _check_plan_line_belongs_to_plan(self):
+        for rec in self:
+            if rec.plan_id and rec.plan_line_id and rec.plan_line_id.plan_id != rec.plan_id:
+                raise ValidationError(
+                    "La actividad seleccionada debe pertenecer al plan del material."
+                )
 
     @api.constrains("quantity")
     def _check_quantity_positive(self):
