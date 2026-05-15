@@ -37,15 +37,17 @@ El plan debe tener líneas (`plan_line_ids`). Si no tiene líneas, el cron o la 
 
 Los materiales de mantenimiento preventivo se definen a nivel de actividad. No se registran materiales en el encabezado del plan ni en el encabezado del aviso.
 
-El diseño vigente separa tres niveles:
+El diseño vigente separa cuatro niveles:
 
 ```text
 Actividad maestra
   → propone materiales estándar
 Actividad del plan
-  → guarda materiales específicos del plan
+  → guarda materiales planificados
 Actividad del aviso
-  → guarda materiales evaluables/editables
+  → guarda materiales evaluados
+Actividad OT
+  → guarda materiales ejecutables
 ```
 
 El maestro de actividades (`barca.maintenance.activity`) puede mantener una propuesta de productos en `material_template_line_ids`. Al seleccionar esa actividad en una línea del plan, la propuesta se copia a materiales propios del plan; luego el plan puede mantener, cambiar, agregar o eliminar materiales sin modificar el maestro.
@@ -67,6 +69,8 @@ En el formulario del plan, la grilla principal de actividades muestra **N° mate
 Cuando un plan genera un aviso, los materiales de cada actividad del plan se copian a materiales propios de la actividad del aviso (`barca.maintenance.alert.line.material`). La copia mantiene producto, unidad, cantidad estimada, secuencia, nota y referencia al material del plan, pero crea registros nuevos. Por eso, cambiar materiales del plan después no modifica avisos ya generados.
 
 En el aviso, cada actividad muestra **N° materiales** y **Materiales** en la grilla de actividades. Al abrir una actividad del aviso, la pestaña **Materiales / Repuestos / Kits** permite editar producto, cantidad estimada, unidad de medida y observación. El disponible mostrado es una referencia simple tomada desde `product_id.qty_available`; todavía no existe lógica por bodega, reservas, compras, consumos ni movimientos de inventario.
+
+Cuando el aviso genera una OT estándar (`maintenance.request`), las actividades del aviso se copian a `barca.maintenance.workorder.line` y sus materiales/repuestos/kits se copian a `barca.maintenance.workorder.line.material`. La OT no lee materiales en vivo desde el plan ni desde el aviso: mantiene registros propios ejecutables con trazabilidad al aviso. Las cantidades operativas (`reserved_quantity`, `withdrawn_quantity`, `consumed_quantity`, `returned_quantity`) son campos estructurales de la OT para fases futuras; en esta etapa no crean reservas, pickings, compras, consumos, devoluciones ni movimientos de inventario.
 
 ## Triggers del plan
 
@@ -389,7 +393,19 @@ Valores creados:
 Después de crear la OT:
 
 1. Guarda `maintenance_request_id` en el aviso.
-2. Pasa el aviso a estado técnico `in_progress` / funcional `Con OT creada`.
+2. Guarda `barca_alert_id` en la OT.
+3. Copia cada `barca.maintenance.alert.line` a una actividad ejecutable `barca.maintenance.workorder.line`.
+4. Copia cada `barca.maintenance.alert.line.material` a un material ejecutable `barca.maintenance.workorder.line.material`.
+5. Pasa el aviso a estado técnico `in_progress` / funcional `Con OT creada`.
+
+
+## Copia de actividades y materiales a la OT
+
+La pestaña **Actividades** de la OT estándar muestra líneas `barca.maintenance.workorder.line`. Cada línea conserva los datos técnicos copiados desde la actividad del aviso: ubicación técnica, tipo de intervención, actividad, duración estimada, descripción/instrucciones, observaciones y estado operativo (`pending`, `in_progress`, `notified`, `closed`).
+
+Cada actividad de OT contiene una subpestaña de **Materiales / Repuestos / Kits** con líneas `barca.maintenance.workorder.line.material`. Se copian producto `product.product`, unidad de medida, cantidad estimada, secuencia, nota y referencia al material del aviso (`alert_line_material_id`). Los kits siguen tratándose como productos íntegros y no se explotan en componentes. La grilla principal de actividades de la OT muestra **N° materiales** y **Materiales** para revisar rápidamente qué productos ejecutables tiene cada actividad.
+
+Las cantidades operativas de materiales de OT deben ser mayores o iguales a cero y la unidad de medida debe pertenecer a la categoría de la unidad base del producto. Producto, cantidad estimada y observaciones pueden editarse en la OT; también pueden agregarse o eliminarse materiales manualmente sin modificar el aviso origen.
 
 ## Relación entre aviso y OT
 
