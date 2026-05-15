@@ -386,10 +386,12 @@ Campos principales:
 - `state`: `pending`, `in_progress`, `notified`, `closed`.
 - `note`
 - `material_line_ids`: materiales/repuestos/kits ejecutables de la actividad de OT.
+- `material_count`: contador de materiales propios de la actividad de OT.
+- `material_summary`: resumen de hasta tres productos copiados/agregados en la actividad de OT, con sufijo `(+N)` si existen más.
 
 ## `barca.maintenance.workorder.line.material`
 
-Material, repuesto o kit ejecutable asociado a una actividad de OT. Es una copia del material evaluado del aviso; no explota kits y todos los productos son `product.product`.
+Material, repuesto o kit ejecutable asociado a una actividad de OT. Es una copia independiente del material evaluado del aviso; no explota kits y todos los productos son `product.product`. Los cambios posteriores en el aviso no actualizan ni reemplazan estas líneas de OT.
 
 Campos principales:
 

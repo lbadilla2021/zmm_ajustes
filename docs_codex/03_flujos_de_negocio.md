@@ -403,9 +403,9 @@ Después de crear la OT:
 
 La pestaña **Actividades** de la OT estándar muestra líneas `barca.maintenance.workorder.line`. Cada línea conserva los datos técnicos copiados desde la actividad del aviso: ubicación técnica, tipo de intervención, actividad, duración estimada, descripción/instrucciones, observaciones y estado operativo (`pending`, `in_progress`, `notified`, `closed`).
 
-Cada actividad de OT contiene una subpestaña de **Materiales / Repuestos / Kits** con líneas `barca.maintenance.workorder.line.material`. Se copian producto `product.product`, unidad de medida, cantidad estimada, secuencia, nota y referencia al material del aviso (`alert_line_material_id`). Los kits siguen tratándose como productos íntegros y no se explotan en componentes.
+Cada actividad de OT contiene una subpestaña de **Materiales / Repuestos / Kits** con líneas `barca.maintenance.workorder.line.material`. Se copian producto `product.product`, unidad de medida, cantidad estimada, secuencia, nota y referencia al material del aviso (`alert_line_material_id`). Los kits siguen tratándose como productos íntegros y no se explotan en componentes. La grilla principal de actividades de la OT muestra **N° materiales** y **Materiales** para revisar rápidamente qué productos ejecutables tiene cada actividad.
 
-Las cantidades operativas de materiales de OT deben ser mayores o iguales a cero y la unidad de medida debe pertenecer a la categoría de la unidad base del producto.
+Las cantidades operativas de materiales de OT deben ser mayores o iguales a cero y la unidad de medida debe pertenecer a la categoría de la unidad base del producto. Producto, cantidad estimada y observaciones pueden editarse en la OT; también pueden agregarse o eliminarse materiales manualmente sin modificar el aviso origen.
 
 ## Relación entre aviso y OT
 

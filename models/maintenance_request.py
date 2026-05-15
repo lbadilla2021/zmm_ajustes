@@ -111,6 +111,55 @@ class BarcaMaintenanceWorkorderLine(models.Model):
         string="Materiales / Repuestos / Kits",
     )
 
+    material_count = fields.Integer(
+        string="N° materiales",
+        compute="_compute_material_count",
+    )
+
+    material_summary = fields.Char(
+        string="Materiales",
+        compute="_compute_material_summary",
+    )
+
+    @api.depends("material_line_ids")
+    def _compute_material_count(self):
+        for rec in self:
+            rec.material_count = len(rec.material_line_ids)
+
+    @api.depends(
+        "material_line_ids.sequence",
+        "material_line_ids.product_id",
+        "material_line_ids.product_id.display_name",
+        "material_line_ids.estimated_quantity",
+        "material_line_ids.product_uom_id",
+    )
+    def _compute_material_summary(self):
+        for rec in self:
+            lines = rec.material_line_ids.sorted(lambda line: line.sequence)
+            parts = []
+
+            for line in lines[:3]:
+                if not line.product_id:
+                    continue
+
+                qty = line.estimated_quantity or 0.0
+                qty_text = ("%s" % qty).rstrip("0").rstrip(".")
+                uom = line.product_uom_id.name or line.product_id.uom_id.name or ""
+                parts.append(
+                    "%s x%s %s" % (line.product_id.display_name, qty_text, uom)
+                )
+
+            if not parts:
+                rec.material_summary = False
+                continue
+
+            remaining = len(lines) - len(parts)
+            summary = ", ".join(parts)
+            if remaining > 0:
+                summary = "%s (+%s)" % (summary, remaining)
+
+            rec.material_summary = summary
+
 
 class BarcaMaintenanceWorkorderLineMaterial(models.Model):
     _name = "barca.maintenance.workorder.line.material"

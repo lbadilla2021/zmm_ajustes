@@ -335,7 +335,9 @@ class BarcaMaintenanceAlert(models.Model):
                         "estimated_duration": line.estimated_duration,
                         "state": "pending",
                         "note": line.note,
-                        "material_line_ids": line._prepare_workorder_material_commands(),
+                        "material_line_ids": (
+                            line._prepare_material_commands_from_alert_line()
+                        ),
                     }
                 )
             )
@@ -532,7 +534,7 @@ class BarcaMaintenanceAlertLine(models.Model):
 
         return commands
 
-    def _prepare_workorder_material_commands(self):
+    def _prepare_material_commands_from_alert_line(self):
         self.ensure_one()
 
         commands = []
@@ -553,6 +555,9 @@ class BarcaMaintenanceAlertLine(models.Model):
             )
 
         return commands
+
+    def _prepare_workorder_material_commands(self):
+        return self._prepare_material_commands_from_alert_line()
 
 
 class BarcaMaintenanceAlertLineMaterial(models.Model):
