@@ -12,6 +12,9 @@
                 <field name="activity_id"/>
                 <field name="estimated_duration"/>
                 <field name="state"/>
+                <button name="action_start_line" string="Iniciar" type="object" class="btn-primary" invisible="state != 'pending'"/>
+                <button name="action_notify_line" string="Notificar" type="object" class="btn-primary" invisible="state != 'in_progress'"/>
+                <button name="action_close_line" string="Cerrar línea" type="object" class="btn-primary" invisible="state != 'notified'"/>
                 <field name="material_count" readonly="1"/>
                 <field name="material_summary" readonly="1"/>
                 <field name="alert_line_id" readonly="1" optional="hide"/>
@@ -183,15 +186,20 @@
                 <attribute name="placeholder">Orden de Trabajo</attribute>
             </xpath>
 
+            <xpath expr="//sheet" position="before">
+                <header>
+                    <button name="action_barca_send_to_review" string="Enviar a revisión" type="object" class="btn-primary"/>
+                </header>
+            </xpath>
+
             <xpath expr="//sheet/group[1]" position="inside">
-                <button name="action_barca_send_to_review" string="Enviar a revisión" type="object" class="btn-primary"/>
-                <field name="barca_alert_id" readonly="1"/>
-                <field name="barca_activity_count" readonly="1"/>
-                <field name="barca_total_activity_count" readonly="1"/>
-                <field name="barca_notified_activity_count" readonly="1"/>
-                <field name="barca_closed_activity_count" readonly="1"/>
-                <field name="barca_all_activities_notified" readonly="1"/>
-                <field name="barca_all_activities_closed" readonly="1"/>
+                <field name="barca_alert_id" readonly="1" invisible="1"/>
+                <field name="barca_activity_count" readonly="1" invisible="1"/>
+                <field name="barca_total_activity_count" readonly="1" invisible="1"/>
+                <field name="barca_notified_activity_count" readonly="1" invisible="1"/>
+                <field name="barca_closed_activity_count" readonly="1" invisible="1"/>
+                <field name="barca_all_activities_notified" readonly="1" invisible="1"/>
+                <field name="barca_all_activities_closed" readonly="1" invisible="1"/>
             </xpath>
 
             <xpath expr="//sheet/notebook" position="inside">
@@ -204,6 +212,9 @@
                             <field name="activity_id"/>
                             <field name="estimated_duration"/>
                             <field name="state"/>
+                            <button name="action_start_line" string="Iniciar" type="object" class="btn-primary" invisible="state != 'pending'"/>
+                            <button name="action_notify_line" string="Notificar" type="object" class="btn-primary" invisible="state != 'in_progress'"/>
+                            <button name="action_close_line" string="Cerrar línea" type="object" class="btn-primary" invisible="state != 'notified'"/>
                             <field name="material_count" readonly="1"/>
                             <field name="material_summary" readonly="1"/>
                             <field name="alert_line_id" readonly="1" optional="hide"/>
