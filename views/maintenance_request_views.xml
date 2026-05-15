@@ -13,6 +13,104 @@
             <xpath expr="//field[@name='name']" position="attributes">
                 <attribute name="placeholder">Orden de Trabajo</attribute>
             </xpath>
+
+            <xpath expr="//sheet/group[1]" position="inside">
+                <field name="barca_alert_id" readonly="1"/>
+                <field name="barca_activity_count" readonly="1"/>
+            </xpath>
+
+            <xpath expr="//sheet/notebook" position="inside">
+                <page string="Actividades" name="barca_activities">
+                    <field name="barca_activity_line_ids" context="{'default_maintenance_request_id': id}">
+                        <list editable="bottom">
+                            <field name="sequence" widget="handle"/>
+                            <field name="technical_location_id"/>
+                            <field name="intervention_type_id"/>
+                            <field name="activity_id"/>
+                            <field name="estimated_duration"/>
+                            <field name="state"/>
+                            <field name="alert_line_id" readonly="1" optional="hide"/>
+                            <field name="alert_id" readonly="1" optional="hide"/>
+                            <field name="plan_line_id" readonly="1" optional="hide"/>
+                        </list>
+                        <form string="Actividad de OT">
+                            <sheet>
+                                <group>
+                                    <group string="Datos técnicos">
+                                        <field name="sequence"/>
+                                        <field name="technical_location_id"/>
+                                        <field name="intervention_type_id"/>
+                                        <field name="activity_id"/>
+                                        <field name="estimated_duration"/>
+                                        <field name="state"/>
+                                    </group>
+                                    <group string="Trazabilidad">
+                                        <field name="maintenance_request_id" readonly="1"/>
+                                        <field name="alert_line_id" readonly="1"/>
+                                        <field name="alert_id" readonly="1"/>
+                                        <field name="plan_line_id" readonly="1"/>
+                                    </group>
+                                </group>
+                                <notebook>
+                                    <page string="Descripción" name="description">
+                                        <group>
+                                            <field name="description" nolabel="1"/>
+                                            <field name="note" nolabel="1"/>
+                                        </group>
+                                    </page>
+                                    <page string="Materiales" name="materials">
+                                        <field name="material_line_ids" context="{'default_workorder_line_id': id}">
+                                            <list editable="bottom">
+                                                <field name="sequence" widget="handle"/>
+                                                <field name="product_id"/>
+                                                <field
+                                                    name="product_uom_id"
+                                                    domain="[('category_id', '=', product_uom_category_id)]"
+                                                />
+                                                <field name="product_uom_category_id" invisible="1"/>
+                                                <field name="estimated_quantity"/>
+                                                <field name="reserved_quantity"/>
+                                                <field name="withdrawn_quantity"/>
+                                                <field name="consumed_quantity"/>
+                                                <field name="returned_quantity"/>
+                                                <field name="alert_line_material_id" readonly="1" optional="hide"/>
+                                                <field name="note" optional="hide"/>
+                                            </list>
+                                            <form string="Material / Repuesto / Kit de OT">
+                                                <sheet>
+                                                    <group>
+                                                        <group>
+                                                            <field name="sequence"/>
+                                                            <field name="product_id"/>
+                                                            <field
+                                                                name="product_uom_id"
+                                                                domain="[('category_id', '=', product_uom_category_id)]"
+                                                            />
+                                                            <field name="product_uom_category_id" invisible="1"/>
+                                                            <field name="estimated_quantity"/>
+                                                        </group>
+                                                        <group string="Cantidades operativas">
+                                                            <field name="reserved_quantity"/>
+                                                            <field name="withdrawn_quantity"/>
+                                                            <field name="consumed_quantity"/>
+                                                            <field name="returned_quantity"/>
+                                                        </group>
+                                                    </group>
+                                                    <group>
+                                                        <field name="maintenance_request_id" readonly="1"/>
+                                                        <field name="alert_line_material_id" readonly="1"/>
+                                                        <field name="note" nolabel="1"/>
+                                                    </group>
+                                                </sheet>
+                                            </form>
+                                        </field>
+                                    </page>
+                                </notebook>
+                            </sheet>
+                        </form>
+                    </field>
+                </page>
+            </xpath>
         </field>
     </record>
 </odoo>
