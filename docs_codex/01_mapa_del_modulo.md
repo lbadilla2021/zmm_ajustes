@@ -86,9 +86,11 @@ Ese hook solo sincroniza vehículos existentes con `maintenance.equipment`. Las 
 | `barca.technical.location` | `technical_location.py` | Árbol de ubicaciones técnicas por categoría de vehículo. |
 | `barca.intervention.type` | `intervention_type.py` | Catálogo simple de tipos de intervención. |
 | `barca.maintenance.activity` | `maintenance_activity.py` | Actividades de mantención por categoría y ubicación técnica. |
+| `barca.maintenance.activity.material` | `maintenance_activity.py` | Propuesta maestra de productos/repuestos/kits (`product.product`) por actividad. |
 | `barca.maintenance.plan` | `maintenance_plan.py` | Plan preventivo con triggers por km, días y horas. |
 | `barca.maintenance.plan.line` | `maintenance_plan_line.py` | Líneas de actividades del plan. |
-| `barca.maintenance.kit` | `maintenance_kit.py` | Kit sugerido de materiales/repuestos. |
+| `barca.maintenance.plan.line.material` | `maintenance_plan_line.py` | Productos/repuestos/kits íntegros (`product.product`) asociados a cada actividad del plan. |
+| `barca.maintenance.kit` | `maintenance_kit.py` | Kit sugerido legado de materiales/repuestos. |
 | `barca.maintenance.kit.line` | `maintenance_kit.py` | Productos y cantidades del kit. |
 | `barca.maintenance.request` | `maintenance_request_simple.py` | Solicitud simple de mantención creada por usuarios y fuente opcional de avisos. |
 | `barca.maintenance.checklist` | `maintenance_checklist.py` | Checklist operativo por tipo de vehículo; genera aviso automáticamente al guardar si existe al menos un No. |
