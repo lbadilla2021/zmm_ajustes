@@ -477,6 +477,28 @@ class BarcaMaintenanceAlertLine(models.Model):
         compute="_compute_material_summary",
     )
 
+    @api.depends(
+        "sequence",
+        "alert_id.name",
+        "activity_id.display_name",
+        "technical_location_id.display_name",
+    )
+    def _compute_display_name(self):
+        for rec in self:
+            parts = []
+            if rec.activity_id:
+                parts.append(rec.activity_id.display_name)
+            if rec.technical_location_id:
+                parts.append(rec.technical_location_id.display_name)
+
+            label = " - ".join(parts) or "Actividad del aviso"
+            if rec.sequence:
+                label = "[%s] %s" % (rec.sequence, label)
+            if rec.alert_id:
+                label = "%s / %s" % (rec.alert_id.display_name, label)
+
+            rec.display_name = label
+
     @api.depends("material_line_ids")
     def _compute_material_count(self):
         for rec in self:
@@ -621,6 +643,25 @@ class BarcaMaintenanceAlertLineMaterial(models.Model):
     )
 
     note = fields.Text(string="Observación")
+
+    @api.depends(
+        "sequence",
+        "alert_line_id.display_name",
+        "product_id.display_name",
+        "estimated_quantity",
+        "product_uom_id.display_name",
+    )
+    def _compute_display_name(self):
+        for rec in self:
+            product = rec.product_id.display_name or "Material del aviso"
+            qty = rec.estimated_quantity or 0.0
+            qty_text = ("%s" % qty).rstrip("0").rstrip(".")
+            uom = rec.product_uom_id.display_name or ""
+            label = "%s x%s %s" % (product, qty_text, uom)
+            if rec.alert_line_id:
+                label = "%s / %s" % (rec.alert_line_id.display_name, label)
+
+            rec.display_name = label
 
     @api.depends("product_id", "product_id.qty_available")
     def _compute_available_quantity(self):

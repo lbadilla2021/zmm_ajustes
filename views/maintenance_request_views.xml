@@ -1,5 +1,160 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
+
+    <record id="view_barca_maintenance_workorder_line_list" model="ir.ui.view">
+        <field name="name">barca.maintenance.workorder.line.list</field>
+        <field name="model">barca.maintenance.workorder.line</field>
+        <field name="arch" type="xml">
+            <list editable="bottom" open_form_view="1">
+                <field name="sequence" widget="handle"/>
+                <field name="technical_location_id"/>
+                <field name="intervention_type_id"/>
+                <field name="activity_id"/>
+                <field name="estimated_duration"/>
+                <field name="state"/>
+                <field name="material_count" readonly="1"/>
+                <field name="material_summary" readonly="1"/>
+                <field name="alert_line_id" readonly="1" optional="hide"/>
+                <field name="alert_id" readonly="1" optional="hide"/>
+                <field name="plan_line_id" readonly="1" optional="hide"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_barca_maintenance_workorder_line_material_list" model="ir.ui.view">
+        <field name="name">barca.maintenance.workorder.line.material.list</field>
+        <field name="model">barca.maintenance.workorder.line.material</field>
+        <field name="arch" type="xml">
+            <list editable="bottom" open_form_view="1">
+                <field name="sequence" widget="handle"/>
+                <field name="product_id"/>
+                <field name="estimated_quantity"/>
+                <field name="reserved_quantity"/>
+                <field name="withdrawn_quantity"/>
+                <field name="consumed_quantity"/>
+                <field name="returned_quantity"/>
+                <field
+                    name="product_uom_id"
+                    domain="[('category_id', '=', product_uom_category_id)]"
+                />
+                <field name="product_uom_category_id" column_invisible="1"/>
+                <field name="note"/>
+            </list>
+        </field>
+    </record>
+
+    <record id="view_barca_maintenance_workorder_line_material_form" model="ir.ui.view">
+        <field name="name">barca.maintenance.workorder.line.material.form</field>
+        <field name="model">barca.maintenance.workorder.line.material</field>
+        <field name="arch" type="xml">
+            <form string="Material OT">
+                <sheet>
+                    <group>
+                        <group string="Material">
+                            <field name="sequence"/>
+                            <field name="product_id"/>
+                            <field
+                                name="product_uom_id"
+                                domain="[('category_id', '=', product_uom_category_id)]"
+                            />
+                            <field name="product_uom_category_id" invisible="1"/>
+                            <field name="estimated_quantity"/>
+                            <field name="note"/>
+                        </group>
+                        <group string="Cantidades operativas">
+                            <field name="reserved_quantity"/>
+                            <field name="withdrawn_quantity"/>
+                            <field name="consumed_quantity"/>
+                            <field name="returned_quantity"/>
+                        </group>
+                    </group>
+                    <group string="Trazabilidad">
+                        <field name="workorder_line_id" readonly="1"/>
+                        <field name="maintenance_request_id" readonly="1"/>
+                        <field name="alert_line_material_id" readonly="1"/>
+                    </group>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <record id="view_barca_maintenance_workorder_line_form" model="ir.ui.view">
+        <field name="name">barca.maintenance.workorder.line.form</field>
+        <field name="model">barca.maintenance.workorder.line</field>
+        <field name="arch" type="xml">
+            <form string="Actividad de OT">
+                <sheet>
+                    <notebook>
+                        <page string="Actividad" name="activity">
+                            <group>
+                                <group string="Datos técnicos">
+                                    <field name="sequence"/>
+                                    <field name="technical_location_id"/>
+                                    <field name="intervention_type_id"/>
+                                    <field name="activity_id"/>
+                                    <field name="estimated_duration"/>
+                                    <field name="state"/>
+                                    <field name="material_count" readonly="1"/>
+                                    <field name="material_summary" readonly="1"/>
+                                </group>
+                                <group string="Trazabilidad">
+                                    <field name="maintenance_request_id" readonly="1"/>
+                                    <field name="alert_line_id" readonly="1"/>
+                                    <field name="alert_id" readonly="1"/>
+                                    <field name="plan_line_id" readonly="1"/>
+                                </group>
+                            </group>
+                            <group string="Descripción y observaciones">
+                                <field name="description" nolabel="1"/>
+                                <field name="note" nolabel="1"/>
+                            </group>
+                        </page>
+                        <page string="Materiales / Repuestos / Kits" name="materials">
+                            <field
+                                name="material_line_ids"
+                                context="{'default_workorder_line_id': id, 'form_view_ref': 'zmm_ajustes.view_barca_maintenance_workorder_line_material_form'}"
+                            >
+                                <list editable="bottom" open_form_view="1">
+                                    <field name="sequence" widget="handle"/>
+                                    <field name="product_id"/>
+                                    <field name="estimated_quantity"/>
+                                    <field name="reserved_quantity"/>
+                                    <field name="withdrawn_quantity"/>
+                                    <field name="consumed_quantity"/>
+                                    <field name="returned_quantity"/>
+                                    <field
+                                        name="product_uom_id"
+                                        domain="[('category_id', '=', product_uom_category_id)]"
+                                    />
+                                    <field name="product_uom_category_id" column_invisible="1"/>
+                                    <field name="note"/>
+                                </list>
+                                <form string="Material OT">
+                                    <sheet>
+                                        <group>
+                                            <field name="product_id"/>
+                                            <field
+                                                name="product_uom_id"
+                                                domain="[('category_id', '=', product_uom_category_id)]"
+                                            />
+                                            <field name="product_uom_category_id" invisible="1"/>
+                                            <field name="estimated_quantity"/>
+                                            <field name="reserved_quantity"/>
+                                            <field name="withdrawn_quantity"/>
+                                            <field name="consumed_quantity"/>
+                                            <field name="returned_quantity"/>
+                                            <field name="note"/>
+                                        </group>
+                                    </sheet>
+                                </form>
+                            </field>
+                        </page>
+                    </notebook>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
     <!--
         Compatibilidad Odoo 18:
         El XML-ID maintenance.hr_equipment_request_view no existe.
@@ -21,7 +176,7 @@
 
             <xpath expr="//sheet/notebook" position="inside">
                 <page string="Actividades" name="barca_activities">
-                    <field name="barca_activity_line_ids" context="{'default_maintenance_request_id': id}">
+                    <field name="barca_activity_line_ids" context="{'default_maintenance_request_id': id, 'form_view_ref': 'zmm_ajustes.view_barca_maintenance_workorder_line_form'}">
                         <list editable="bottom" open_form_view="1">
                             <field name="sequence" widget="handle"/>
                             <field name="technical_location_id"/>
@@ -63,7 +218,7 @@
                                         </group>
                                     </page>
                                     <page string="Materiales / Repuestos / Kits" name="materials">
-                                        <field name="material_line_ids">
+                                        <field name="material_line_ids" context="{'default_workorder_line_id': id, 'form_view_ref': 'zmm_ajustes.view_barca_maintenance_workorder_line_material_form'}">
                                             <list editable="bottom" open_form_view="1">
                                                 <field name="sequence" widget="handle"/>
                                                 <field name="product_id"/>

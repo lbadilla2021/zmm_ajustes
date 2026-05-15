@@ -69,6 +69,28 @@ class BarcaMaintenancePlanLine(models.Model):
         compute="_compute_material_summary",
     )
 
+    @api.depends(
+        "sequence",
+        "plan_id.name",
+        "activity_id.display_name",
+        "technical_location_id.display_name",
+    )
+    def _compute_display_name(self):
+        for rec in self:
+            parts = []
+            if rec.activity_id:
+                parts.append(rec.activity_id.display_name)
+            if rec.technical_location_id:
+                parts.append(rec.technical_location_id.display_name)
+
+            label = " - ".join(parts) or "Actividad del plan"
+            if rec.sequence:
+                label = "[%s] %s" % (rec.sequence, label)
+            if rec.plan_id:
+                label = "%s / %s" % (rec.plan_id.display_name, label)
+
+            rec.display_name = label
+
     @api.depends("material_line_ids")
     def _compute_material_count(self):
         for rec in self:
@@ -276,6 +298,25 @@ class BarcaMaintenancePlanLineMaterial(models.Model):
     )
 
     note = fields.Text(string="Observación")
+
+    @api.depends(
+        "sequence",
+        "plan_line_id.display_name",
+        "product_id.display_name",
+        "quantity",
+        "product_uom_id.display_name",
+    )
+    def _compute_display_name(self):
+        for rec in self:
+            product = rec.product_id.display_name or "Material del plan"
+            qty = rec.quantity or 0.0
+            qty_text = ("%s" % qty).rstrip("0").rstrip(".")
+            uom = rec.product_uom_id.display_name or ""
+            label = "%s x%s %s" % (product, qty_text, uom)
+            if rec.plan_line_id:
+                label = "%s / %s" % (rec.plan_line_id.display_name, label)
+
+            rec.display_name = label
 
     @api.onchange("product_id")
     def _onchange_product_id(self):
