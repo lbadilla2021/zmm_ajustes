@@ -304,6 +304,8 @@ class BarcaMaintenanceAlert(models.Model):
                 "maintenance_type": "corrective",
                 "description": (alert.description or "") + activities_summary,
                 "equipment_id": alert.equipment_id.id,
+                "barca_alert_id": alert.id,
+                "barca_activity_line_ids": alert._prepare_workorder_activity_commands(),
             }
             if "category_id" in self.env["maintenance.request"]._fields:
                 equipment_category = alert.equipment_id.category_id
@@ -315,6 +317,30 @@ class BarcaMaintenanceAlert(models.Model):
                 "in_progress",
                 {"maintenance_request_id": request.id},
             )
+
+    def _prepare_workorder_activity_commands(self):
+        self.ensure_one()
+
+        commands = []
+        for line in self.alert_line_ids.sorted(lambda alert_line: alert_line.sequence):
+            commands.append(
+                Command.create(
+                    {
+                        "sequence": line.sequence,
+                        "alert_line_id": line.id,
+                        "technical_location_id": line.technical_location_id.id,
+                        "intervention_type_id": line.intervention_type_id.id,
+                        "activity_id": line.activity_id.id,
+                        "description": line.activity_id.note,
+                        "estimated_duration": line.estimated_duration,
+                        "state": "pending",
+                        "note": line.note,
+                        "material_line_ids": line._prepare_workorder_material_commands(),
+                    }
+                )
+            )
+
+        return commands
 
     # -------------------------------------------------------------------------
     # Constrains y onchange
@@ -499,6 +525,28 @@ class BarcaMaintenanceAlertLine(models.Model):
                         "product_id": material.product_id.id,
                         "product_uom_id": material.product_uom_id.id,
                         "estimated_quantity": material.quantity,
+                        "note": material.note,
+                    }
+                )
+            )
+
+        return commands
+
+    def _prepare_workorder_material_commands(self):
+        self.ensure_one()
+
+        commands = []
+        for material in self.material_line_ids.sorted(
+            lambda material_line: material_line.sequence
+        ):
+            commands.append(
+                Command.create(
+                    {
+                        "sequence": material.sequence,
+                        "alert_line_material_id": material.id,
+                        "product_id": material.product_id.id,
+                        "product_uom_id": material.product_uom_id.id,
+                        "estimated_quantity": material.estimated_quantity,
                         "note": material.note,
                     }
                 )

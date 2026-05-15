@@ -25,6 +25,8 @@ barca.maintenance.plan ──genera──> barca.maintenance.alert
 barca.maintenance.alert ──contiene──> barca.maintenance.alert.line
 barca.maintenance.alert.line ──contiene──> barca.maintenance.alert.line.material
 barca.maintenance.alert ──crea──> maintenance.request
+maintenance.request ──contiene──> barca.maintenance.workorder.line
+barca.maintenance.workorder.line ──contiene──> barca.maintenance.workorder.line.material
 ```
 
 ## `fleet.vehicle`
@@ -353,6 +355,64 @@ Campos principales:
 
 Una solicitud simple puede generar un `barca.maintenance.alert` con `source_type == 'request'`, `source_reference` igual al número de solicitud y `source_request_id` como vínculo trazable.
 
+
+
+## Extensión `maintenance.request`
+
+La OT estándar se extiende para mantener una estructura operativa propia copiada desde el aviso, sin leer materiales en vivo desde el plan ni desde el aviso.
+
+Campos Barca agregados:
+
+- `barca_alert_id`: aviso Barca que originó la OT.
+- `barca_activity_line_ids`: actividades ejecutables de la OT (`barca.maintenance.workorder.line`).
+- `barca_activity_count`: contador calculado de actividades.
+
+## `barca.maintenance.workorder.line`
+
+Actividad ejecutable dentro de una OT estándar. Se crea al generar la OT desde un aviso y conserva trazabilidad opcional hacia la actividad del aviso.
+
+Campos principales:
+
+- `sequence`
+- `maintenance_request_id`
+- `alert_line_id`
+- `alert_id`: relacionado desde la actividad del aviso.
+- `plan_line_id`: relacionado desde la actividad del aviso.
+- `technical_location_id`
+- `intervention_type_id`
+- `activity_id`
+- `description`
+- `estimated_duration`
+- `state`: `pending`, `in_progress`, `notified`, `closed`.
+- `note`
+- `material_line_ids`: materiales/repuestos/kits ejecutables de la actividad de OT.
+
+## `barca.maintenance.workorder.line.material`
+
+Material, repuesto o kit ejecutable asociado a una actividad de OT. Es una copia del material evaluado del aviso; no explota kits y todos los productos son `product.product`.
+
+Campos principales:
+
+- `sequence`
+- `workorder_line_id`
+- `maintenance_request_id`: relacionado desde la actividad de OT.
+- `alert_line_material_id`
+- `product_id`
+- `product_uom_id`
+- `product_uom_category_id`
+- `estimated_quantity`
+- `reserved_quantity`
+- `withdrawn_quantity`
+- `consumed_quantity`
+- `returned_quantity`
+- `note`
+
+Reglas:
+
+- Todas las cantidades deben ser mayores o iguales a cero.
+- `product_id` y `product_uom_id` son obligatorios.
+- La unidad de medida debe ser compatible con la categoría de UdM del producto.
+- En esta fase no hay reservas, pickings, compras, consumos reales, devoluciones ni movimientos de inventario.
 
 ## `barca.maintenance.checklist`
 
