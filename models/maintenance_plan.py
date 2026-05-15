@@ -280,6 +280,7 @@ class BarcaMaintenancePlan(models.Model):
 
     def _build_alert_line_vals(self, alert_id):
         self.ensure_one()
+        AlertLine = self.env["barca.maintenance.alert.line"]
         return [
             {
                 "alert_id": alert_id,
@@ -290,6 +291,9 @@ class BarcaMaintenancePlan(models.Model):
                 "estimated_duration": line.estimated_duration,
                 "note": line.note,
                 "sequence": line.sequence,
+                "material_line_ids": AlertLine._prepare_material_commands_from_plan_line(
+                    line
+                ),
             }
             for line in self.plan_line_ids
         ]

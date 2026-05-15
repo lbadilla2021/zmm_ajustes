@@ -108,15 +108,67 @@
                     <notebook>
                         <page string="Actividades" name="activities">
                             <field name="alert_line_ids">
-                                <list editable="bottom">
+                                <list editable="bottom" open_form_view="1">
                                     <field name="sequence" widget="handle"/>
                                     <field name="technical_location_id" readonly="1"/>
                                     <field name="intervention_type_id" readonly="1"/>
                                     <field name="activity_id" readonly="1"/>
                                     <field name="estimated_duration" string="Duración (hrs)" readonly="1"/>
+                                    <field name="material_count" readonly="1"/>
+                                    <field name="material_summary" readonly="1" optional="show"/>
                                     <field name="done"/>
                                     <field name="note" optional="show"/>
                                 </list>
+                                <form string="Actividad del aviso">
+                                    <sheet>
+                                        <group col="2">
+                                            <group>
+                                                <field name="technical_location_id" readonly="1"/>
+                                                <field name="intervention_type_id" readonly="1"/>
+                                                <field name="activity_id" readonly="1"/>
+                                            </group>
+                                            <group>
+                                                <field name="estimated_duration" string="Duración (hrs)" readonly="1"/>
+                                                <field name="done"/>
+                                                <field name="note"/>
+                                            </group>
+                                        </group>
+                                        <notebook>
+                                            <page string="Materiales / Repuestos / Kits" name="materials">
+                                                <field name="material_line_ids">
+                                                    <list editable="bottom" open_form_view="1">
+                                                        <field name="sequence" widget="handle"/>
+                                                        <field name="product_id"/>
+                                                        <field name="estimated_quantity"/>
+                                                        <field
+                                                            name="product_uom_id"
+                                                            domain="[('category_id', '=', product_uom_category_id)]"
+                                                        />
+                                                        <field name="available_quantity" readonly="1"/>
+                                                        <field name="product_uom_category_id" column_invisible="1"/>
+                                                        <field name="note"/>
+                                                    </list>
+
+                                                    <form string="Material / Repuesto / Kit del aviso">
+                                                        <sheet>
+                                                            <group>
+                                                                <field name="product_id"/>
+                                                                <field
+                                                                    name="product_uom_id"
+                                                                    domain="[('category_id', '=', product_uom_category_id)]"
+                                                                />
+                                                                <field name="product_uom_category_id" invisible="1"/>
+                                                                <field name="estimated_quantity"/>
+                                                                <field name="available_quantity" readonly="1"/>
+                                                                <field name="note"/>
+                                                            </group>
+                                                        </sheet>
+                                                    </form>
+                                                </field>
+                                            </page>
+                                        </notebook>
+                                    </sheet>
+                                </form>
                             </field>
                         </page>
 

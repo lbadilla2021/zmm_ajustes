@@ -23,6 +23,7 @@ barca.maintenance.request ──puede originar──> barca.maintenance.alert
 barca.maintenance.checklist ──puede originar──> barca.maintenance.alert
 barca.maintenance.plan ──genera──> barca.maintenance.alert
 barca.maintenance.alert ──contiene──> barca.maintenance.alert.line
+barca.maintenance.alert.line ──contiene──> barca.maintenance.alert.line.material
 barca.maintenance.alert ──crea──> maintenance.request
 ```
 
@@ -208,7 +209,7 @@ Campos:
 - `technical_location_code`
 - `estimated_duration`
 - `note`
-- `material_line_ids`: propuesta maestra de materiales, repuestos o kits para nuevos planes.
+- `material_template_line_ids`: propuesta maestra de materiales, repuestos o kits para nuevos planes.
 - `material_count`: contador visible de materiales propuestos.
 - `material_summary`: resumen visible de materiales propuestos.
 
@@ -431,8 +432,47 @@ Campos:
 - `estimated_duration`
 - `done`
 - `note`
+- `material_line_ids`: materiales, repuestos o kits evaluables/editables de esa actividad del aviso.
+- `material_count`: contador visible de materiales asociados a la actividad del aviso.
+- `material_summary`: resumen visible con hasta tres productos y sufijo `(+N)` si existen más.
 
-Estas líneas se copian desde `barca.maintenance.plan.line` al crear aviso desde PM.
+Estas líneas se copian desde `barca.maintenance.plan.line` al crear aviso desde PM. Sus materiales se copian desde `barca.maintenance.plan.line.material` hacia líneas nuevas de `barca.maintenance.alert.line.material`, por lo que cada aviso mantiene registros propios e independientes del plan. No existen materiales globales en el encabezado del aviso.
+
+## `barca.maintenance.alert.line.material`
+
+Línea de material, repuesto o kit asociado a una actividad específica del aviso (`barca.maintenance.alert.line`). Es el nivel operativo donde Tomas puede evaluar y ajustar los materiales requeridos para la actividad del aviso.
+
+Campos:
+
+- `sequence`
+- `alert_line_id`: actividad específica del aviso.
+- `alert_id`: aviso relacionado, calculado desde `alert_line_id` para trazabilidad y búsqueda.
+- `plan_line_material_id`: material de línea de plan origen, opcional y conservado solo como referencia.
+- `product_id`: producto de Odoo (`product.product`), mostrado como **Repuesto / Kit / Material**.
+- `product_uom_id`: unidad de medida estimada.
+- `product_uom_category_id`: categoría de UdM del producto para restringir unidades compatibles.
+- `estimated_quantity`: cantidad estimada editable en el aviso.
+- `available_quantity`: disponible simple calculado desde `product_id.qty_available`; no implementa lógica por bodega.
+- `note`
+
+Reglas:
+
+- `estimated_quantity` debe ser mayor que cero.
+- `product_id` y `product_uom_id` son obligatorios.
+- `product_uom_id` debe pertenecer a la misma categoría que la unidad de medida del producto.
+- Los materiales del aviso siempre pertenecen a una línea de actividad; no se agregan materiales al encabezado de `barca.maintenance.alert`.
+- Un kit sigue siendo un `product.product` íntegro; no se explota en componentes.
+
+Flujo de materiales:
+
+```text
+Actividad maestra (`barca.maintenance.activity`)
+  → propone materiales estándar (`barca.maintenance.activity.material`)
+Actividad del plan (`barca.maintenance.plan.line`)
+  → guarda materiales específicos del plan (`barca.maintenance.plan.line.material`)
+Actividad del aviso (`barca.maintenance.alert.line`)
+  → guarda materiales evaluables/editables (`barca.maintenance.alert.line.material`)
+```
 
 ## `barca.maintenance.kit`
 

@@ -1,6 +1,6 @@
 import logging
 
-from odoo import api, fields, models
+from odoo import Command, api, fields, models
 from odoo.exceptions import ValidationError
 
 _logger = logging.getLogger(__name__)
@@ -432,3 +432,172 @@ class BarcaMaintenanceAlertLine(models.Model):
     )
 
     note = fields.Text(string="Observaciones")
+
+    material_line_ids = fields.One2many(
+        "barca.maintenance.alert.line.material",
+        "alert_line_id",
+        string="Materiales / Repuestos / Kits",
+    )
+
+    material_count = fields.Integer(
+        string="N° materiales",
+        compute="_compute_material_count",
+    )
+
+    material_summary = fields.Char(
+        string="Materiales",
+        compute="_compute_material_summary",
+    )
+
+    @api.depends("material_line_ids")
+    def _compute_material_count(self):
+        for rec in self:
+            rec.material_count = len(rec.material_line_ids)
+
+    @api.depends(
+        "material_line_ids.sequence",
+        "material_line_ids.product_id",
+        "material_line_ids.product_id.display_name",
+        "material_line_ids.estimated_quantity",
+        "material_line_ids.product_uom_id",
+    )
+    def _compute_material_summary(self):
+        for rec in self:
+            lines = rec.material_line_ids.sorted(lambda line: line.sequence)
+            parts = []
+
+            for line in lines[:3]:
+                if not line.product_id:
+                    continue
+
+                qty = line.estimated_quantity or 0.0
+                uom = line.product_uom_id.name or line.product_id.uom_id.name or ""
+                parts.append("%s x %s %s" % (line.product_id.display_name, qty, uom))
+
+            if not parts:
+                rec.material_summary = False
+                continue
+
+            remaining = len(lines) - len(parts)
+            summary = ", ".join(parts)
+            if remaining > 0:
+                summary = "%s (+%s)" % (summary, remaining)
+
+            rec.material_summary = summary
+
+    @api.model
+    def _prepare_material_commands_from_plan_line(self, plan_line):
+        commands = []
+        for material in plan_line.material_line_ids.sorted(
+            lambda line: line.sequence
+        ):
+            commands.append(
+                Command.create(
+                    {
+                        "sequence": material.sequence,
+                        "plan_line_material_id": material.id,
+                        "product_id": material.product_id.id,
+                        "product_uom_id": material.product_uom_id.id,
+                        "estimated_quantity": material.quantity,
+                        "note": material.note,
+                    }
+                )
+            )
+
+        return commands
+
+
+class BarcaMaintenanceAlertLineMaterial(models.Model):
+    _name = "barca.maintenance.alert.line.material"
+    _description = "Material, repuesto o kit por actividad del aviso"
+    _order = "sequence, id"
+
+    sequence = fields.Integer(string="Secuencia", default=10)
+
+    alert_line_id = fields.Many2one(
+        "barca.maintenance.alert.line",
+        string="Actividad del aviso",
+        required=True,
+        ondelete="cascade",
+        index=True,
+    )
+
+    alert_id = fields.Many2one(
+        "barca.maintenance.alert",
+        string="Aviso",
+        related="alert_line_id.alert_id",
+        store=True,
+        readonly=True,
+        index=True,
+    )
+
+    plan_line_material_id = fields.Many2one(
+        "barca.maintenance.plan.line.material",
+        string="Material de línea de plan origen",
+        ondelete="set null",
+    )
+
+    product_id = fields.Many2one(
+        "product.product",
+        string="Repuesto / Kit / Material",
+        required=True,
+    )
+
+    product_uom_id = fields.Many2one(
+        "uom.uom",
+        string="UdM",
+        required=True,
+    )
+
+    product_uom_category_id = fields.Many2one(
+        "uom.category",
+        related="product_id.uom_id.category_id",
+        readonly=True,
+    )
+
+    estimated_quantity = fields.Float(
+        string="Cantidad estimada",
+        required=True,
+        default=1.0,
+    )
+
+    available_quantity = fields.Float(
+        string="Disponible",
+        compute="_compute_available_quantity",
+        readonly=True,
+    )
+
+    note = fields.Text(string="Observación")
+
+    @api.depends("product_id", "product_id.qty_available")
+    def _compute_available_quantity(self):
+        for rec in self:
+            rec.available_quantity = (
+                rec.product_id.qty_available if rec.product_id else 0.0
+            )
+
+    @api.onchange("product_id")
+    def _onchange_product_id(self):
+        for rec in self:
+            rec.product_uom_id = rec.product_id.uom_id if rec.product_id else False
+
+    @api.constrains("estimated_quantity")
+    def _check_estimated_quantity_positive(self):
+        for rec in self:
+            if rec.estimated_quantity <= 0:
+                raise ValidationError("La cantidad estimada debe ser mayor que cero.")
+
+    @api.constrains("product_id", "product_uom_id")
+    def _check_product_and_uom(self):
+        for rec in self:
+            if not rec.product_id:
+                raise ValidationError("Debe definir un Repuesto / Kit / Material.")
+
+            if not rec.product_uom_id:
+                raise ValidationError("Debe definir una unidad de medida.")
+
+            if rec.product_uom_id.category_id != rec.product_id.uom_id.category_id:
+                raise ValidationError(
+                    "La unidad de medida debe pertenecer a la misma categoría "
+                    "que la unidad del producto."
+                )
