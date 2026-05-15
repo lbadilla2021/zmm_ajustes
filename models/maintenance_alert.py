@@ -304,6 +304,8 @@ class BarcaMaintenanceAlert(models.Model):
                 "maintenance_type": "corrective",
                 "description": (alert.description or "") + activities_summary,
                 "equipment_id": alert.equipment_id.id,
+                "barca_alert_id": alert.id,
+                "barca_activity_line_ids": alert._prepare_workorder_activity_commands(),
             }
             if "category_id" in self.env["maintenance.request"]._fields:
                 equipment_category = alert.equipment_id.category_id
@@ -315,6 +317,32 @@ class BarcaMaintenanceAlert(models.Model):
                 "in_progress",
                 {"maintenance_request_id": request.id},
             )
+
+    def _prepare_workorder_activity_commands(self):
+        self.ensure_one()
+
+        commands = []
+        for line in self.alert_line_ids.sorted(lambda alert_line: alert_line.sequence):
+            commands.append(
+                Command.create(
+                    {
+                        "sequence": line.sequence,
+                        "alert_line_id": line.id,
+                        "technical_location_id": line.technical_location_id.id,
+                        "intervention_type_id": line.intervention_type_id.id,
+                        "activity_id": line.activity_id.id,
+                        "description": line.activity_id.note,
+                        "estimated_duration": line.estimated_duration,
+                        "state": "pending",
+                        "note": line.note,
+                        "material_line_ids": (
+                            line._prepare_material_commands_from_alert_line()
+                        ),
+                    }
+                )
+            )
+
+        return commands
 
     # -------------------------------------------------------------------------
     # Constrains y onchange
@@ -449,6 +477,28 @@ class BarcaMaintenanceAlertLine(models.Model):
         compute="_compute_material_summary",
     )
 
+    @api.depends(
+        "sequence",
+        "alert_id.name",
+        "activity_id.display_name",
+        "technical_location_id.display_name",
+    )
+    def _compute_display_name(self):
+        for rec in self:
+            parts = []
+            if rec.activity_id:
+                parts.append(rec.activity_id.display_name)
+            if rec.technical_location_id:
+                parts.append(rec.technical_location_id.display_name)
+
+            label = " - ".join(parts) or "Actividad del aviso"
+            if rec.sequence:
+                label = "[%s] %s" % (rec.sequence, label)
+            if rec.alert_id:
+                label = "%s / %s" % (rec.alert_id.display_name, label)
+
+            rec.display_name = label
+
     @api.depends("material_line_ids")
     def _compute_material_count(self):
         for rec in self:
@@ -505,6 +555,31 @@ class BarcaMaintenanceAlertLine(models.Model):
             )
 
         return commands
+
+    def _prepare_material_commands_from_alert_line(self):
+        self.ensure_one()
+
+        commands = []
+        for material in self.material_line_ids.sorted(
+            lambda material_line: material_line.sequence
+        ):
+            commands.append(
+                Command.create(
+                    {
+                        "sequence": material.sequence,
+                        "alert_line_material_id": material.id,
+                        "product_id": material.product_id.id,
+                        "product_uom_id": material.product_uom_id.id,
+                        "estimated_quantity": material.estimated_quantity,
+                        "note": material.note,
+                    }
+                )
+            )
+
+        return commands
+
+    def _prepare_workorder_material_commands(self):
+        return self._prepare_material_commands_from_alert_line()
 
 
 class BarcaMaintenanceAlertLineMaterial(models.Model):
@@ -568,6 +643,25 @@ class BarcaMaintenanceAlertLineMaterial(models.Model):
     )
 
     note = fields.Text(string="Observación")
+
+    @api.depends(
+        "sequence",
+        "alert_line_id.display_name",
+        "product_id.display_name",
+        "estimated_quantity",
+        "product_uom_id.display_name",
+    )
+    def _compute_display_name(self):
+        for rec in self:
+            product = rec.product_id.display_name or "Material del aviso"
+            qty = rec.estimated_quantity or 0.0
+            qty_text = ("%s" % qty).rstrip("0").rstrip(".")
+            uom = rec.product_uom_id.display_name or ""
+            label = "%s x%s %s" % (product, qty_text, uom)
+            if rec.alert_line_id:
+                label = "%s / %s" % (rec.alert_line_id.display_name, label)
+
+            rec.display_name = label
 
     @api.depends("product_id", "product_id.qty_available")
     def _compute_available_quantity(self):
