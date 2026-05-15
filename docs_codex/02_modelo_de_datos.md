@@ -583,3 +583,29 @@ Extensión en `models/maintenance_request.py`.
 La Solicitud de Mantención estándar de Odoo se renombra funcionalmente como Orden de Trabajo. Su ciclo de programación, ejecución, revisión y cierre queda separado del ciclo del aviso `barca.maintenance.alert`.
 
 El aviso asociado queda en estado técnico `in_progress` / funcional `Con OT creada` hasta que el usuario lo cierre explícitamente. El cierre del aviso solo se permite si la OT asociada está en una etapa terminada (`stage_id.done`), equivalente funcionalmente a Reparado o Desechar.
+
+### Fase 4: ciclo operativo de actividades de OT
+
+`barca.maintenance.workorder.line` administra el avance operativo básico de cada actividad ejecutable de la OT con el campo `state` y los valores técnicos:
+
+- `pending`: Pendiente.
+- `in_progress`: En ejecución.
+- `notified`: Notificada.
+- `closed`: Cerrada.
+
+La notificación de avance se registra en la misma actividad mediante:
+
+- `notification_note`: descripción manual de lo realizado.
+- `result`: resultado informado (`resolved`, `partial`, `not_resolved`).
+- `notification_date`: fecha/hora asignada automáticamente al notificar.
+- `notified_by_id`: usuario que notificó la actividad.
+
+`maintenance.request` calcula contadores de actividades Barca para apoyar revisión operativa:
+
+- `barca_total_activity_count`.
+- `barca_notified_activity_count`: considera actividades `notified` y `closed`.
+- `barca_closed_activity_count`.
+- `barca_all_activities_notified`.
+- `barca_all_activities_closed`.
+
+En materiales de OT (`barca.maintenance.workorder.line.material`), Fase 4 mantiene cantidades operativas manuales y valida que `estimated_quantity`, `reserved_quantity`, `withdrawn_quantity`, `consumed_quantity` y `returned_quantity` no sean negativas. El consumo informado (`consumed_quantity`) es un dato manual de avance; no descuenta inventario ni exige haber retirado material desde bodega.

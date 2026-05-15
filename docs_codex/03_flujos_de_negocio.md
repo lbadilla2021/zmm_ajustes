@@ -423,3 +423,32 @@ Al cerrar (`action_close()`):
    - `x_hours_last_service`
 
 Regla importante: nunca retrocede valores; solo actualiza si el valor del aviso es mayor que el valor actual del vehículo.
+
+## Fase 4: operación y notificación de actividades de OT
+
+Cada actividad ejecutable de una OT (`barca.maintenance.workorder.line`) sigue el ciclo operativo básico:
+
+```text
+Pendiente → En ejecución → Notificada → Cerrada
+```
+
+Acciones disponibles:
+
+- **Iniciar**: cambia una actividad `pending` a `in_progress`.
+- **Notificar**: exige descripción de lo realizado, resultado y cantidades de materiales no negativas; cambia la actividad `in_progress` a `notified` y registra fecha/hora y usuario notificador.
+- **Cerrar línea**: cambia una actividad `notified` a `closed`.
+- **Reabrir a pendiente**: solo para administrador o programador Barca; vuelve la actividad a `pending` y limpia fecha/usuario de notificación, conservando descripción, resultado, materiales y cantidades informadas.
+
+La pestaña **Materiales / Repuestos / Kits** de la actividad de OT permite informar manualmente `consumed_quantity` y observaciones por material. Las cantidades reservadas, retiradas y devueltas siguen siendo datos estructurales visibles/editables para continuidad funcional, pero en esta fase no ejecutan operaciones logísticas.
+
+La OT calcula total de actividades, actividades notificadas y actividades cerradas. El botón **Enviar a revisión** valida que exista al menos una actividad y que todas estén `notified` o `closed`. Si la validación pasa, publica un mensaje en chatter cuando está disponible y muestra una notificación indicando que la OT queda lista para revisión. Esta fase no realiza cierre definitivo de la OT ni cambia etapas estándar si no hay una etapa segura identificada.
+
+Fase 4 no implementa ni dispara:
+
+- Reservas.
+- Retiros de bodega.
+- `stock.move`.
+- `stock.picking`.
+- Compras.
+- Devoluciones.
+- Consumos reales de inventario.

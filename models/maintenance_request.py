@@ -21,13 +21,84 @@ class MaintenanceRequest(models.Model):
     )
     barca_activity_count = fields.Integer(
         string="N° actividades Barca",
-        compute="_compute_barca_activity_count",
+        compute="_compute_barca_activity_counts",
+    )
+    barca_total_activity_count = fields.Integer(
+        string="Total actividades",
+        compute="_compute_barca_activity_counts",
+    )
+    barca_notified_activity_count = fields.Integer(
+        string="Actividades notificadas",
+        compute="_compute_barca_activity_counts",
+    )
+    barca_closed_activity_count = fields.Integer(
+        string="Actividades cerradas",
+        compute="_compute_barca_activity_counts",
+    )
+    barca_all_activities_notified = fields.Boolean(
+        string="Todas las actividades notificadas",
+        compute="_compute_barca_activity_counts",
+    )
+    barca_all_activities_closed = fields.Boolean(
+        string="Todas las actividades cerradas",
+        compute="_compute_barca_activity_counts",
     )
 
-    @api.depends("barca_activity_line_ids")
-    def _compute_barca_activity_count(self):
+    @api.depends("barca_activity_line_ids", "barca_activity_line_ids.state")
+    def _compute_barca_activity_counts(self):
         for request in self:
-            request.barca_activity_count = len(request.barca_activity_line_ids)
+            total = len(request.barca_activity_line_ids)
+            notified = len(
+                request.barca_activity_line_ids.filtered(
+                    lambda line: line.state in ("notified", "closed")
+                )
+            )
+            closed = len(
+                request.barca_activity_line_ids.filtered(
+                    lambda line: line.state == "closed"
+                )
+            )
+
+            request.barca_activity_count = total
+            request.barca_total_activity_count = total
+            request.barca_notified_activity_count = notified
+            request.barca_closed_activity_count = closed
+            request.barca_all_activities_notified = total > 0 and notified == total
+            request.barca_all_activities_closed = total > 0 and closed == total
+
+    def action_barca_send_to_review(self):
+        message = (
+            "Todas las actividades fueron notificadas. "
+            "La OT queda lista para revisión."
+        )
+        for request in self:
+            if not request.barca_activity_line_ids:
+                raise ValidationError(
+                    "La OT debe tener al menos una actividad para enviarse a revisión."
+                )
+
+            pending_lines = request.barca_activity_line_ids.filtered(
+                lambda line: line.state not in ("notified", "closed")
+            )
+            if pending_lines:
+                raise ValidationError(
+                    "Todas las actividades deben estar notificadas antes de enviar "
+                    "la OT a revisión."
+                )
+
+            if callable(getattr(request, "message_post", None)):
+                request.message_post(body=message)
+
+        return {
+            "type": "ir.actions.client",
+            "tag": "display_notification",
+            "params": {
+                "title": "OT lista para revisión",
+                "message": message,
+                "type": "success",
+                "sticky": False,
+            },
+        }
 
 
 class BarcaMaintenanceWorkorderLine(models.Model):
@@ -94,7 +165,7 @@ class BarcaMaintenanceWorkorderLine(models.Model):
     state = fields.Selection(
         [
             ("pending", "Pendiente"),
-            ("in_progress", "En proceso"),
+            ("in_progress", "En ejecución"),
             ("notified", "Notificada"),
             ("closed", "Cerrada"),
         ],
@@ -104,6 +175,30 @@ class BarcaMaintenanceWorkorderLine(models.Model):
     )
 
     note = fields.Text(string="Observaciones")
+
+    notification_note = fields.Text(
+        string="Descripción de lo realizado",
+    )
+
+    result = fields.Selection(
+        [
+            ("resolved", "Resuelto"),
+            ("partial", "Parcial"),
+            ("not_resolved", "No resuelto"),
+        ],
+        string="Resultado",
+    )
+
+    notification_date = fields.Datetime(
+        string="Fecha/hora notificación",
+        readonly=True,
+    )
+
+    notified_by_id = fields.Many2one(
+        "res.users",
+        string="Notificado por",
+        readonly=True,
+    )
 
     material_line_ids = fields.One2many(
         "barca.maintenance.workorder.line.material",
@@ -181,6 +276,69 @@ class BarcaMaintenanceWorkorderLine(models.Model):
                 summary = "%s (+%s)" % (summary, remaining)
 
             rec.material_summary = summary
+
+    def action_start_line(self):
+        for line in self:
+            if line.state != "pending":
+                raise ValidationError(
+                    "Solo se pueden iniciar actividades en estado Pendiente."
+                )
+            line.state = "in_progress"
+        return True
+
+    def action_notify_line(self):
+        for line in self:
+            if line.state != "in_progress":
+                raise ValidationError(
+                    "Solo se pueden notificar actividades en estado En ejecución."
+                )
+            if not line.notification_note or not line.notification_note.strip():
+                raise ValidationError(
+                    "Debe ingresar la descripción de lo realizado antes de notificar."
+                )
+            if not line.result:
+                raise ValidationError(
+                    "Debe seleccionar un resultado antes de notificar la actividad."
+                )
+
+            line.material_line_ids._check_quantities_non_negative()
+            line.write(
+                {
+                    "state": "notified",
+                    "notification_date": fields.Datetime.now(),
+                    "notified_by_id": self.env.user.id,
+                }
+            )
+        return True
+
+    def action_close_line(self):
+        for line in self:
+            if line.state != "notified":
+                raise ValidationError(
+                    "Solo se pueden cerrar actividades en estado Notificada."
+                )
+            line.state = "closed"
+        return True
+
+    def action_reset_to_pending(self):
+        if not (
+            self.env.user.has_group("zmm_ajustes.group_barca_admin")
+            or self.env.user.has_group("zmm_ajustes.group_barca_programador")
+        ):
+            raise ValidationError(
+                "Solo un administrador o programador Barca puede reabrir "
+                "actividades a pendiente."
+            )
+
+        for line in self:
+            line.write(
+                {
+                    "state": "pending",
+                    "notification_date": False,
+                    "notified_by_id": False,
+                }
+            )
+        return True
 
 
 class BarcaMaintenanceWorkorderLineMaterial(models.Model):

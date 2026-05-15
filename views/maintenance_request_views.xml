@@ -12,6 +12,9 @@
                 <field name="activity_id"/>
                 <field name="estimated_duration"/>
                 <field name="state"/>
+                <button name="action_start_line" string="Iniciar" type="object" class="btn-primary" invisible="state != 'pending'"/>
+                <button name="action_notify_line" string="Notificar" type="object" class="btn-primary" invisible="state != 'in_progress'"/>
+                <button name="action_close_line" string="Cerrar línea" type="object" class="btn-primary" invisible="state != 'notified'"/>
                 <field name="material_count" readonly="1"/>
                 <field name="material_summary" readonly="1"/>
                 <field name="alert_line_id" readonly="1" optional="hide"/>
@@ -83,6 +86,12 @@
         <field name="model">barca.maintenance.workorder.line</field>
         <field name="arch" type="xml">
             <form string="Actividad de OT">
+                <header>
+                    <button name="action_start_line" string="Iniciar" type="object" class="btn-primary" invisible="state != 'pending'"/>
+                    <button name="action_notify_line" string="Notificar" type="object" class="btn-primary" invisible="state != 'in_progress'"/>
+                    <button name="action_close_line" string="Cerrar línea" type="object" class="btn-primary" invisible="state != 'notified'"/>
+                    <button name="action_reset_to_pending" string="Reabrir a pendiente" type="object" groups="zmm_ajustes.group_barca_admin,zmm_ajustes.group_barca_programador" invisible="state not in ('in_progress', 'notified', 'closed')"/>
+                </header>
                 <sheet>
                     <notebook>
                         <page string="Actividad" name="activity">
@@ -149,6 +158,14 @@
                                 </form>
                             </field>
                         </page>
+                        <page string="Notificación" name="notification">
+                            <group>
+                                <field name="notification_note" placeholder="Describa el trabajo realizado"/>
+                                <field name="result"/>
+                                <field name="notification_date" readonly="1"/>
+                                <field name="notified_by_id" readonly="1"/>
+                            </group>
+                        </page>
                     </notebook>
                 </sheet>
             </form>
@@ -169,9 +186,20 @@
                 <attribute name="placeholder">Orden de Trabajo</attribute>
             </xpath>
 
+            <xpath expr="//sheet" position="before">
+                <header>
+                    <button name="action_barca_send_to_review" string="Enviar a revisión" type="object" class="btn-primary"/>
+                </header>
+            </xpath>
+
             <xpath expr="//sheet/group[1]" position="inside">
-                <field name="barca_alert_id" readonly="1"/>
-                <field name="barca_activity_count" readonly="1"/>
+                <field name="barca_alert_id" readonly="1" invisible="1"/>
+                <field name="barca_activity_count" readonly="1" invisible="1"/>
+                <field name="barca_total_activity_count" readonly="1" invisible="1"/>
+                <field name="barca_notified_activity_count" readonly="1" invisible="1"/>
+                <field name="barca_closed_activity_count" readonly="1" invisible="1"/>
+                <field name="barca_all_activities_notified" readonly="1" invisible="1"/>
+                <field name="barca_all_activities_closed" readonly="1" invisible="1"/>
             </xpath>
 
             <xpath expr="//sheet/notebook" position="inside">
@@ -184,6 +212,9 @@
                             <field name="activity_id"/>
                             <field name="estimated_duration"/>
                             <field name="state"/>
+                            <button name="action_start_line" string="Iniciar" type="object" class="btn-primary" invisible="state != 'pending'"/>
+                            <button name="action_notify_line" string="Notificar" type="object" class="btn-primary" invisible="state != 'in_progress'"/>
+                            <button name="action_close_line" string="Cerrar línea" type="object" class="btn-primary" invisible="state != 'notified'"/>
                             <field name="material_count" readonly="1"/>
                             <field name="material_summary" readonly="1"/>
                             <field name="alert_line_id" readonly="1" optional="hide"/>
@@ -191,6 +222,12 @@
                             <field name="plan_line_id" readonly="1" optional="hide"/>
                         </list>
                         <form string="Actividad de OT">
+                            <header>
+                                <button name="action_start_line" string="Iniciar" type="object" class="btn-primary" invisible="state != 'pending'"/>
+                                <button name="action_notify_line" string="Notificar" type="object" class="btn-primary" invisible="state != 'in_progress'"/>
+                                <button name="action_close_line" string="Cerrar línea" type="object" class="btn-primary" invisible="state != 'notified'"/>
+                                <button name="action_reset_to_pending" string="Reabrir a pendiente" type="object" groups="zmm_ajustes.group_barca_admin,zmm_ajustes.group_barca_programador" invisible="state not in ('in_progress', 'notified', 'closed')"/>
+                            </header>
                             <sheet>
                                 <notebook>
                                     <page string="Actividad" name="activity">
@@ -253,6 +290,14 @@
                                                 </sheet>
                                             </form>
                                         </field>
+                                    </page>
+                                    <page string="Notificación" name="notification">
+                                        <group>
+                                            <field name="notification_note" placeholder="Describa el trabajo realizado"/>
+                                            <field name="result"/>
+                                            <field name="notification_date" readonly="1"/>
+                                            <field name="notified_by_id" readonly="1"/>
+                                        </group>
                                     </page>
                                 </notebook>
                             </sheet>
