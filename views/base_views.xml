@@ -76,10 +76,6 @@
                 </page>
             </xpath>
 
-            <xpath expr="//sheet/notebook/page[@name='description']" position="inside">
-                <field name="description"/>
-            </xpath>
-
             <xpath expr="//sheet/notebook" position="inside">
                 <page string="Contadores" name="barca_counters">
                     <group>
