@@ -173,9 +173,10 @@
     </record>
 
     <!--
-        Compatibilidad Odoo 18:
-        El XML-ID maintenance.hr_equipment_request_view no existe.
-        Se usa la vista formulario vigente del módulo maintenance.
+        Compatibilidad Odoo 18 Community:
+        maintenance.hr_equipment_request_view_form es el formulario estándar vigente
+        de maintenance.request y ya incluye <form><header>. Por eso el botón Barca
+        se inserta dentro del header existente para no crear un segundo header.
     -->
     <record id="barca_maintenance_request_form_inherit" model="ir.ui.view">
         <field name="name">barca.maintenance.request.form.inherit</field>
@@ -186,10 +187,8 @@
                 <attribute name="placeholder">Orden de Trabajo</attribute>
             </xpath>
 
-            <xpath expr="//sheet" position="before">
-                <header>
-                    <button name="action_barca_send_to_review" string="Enviar a revisión" type="object" class="btn-primary"/>
-                </header>
+            <xpath expr="//form/header" position="inside">
+                <button name="action_barca_send_to_review" string="Enviar a revisión" type="object" class="btn-primary"/>
             </xpath>
 
             <xpath expr="//sheet/group[1]" position="inside">
