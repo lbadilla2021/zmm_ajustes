@@ -107,13 +107,14 @@ Visible para todos los grupos Barca.
 
 Submenús:
 
+- `Odómetros`: Conductor, Programador, Ejecutor, Bodega, Admin. Usa `fleet.vehicle.odometer`; los grupos Barca tienen lectura de vehículos y lectura/creación/edición de odómetros sin eliminación para operar el menú sin habilitar todo Flotilla.
 - `Avisos`: Conductor, Programador, Ejecutor, Bodega, Admin.
 - `Orden de Trabajo`: Programador, Admin.
 - `Calendario Mantenimiento`: Programador, Admin.
 
 ### Equipos
 
-Visible para Programador, Ejecutor, Admin.
+Visible para Programador, Ejecutor, Admin. La pestaña **Documentación** muestra datos relacionados desde `fleet.vehicle` en solo lectura; la mantención de esos campos se realiza en Flotilla.
 
 ### Informes
 

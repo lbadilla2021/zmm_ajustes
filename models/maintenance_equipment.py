@@ -40,6 +40,32 @@ class MaintenanceEquipment(models.Model):
         readonly=True,
     )
 
+    x_doc_circulation_permit_expiry = fields.Date(
+        string="Vencimiento permiso de circulación",
+        related="vehicle_id.x_doc_circulation_permit_expiry",
+        readonly=True,
+    )
+    x_doc_technical_review_expiry = fields.Date(
+        string="Vencimiento revisión técnica",
+        related="vehicle_id.x_doc_technical_review_expiry",
+        readonly=True,
+    )
+    x_doc_fuel_card = fields.Char(
+        string="Tarjeta combustible",
+        related="vehicle_id.x_doc_fuel_card",
+        readonly=True,
+    )
+    x_doc_tag = fields.Boolean(
+        string="TAG",
+        related="vehicle_id.x_doc_tag",
+        readonly=True,
+    )
+    x_alert_days_before = fields.Integer(
+        string="Días alerta vencimiento",
+        related="vehicle_id.x_alert_days_before",
+        readonly=True,
+    )
+
     _sql_constraints = [
         (
             "unique_vehicle_equipment",
