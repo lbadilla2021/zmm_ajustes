@@ -25,9 +25,10 @@ Estas instrucciones aplican a todo el módulo Odoo `zmm_ajustes`.
   2. **Solicitud de Mantención**
   3. **Checklist**
 - Dentro del menú principal **Mantenimiento**, los submenús deben quedar en este orden:
-  1. **Avisos**
-  2. **Orden de Trabajo**
-  3. **Calendario Mantenimiento**
+  1. **Odómetros**
+  2. **Avisos**
+  3. **Orden de Trabajo**
+  4. **Calendario Mantenimiento**
 - Dentro del menú principal **Informes**, debe existir **Solicitudes de mantenimiento** mediante `action_barca_maintenance_request_report`.
 - **Avisos** no debe quedar como menú principal; debe depender de `menu_barca_maintenance`.
 - **Planes de Mantenimiento**, **Solicitud de Mantención** y **Checklist** no deben depender de `menu_barca_maintenance`; deben depender de `menu_barca_alert_origins`.
