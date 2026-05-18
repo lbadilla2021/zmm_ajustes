@@ -44,12 +44,14 @@ Dentro del menú principal **Mantenimiento**, el orden vigente es:
 
 | Secuencia | Submenú | XML ID | Acción | Archivo |
 | --- | --- | --- | --- | --- |
+| 20 | Odómetros | `menu_barca_fleet_vehicle_odometer` | `action_barca_fleet_vehicle_odometer` | `views/base_views.xml` |
 | 25 | Avisos | `menu_barca_maintenance_alert` | `action_barca_maintenance_alert` | `views/maintenance_alert_views.xml` |
 | 30 | Orden de Trabajo | `menu_barca_reporting_requests` | `action_barca_maintenance_report` | `views/base_views.xml` |
 | 40 | Calendario Mantenimiento | `menu_barca_reporting_calendar` | `action_barca_maintenance_calendar` | `views/base_views.xml` |
 
 ## Reglas funcionales que no se deben perder
 
+- **Odómetros** replica el acceso estándar de Flotilla a `fleet.vehicle.odometer` dentro de **Mantenimiento** y debe quedar antes de **Avisos**.
 - **Avisos** debe estar dentro de **Mantenimiento** y no como menú principal.
 - **Planes de Mantenimiento**, **Solicitud de Mantención** y **Checklist** deben ubicarse bajo **Orígenes Avisos** como fuentes de avisos.
 - **Avisos** permanece dentro de **Mantenimiento** para continuar el flujo hacia OT.
