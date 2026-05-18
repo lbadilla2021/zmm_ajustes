@@ -93,6 +93,10 @@ El botón `Enviar Avisos` y el cron `ir_cron_send_fleet_expiration_alerts` aplic
 
 Al crear un vehículo, el módulo crea automáticamente un `maintenance.equipment` asociado. Al cambiar el nombre del vehículo, sincroniza el nombre del equipo asociado.
 
+### Odómetros en Mantención Barca
+
+El historial estándar `fleet.vehicle.odometer` sigue perteneciendo a Flotilla, pero se expone también desde **Mantención Barca → Mantenimiento → Odómetros** mediante una acción propia del módulo. Las lecturas registradas allí son las mismas lecturas estándar de Flotilla y alimentan los planes preventivos por kilometraje.
+
 ## `barca.fleet.alert.rule`
 
 Modelo de configuración para listas de distribución de alertas de flotilla.
@@ -137,7 +141,7 @@ Agrega:
 - `x_current_odometer`: último odómetro actual del vehículo, relacionado y solo lectura.
 - `x_current_operating_hours`: horas de operación actuales del vehículo, relacionadas y solo lectura.
 
-La vista de equipos agrega una pestaña **Contadores** con dos bloques: **Taller** para los cuatro contadores históricos de taller y **Actual** para odómetro y horas de operación vigentes.
+La vista de equipos agrega una pestaña **Contadores** con dos bloques: **Taller** para los cuatro contadores históricos de taller y **Actual** para odómetro y horas de operación vigentes. También agrega una pestaña **Documentación** solo de consulta, alimentada por campos relacionados al vehículo de Flotilla, para ver vencimiento de permiso de circulación, vencimiento de revisión técnica, tarjeta combustible, TAG y días de alerta sin mantener esos datos desde Mantención Barca.
 
 Restricción SQL:
 
