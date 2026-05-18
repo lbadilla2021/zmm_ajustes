@@ -434,14 +434,16 @@ Pendiente → En ejecución → Notificada → Cerrada
 
 Acciones disponibles:
 
-- **Iniciar**: cambia una actividad `pending` a `in_progress`.
+- **Iniciar**: cambia una actividad `pending` a `in_progress`. Se permite que varias actividades de la misma OT estén simultáneamente en ejecución; Fase 4 no impone una restricción de actividad única en curso.
 - **Notificar**: exige descripción de lo realizado, resultado y cantidades de materiales no negativas; cambia la actividad `in_progress` a `notified` y registra fecha/hora y usuario notificador.
 - **Cerrar línea**: cambia una actividad `notified` a `closed`.
 - **Reabrir a pendiente**: solo para administrador o programador Barca; vuelve la actividad a `pending` y limpia fecha/usuario de notificación, conservando descripción, resultado, materiales y cantidades informadas.
 
-La pestaña **Materiales / Repuestos / Kits** de la actividad de OT permite informar manualmente `consumed_quantity` y observaciones por material. Las cantidades reservadas, retiradas y devueltas siguen siendo datos estructurales visibles/editables para continuidad funcional, pero en esta fase no ejecutan operaciones logísticas.
+La pestaña **Materiales / Repuestos / Kits** de la actividad de OT muestra el detalle estructurado de materiales, repuestos o kits. Mantiene visibles las cantidades `estimated_quantity`, `reserved_quantity`, `withdrawn_quantity`, `consumed_quantity` y `returned_quantity`, además de UdM y observación, como preparación para Fase 5 y Fase 6. En Fase 4 esas cantidades son datos manuales/estructurales y no ejecutan operaciones logísticas.
 
-La OT calcula total de actividades, actividades notificadas y actividades cerradas. El botón **Enviar a revisión** valida que exista al menos una actividad y que todas estén `notified` o `closed`. Si la validación pasa, publica un mensaje en chatter cuando está disponible y muestra una notificación indicando que la OT queda lista para revisión. Esta fase no realiza cierre definitivo de la OT ni cambia etapas estándar si no hay una etapa segura identificada.
+La OT calcula total de actividades, actividades notificadas y actividades cerradas. El botón **Enviar a revisión** valida que exista al menos una actividad y que todas estén `notified` o `closed` (cerrada implica que ya fue notificada). Si la validación pasa, publica un mensaje en chatter cuando está disponible y muestra una notificación indicando que la OT queda lista para revisión. Esta fase no realiza cierre definitivo de la OT ni cambia etapas estándar si no hay una etapa segura identificada.
+
+La descripción de la OT puede conservar el resumen textual concatenado de actividades para lectura rápida y compatibilidad, pero la fuente operacional principal del trabajo vive en las líneas reales `barca_activity_line_ids` y en sus materiales `barca.maintenance.workorder.line.material`; no se debe volver a una lógica basada solo en texto.
 
 Fase 4 no implementa ni dispara:
 

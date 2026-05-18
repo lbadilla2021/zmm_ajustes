@@ -107,7 +107,7 @@ Ese hook solo sincroniza vehículos existentes con `maintenance.equipment`. Las 
 | `fleet.vehicle` | `fleet_vehicle.py` | Campos internos, medidores, documentación, taller, detección de seguro y licencia; crea/sincroniza `maintenance.equipment` y notifica cambios documentales/vencimientos. |
 | `fleet.vehicle.log.contract` | `fleet_vehicle_log_contract.py` | Agrega adjuntos múltiples a contratos de flotilla. |
 | `fleet.vehicle.log.services` | `fleet_vehicle_log_services.py` | Agrega campo `name` de compatibilidad. |
-| `maintenance.equipment` | `maintenance_equipment.py` | Agrega `vehicle_id` único y contadores relacionados del vehículo para la pestaña **Contadores**. |
+| `maintenance.equipment` | `maintenance_equipment.py` | Agrega `vehicle_id` único, contadores relacionados para **Contadores** y documentación relacionada de Flotilla en solo lectura para la pestaña **Documentación** de Equipos. |
 | `maintenance.request` | `maintenance_request.py` | Modelo estándar mantenido como Orden de Trabajo operativa. |
 
 ## Menú principal
@@ -121,6 +121,7 @@ Submenús principales:
   - `Solicitud de Mantención`
   - `Checklist`
 - `Mantenimiento`
+  - `Odómetros`
   - `Avisos`
   - `Orden de Trabajo`
   - `Calendario Mantenimiento`

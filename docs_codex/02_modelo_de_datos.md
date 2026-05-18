@@ -93,6 +93,10 @@ El botón `Enviar Avisos` y el cron `ir_cron_send_fleet_expiration_alerts` aplic
 
 Al crear un vehículo, el módulo crea automáticamente un `maintenance.equipment` asociado. Al cambiar el nombre del vehículo, sincroniza el nombre del equipo asociado.
 
+### Odómetros en Mantención Barca
+
+El historial estándar `fleet.vehicle.odometer` sigue perteneciendo a Flotilla, pero se expone también desde **Mantención Barca → Mantenimiento → Odómetros** mediante una acción propia del módulo. Las lecturas registradas allí son las mismas lecturas estándar de Flotilla y alimentan los planes preventivos por kilometraje.
+
 ## `barca.fleet.alert.rule`
 
 Modelo de configuración para listas de distribución de alertas de flotilla.
@@ -137,7 +141,7 @@ Agrega:
 - `x_current_odometer`: último odómetro actual del vehículo, relacionado y solo lectura.
 - `x_current_operating_hours`: horas de operación actuales del vehículo, relacionadas y solo lectura.
 
-La vista de equipos agrega una pestaña **Contadores** con dos bloques: **Taller** para los cuatro contadores históricos de taller y **Actual** para odómetro y horas de operación vigentes.
+La vista de equipos agrega una pestaña **Contadores** con dos bloques: **Taller** para los cuatro contadores históricos de taller y **Actual** para odómetro y horas de operación vigentes. También agrega una pestaña **Documentación** solo de consulta, alimentada por campos relacionados al vehículo de Flotilla, para ver vencimiento de permiso de circulación, vencimiento de revisión técnica, tarjeta combustible, TAG y días de alerta sin mantener esos datos desde Mantención Barca.
 
 Restricción SQL:
 
@@ -582,7 +586,7 @@ Extensión en `models/maintenance_request.py`.
 
 La Solicitud de Mantención estándar de Odoo se renombra funcionalmente como Orden de Trabajo. Su ciclo de programación, ejecución, revisión y cierre queda separado del ciclo del aviso `barca.maintenance.alert`.
 
-El aviso asociado queda en estado técnico `in_progress` / funcional `Con OT creada` hasta que el usuario lo cierre explícitamente. El cierre del aviso solo se permite si la OT asociada está en una etapa terminada (`stage_id.done`), equivalente funcionalmente a Reparado o Desechar.
+El aviso asociado queda en estado técnico `in_progress` / funcional `Con OT creada` hasta que el usuario lo cierre explícitamente. El cierre del aviso solo se permite si la OT asociada está en una etapa terminada (`stage_id.done`), equivalente funcionalmente a Reparado o Desechar. La descripción de la OT puede guardar un resumen textual de actividades, pero el detalle operativo estable se guarda en `barca_activity_line_ids` y en sus materiales.
 
 ### Fase 4: ciclo operativo de actividades de OT
 
@@ -593,7 +597,7 @@ El aviso asociado queda en estado técnico `in_progress` / funcional `Con OT cre
 - `notified`: Notificada.
 - `closed`: Cerrada.
 
-La notificación de avance se registra en la misma actividad mediante:
+Varias actividades de una misma OT pueden estar en `in_progress` al mismo tiempo; el modelo no aplica una restricción de actividad única en ejecución. La notificación de avance se registra en la misma actividad mediante:
 
 - `notification_note`: descripción manual de lo realizado.
 - `result`: resultado informado (`resolved`, `partial`, `not_resolved`).
@@ -608,4 +612,4 @@ La notificación de avance se registra en la misma actividad mediante:
 - `barca_all_activities_notified`.
 - `barca_all_activities_closed`.
 
-En materiales de OT (`barca.maintenance.workorder.line.material`), Fase 4 mantiene cantidades operativas manuales y valida que `estimated_quantity`, `reserved_quantity`, `withdrawn_quantity`, `consumed_quantity` y `returned_quantity` no sean negativas. El consumo informado (`consumed_quantity`) es un dato manual de avance; no descuenta inventario ni exige haber retirado material desde bodega.
+En materiales de OT (`barca.maintenance.workorder.line.material`), Fase 4 mantiene visibles las cantidades operativas manuales `estimated_quantity`, `reserved_quantity`, `withdrawn_quantity`, `consumed_quantity` y `returned_quantity`, junto con producto, UdM y observación, y valida que no sean negativas. El consumo informado (`consumed_quantity`) es un dato manual de avance; no descuenta inventario ni exige haber retirado material desde bodega. Los campos de reserva, retiro, consumo y devolución quedan disponibles para Fase 5 y Fase 6, sin crear `stock.move`, `stock.picking`, reservas, retiros, devoluciones ni compras en esta fase.
