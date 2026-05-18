@@ -68,6 +68,68 @@ class MaintenanceEquipment(models.Model):
 
 
 
+
+    fleet_vehicle_model_year = fields.Char(
+        string="Año del modelo",
+        related="vehicle_id.model_year",
+        readonly=False,
+    )
+    fleet_vehicle_transmission = fields.Selection(
+        related="vehicle_id.transmission",
+        string="Transmisión",
+        readonly=False,
+    )
+    fleet_vehicle_color = fields.Char(
+        string="Color",
+        related="vehicle_id.color",
+        readonly=False,
+    )
+    fleet_vehicle_seats = fields.Integer(
+        string="Número de asientos",
+        related="vehicle_id.seats",
+        readonly=False,
+    )
+    fleet_vehicle_doors = fields.Integer(
+        string="Número de puertas",
+        related="vehicle_id.doors",
+        readonly=False,
+    )
+    fleet_vehicle_trailer_hook = fields.Boolean(
+        string="Enganche de remolque",
+        related="vehicle_id.trailer_hook",
+        readonly=False,
+    )
+    fleet_vehicle_power_unit = fields.Selection(
+        related="vehicle_id.power_unit",
+        string="Unidad de potencia",
+        readonly=False,
+    )
+    fleet_vehicle_power = fields.Float(
+        string="Potencia",
+        related="vehicle_id.power",
+        readonly=False,
+    )
+    fleet_vehicle_range = fields.Char(
+        string="Rango",
+        compute="_compute_fleet_vehicle_range",
+        inverse="_inverse_fleet_vehicle_range",
+    )
+    fleet_vehicle_fuel_type = fields.Selection(
+        related="vehicle_id.fuel_type",
+        string="Tipo de combustible",
+        readonly=False,
+    )
+    fleet_vehicle_co2 = fields.Float(
+        string="Emisiones de CO2",
+        related="vehicle_id.co2",
+        readonly=False,
+    )
+    fleet_vehicle_co2_standard = fields.Char(
+        string="Estándar de CO2",
+        related="vehicle_id.co2_standard",
+        readonly=False,
+    )
+
     fleet_vehicle_model_id = fields.Many2one(
         "fleet.vehicle.model",
         string="Modelo",
@@ -84,6 +146,30 @@ class MaintenanceEquipment(models.Model):
         related="vehicle_id.x_engine_code",
         readonly=False,
     )
+
+
+    def _compute_fleet_vehicle_range(self):
+        candidate_fields = ("range", "electric_range", "range_km")
+        for rec in self:
+            rec.fleet_vehicle_range = False
+            vehicle = rec.vehicle_id
+            if not vehicle:
+                continue
+            for field_name in candidate_fields:
+                if field_name in vehicle._fields:
+                    rec.fleet_vehicle_range = vehicle[field_name]
+                    break
+
+    def _inverse_fleet_vehicle_range(self):
+        candidate_fields = ("range", "electric_range", "range_km")
+        for rec in self:
+            vehicle = rec.vehicle_id
+            if not vehicle:
+                continue
+            for field_name in candidate_fields:
+                if field_name in vehicle._fields:
+                    vehicle[field_name] = rec.fleet_vehicle_range
+                    break
 
     _sql_constraints = [
         (

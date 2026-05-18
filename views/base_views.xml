@@ -64,13 +64,21 @@
             <xpath expr="//sheet/notebook/page[@name='description']" position="before">
                 <page string="Modelo" name="barca_model_tab">
                     <group>
-                        <group string="Modelo">
-                            <field name="fleet_vehicle_model_id"/>
-                            <field name="vehicle_id" readonly="1"/>
+                        <group string="MODELO">
+                            <field name="fleet_vehicle_model_year"/>
+                            <field name="fleet_vehicle_transmission"/>
+                            <field name="fleet_vehicle_color"/>
+                            <field name="fleet_vehicle_seats"/>
+                            <field name="fleet_vehicle_doors"/>
+                            <field name="fleet_vehicle_trailer_hook"/>
                         </group>
-                        <group string="Motor">
-                            <field name="fleet_vehicle_vin_sn"/>
-                            <field name="fleet_vehicle_engine_code"/>
+                        <group string="MOTOR">
+                            <field name="fleet_vehicle_power_unit"/>
+                            <field name="fleet_vehicle_power"/>
+                            <field name="fleet_vehicle_range"/>
+                            <field name="fleet_vehicle_fuel_type"/>
+                            <field name="fleet_vehicle_co2"/>
+                            <field name="fleet_vehicle_co2_standard"/>
                         </group>
                     </group>
                 </page>
