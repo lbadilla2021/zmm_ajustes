@@ -104,12 +104,17 @@ class MaintenanceEquipment(models.Model):
         string="Unidad de potencia",
         readonly=False,
     )
-    fleet_vehicle_power = fields.Float(
+    # fleet.vehicle.power es Integer en Fleet. En un campo related, el tipo
+    # debe coincidir exactamente con el campo origen; si se define como Float
+    # Odoo no puede cargar el registry y devuelve Internal Server Error 500.
+    fleet_vehicle_power = fields.Integer(
         string="Potencia",
         related="vehicle_id.power",
         readonly=False,
     )
-    fleet_vehicle_range = fields.Char(
+    # En Fleet, el rango normalmente es numérico. No se usa related directo para
+    # mantener compatibilidad con distintas versiones/nombres técnicos del campo.
+    fleet_vehicle_range = fields.Integer(
         string="Rango",
         compute="_compute_fleet_vehicle_range",
         inverse="_inverse_fleet_vehicle_range",
@@ -151,13 +156,14 @@ class MaintenanceEquipment(models.Model):
     def _compute_fleet_vehicle_range(self):
         candidate_fields = ("range", "electric_range", "range_km")
         for rec in self:
-            rec.fleet_vehicle_range = False
+            rec.fleet_vehicle_range = 0
             vehicle = rec.vehicle_id
             if not vehicle:
                 continue
             for field_name in candidate_fields:
                 if field_name in vehicle._fields:
-                    rec.fleet_vehicle_range = vehicle[field_name]
+                    value = vehicle[field_name]
+                    rec.fleet_vehicle_range = int(value or 0)
                     break
 
     def _inverse_fleet_vehicle_range(self):
@@ -168,7 +174,7 @@ class MaintenanceEquipment(models.Model):
                 continue
             for field_name in candidate_fields:
                 if field_name in vehicle._fields:
-                    vehicle[field_name] = rec.fleet_vehicle_range
+                    vehicle[field_name] = int(rec.fleet_vehicle_range or 0)
                     break
 
     _sql_constraints = [
