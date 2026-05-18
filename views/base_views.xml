@@ -6,6 +6,17 @@
         <field name="view_mode">kanban,list,form</field>
     </record>
 
+    <record id="action_barca_fleet_vehicle_odometer" model="ir.actions.act_window">
+        <field name="name">Odómetros</field>
+        <field name="res_model">fleet.vehicle.odometer</field>
+        <field name="view_mode">list,kanban,form,graph</field>
+        <field name="help" type="html">
+            <p class="o_view_nocontent_smiling_face">
+                Registre lecturas de odómetro para los vehículos.
+            </p>
+        </field>
+    </record>
+
     <record id="action_barca_maintenance_report" model="ir.actions.act_window">
         <field name="name">Órdenes de Trabajo</field>
         <field name="res_model">maintenance.request</field>
@@ -50,6 +61,29 @@
         <field name="model">maintenance.equipment</field>
         <field name="inherit_id" ref="maintenance.hr_equipment_view_form"/>
         <field name="arch" type="xml">
+            <xpath expr="//sheet/notebook/page[@name='description']" position="before">
+                <page string="Modelo" name="barca_model_tab">
+                    <group>
+                        <group string="MODELO">
+                            <field name="fleet_vehicle_model_year"/>
+                            <field name="fleet_vehicle_transmission"/>
+                            <field name="fleet_vehicle_color"/>
+                            <field name="fleet_vehicle_seats"/>
+                            <field name="fleet_vehicle_doors"/>
+                            <field name="fleet_vehicle_trailer_hook"/>
+                        </group>
+                        <group string="MOTOR">
+                            <field name="fleet_vehicle_power_unit"/>
+                            <field name="fleet_vehicle_power"/>
+                            <field name="fleet_vehicle_range"/>
+                            <field name="fleet_vehicle_fuel_type"/>
+                            <field name="fleet_vehicle_co2"/>
+                            <field name="fleet_vehicle_co2_standard"/>
+                        </group>
+                    </group>
+                </page>
+            </xpath>
+
             <xpath expr="//sheet/notebook" position="inside">
                 <page string="Contadores" name="barca_counters">
                     <group>
@@ -63,6 +97,15 @@
                             <field name="x_current_odometer"/>
                             <field name="x_current_operating_hours"/>
                         </group>
+                    </group>
+                </page>
+                <page string="Documentación" name="barca_documentation">
+                    <group>
+                        <field name="x_doc_circulation_permit_expiry" readonly="1"/>
+                        <field name="x_doc_technical_review_expiry" readonly="1"/>
+                        <field name="x_doc_fuel_card" readonly="1"/>
+                        <field name="x_doc_tag" readonly="1"/>
+                        <field name="x_alert_days_before" readonly="1"/>
                     </group>
                 </page>
             </xpath>
@@ -102,6 +145,15 @@
         action="action_barca_maintenance_plan"
         sequence="10"
         groups="zmm_ajustes.group_barca_programador,zmm_ajustes.group_barca_admin"
+    />
+
+    <menuitem
+        id="menu_barca_fleet_vehicle_odometer"
+        name="Odómetros"
+        parent="menu_barca_maintenance"
+        action="action_barca_fleet_vehicle_odometer"
+        sequence="20"
+        groups="zmm_ajustes.group_barca_conductor,zmm_ajustes.group_barca_programador,zmm_ajustes.group_barca_ejecutor,zmm_ajustes.group_barca_bodega,zmm_ajustes.group_barca_admin"
     />
 
     <menuitem
