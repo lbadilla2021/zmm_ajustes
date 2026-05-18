@@ -61,7 +61,7 @@
         <field name="model">maintenance.equipment</field>
         <field name="inherit_id" ref="maintenance.hr_equipment_view_form"/>
         <field name="arch" type="xml">
-            <xpath expr="//sheet/notebook/page[@name='description'] | //sheet/notebook/page[@string='Descripción del Producto']" position="before">
+            <xpath expr="//sheet/notebook/page[@name='description']" position="before">
                 <page string="Modelo" name="barca_model_tab">
                     <group>
                         <group string="Modelo">
@@ -76,7 +76,7 @@
                 </page>
             </xpath>
 
-            <xpath expr="//sheet/notebook/page[@name='description'] | //sheet/notebook/page[@string='Descripción del Producto']" position="inside">
+            <xpath expr="//sheet/notebook/page[@name='description']" position="inside">
                 <field name="description"/>
             </xpath>
 
