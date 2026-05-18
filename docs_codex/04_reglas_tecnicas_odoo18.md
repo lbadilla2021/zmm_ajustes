@@ -32,7 +32,13 @@ No eliminar sin revisar vistas, acciones o búsquedas heredadas.
 <field name="inherit_id" ref="maintenance.hr_equipment_request_view_form"/>
 ```
 
-El comentario indica que en Odoo 18 se usa la vista formulario vigente del módulo `maintenance`.
+Este XML ID corresponde al formulario estándar vigente de `maintenance.request` en Odoo 18 Community. Esa vista base ya contiene `<form><header>`, por lo que los botones propios de Barca deben insertarse con un xpath seguro sobre el header existente, por ejemplo:
+
+```xml
+<xpath expr="//form/header" position="inside">
+```
+
+No insertar un nuevo `<header>` con `//sheet position="before"` salvo que se confirme en una versión futura que la vista base ya no trae header, porque eso puede generar doble header en el formulario de OT.
 
 Antes de cambiar este XML ID, confirmar en la instalación real:
 
