@@ -66,6 +66,25 @@ class MaintenanceEquipment(models.Model):
         readonly=True,
     )
 
+
+
+    fleet_vehicle_model_id = fields.Many2one(
+        "fleet.vehicle.model",
+        string="Modelo",
+        related="vehicle_id.model_id",
+        readonly=False,
+    )
+    fleet_vehicle_vin_sn = fields.Char(
+        string="N° chasis",
+        related="vehicle_id.vin_sn",
+        readonly=False,
+    )
+    fleet_vehicle_engine_code = fields.Char(
+        string="Número de Motor",
+        related="vehicle_id.x_engine_code",
+        readonly=False,
+    )
+
     _sql_constraints = [
         (
             "unique_vehicle_equipment",

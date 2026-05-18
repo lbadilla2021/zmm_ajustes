@@ -61,6 +61,25 @@
         <field name="model">maintenance.equipment</field>
         <field name="inherit_id" ref="maintenance.hr_equipment_view_form"/>
         <field name="arch" type="xml">
+            <xpath expr="//sheet/notebook/page[@name='description'] | //sheet/notebook/page[@string='Descripción del Producto']" position="before">
+                <page string="Modelo" name="barca_model_tab">
+                    <group>
+                        <group string="Modelo">
+                            <field name="fleet_vehicle_model_id"/>
+                            <field name="vehicle_id" readonly="1"/>
+                        </group>
+                        <group string="Motor">
+                            <field name="fleet_vehicle_vin_sn"/>
+                            <field name="fleet_vehicle_engine_code"/>
+                        </group>
+                    </group>
+                </page>
+            </xpath>
+
+            <xpath expr="//sheet/notebook/page[@name='description'] | //sheet/notebook/page[@string='Descripción del Producto']" position="inside">
+                <field name="description"/>
+            </xpath>
+
             <xpath expr="//sheet/notebook" position="inside">
                 <page string="Contadores" name="barca_counters">
                     <group>
