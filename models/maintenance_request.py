@@ -167,11 +167,10 @@ class MaintenanceRequest(models.Model):
             [
                 ("usage", "=", "internal"),
                 ("active", "=", True),
-                ("complete_name", "ilike", "mantenimiento"),
+                ("complete_name", "ilike", "WH/Serviteca"),
                 ("company_id", "in", [company.id, False]),
             ],
-            limit=1,
-        )
+            limit=1,        )
         if not location_dest:
             # Usar la ubicación destino por defecto del tipo de operación
             location_dest = picking_type.default_location_dest_id
