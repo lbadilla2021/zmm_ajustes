@@ -133,3 +133,34 @@ El botón del formulario de vehículo ejecuta `_send_expiration_alerts()`, que b
 ## 15. Correos de flotilla dependen de destinatarios configurados
 
 Las alertas de `Modificaciones` y `Vencimientos` no fallan si la regla existe sin destinatarios; simplemente no envían correo. Antes de reportar un problema de envío, revisar `barca.fleet.alert.rule.email_names`.
+
+## 16. `user_has_groups()` no funciona en expresiones de vista XML
+
+En Odoo 18, `user_has_groups()` es un método Python del ORM y no existe como campo en ningún modelo. Usarlo en atributos `readonly=`, `invisible=` genera error de validación de vista:
+
+```text
+el campo "user_has_groups" no existe en el modelo "..."
+```
+
+**Solución correcta:** usar el atributo `groups=` del campo declarando dos versiones del mismo campo — una editable para los grupos autorizados y otra `readonly="1"` para el resto. Ver sección correspondiente en `04_reglas_tecnicas_odoo18.md`.
+
+## 17. `state` en listas inline no referencia el padre
+
+Dentro de un `<list>` de `One2many`, `state` se evalúa en el modelo hijo. Si el campo `state` existe en el padre pero no en el hijo, Odoo lanzará error de validación de vista. Usar `parent.state` para acceder al padre. Solo hay un nivel disponible; para bisnietos usar `readonly="1"` fijo.
+
+## 18. Dos barras de estado en la OT (pendiente de decisión)
+
+La OT muestra dos statusbars simultáneamente: el nativo de Odoo (`stage_id`) y el propio de Barca (`barca_state`). El nativo no debe ocultarse porque controla las columnas del Kanban. Pendiente decisión sobre integración entre ambos estados o creación de vista Kanban personalizada basada en `barca_state`.
+
+## 19. Fecha programada obligatoria para generar OT desde aviso
+
+Desde el módulo 1 del flujo de revisión, `action_create_maintenance_request()` exige que el aviso tenga `barca_scheduled_date` antes de crear la OT. Sin esta fecha, la acción lanza `ValidationError`. El campo es editable solo cuando el aviso está en estado `approved` (En evaluación).
+
+## 20. Revisor de OT se resuelve automáticamente
+
+`action_barca_send_to_review()` resuelve el revisor sin intervención del usuario:
+
+1. `barca_alert_id.approved_by_id` — el programador que tomó el aviso (caso normal).
+2. `create_uid` de la OT — fallback si no hay aviso asociado.
+
+No hay campo editable para seleccionar el revisor manualmente.

@@ -9,7 +9,6 @@
 - `zhr_ajustes`
 - `maintenance`
 - `stock`
-- `purchase`
 - `mail`
 
 El módulo está orientado a gestionar mantención preventiva y correctiva de vehículos/equipos mediante categorías de vehículos, ubicaciones técnicas, actividades, planes preventivos, avisos de mantención, kits/materiales y solicitudes simples de mantención, avisos técnicos y órdenes de trabajo basadas en `maintenance.request`.
@@ -25,8 +24,10 @@ El módulo busca que Barca pueda estructurar su mantenimiento así:
 5. Evaluar automáticamente los planes mediante cron o manualmente desde el formulario.
 6. Crear solicitudes simples de mantención (`barca.maintenance.request`) cuando un usuario reporta una necesidad.
 7. Generar avisos de mantención (`barca.maintenance.alert`) desde solicitudes simples, checklist o planes preventivos.
-8. Aprobar/rechazar avisos y crear órdenes de trabajo (`maintenance.request`) desde avisos aprobados.
-9. Actualizar medidores del vehículo al cerrar avisos PM.
+8. El programador toma el aviso para evaluación, asigna una **Fecha Programada** y genera la OT.
+9. La OT se ejecuta por el jefe de taller/ejecutor y se envía a revisión al programador que la originó.
+10. El programador aprueba o devuelve la OT con comentarios.
+11. Al cerrar el aviso PM, se actualizan los medidores del vehículo.
 
 ## Principio de diseño
 
@@ -37,15 +38,15 @@ Este módulo no reemplaza completamente `fleet` ni `maintenance`; los extiende. 
 En `__manifest__.py`:
 
 ```python
-'depends': ['fleet', 'hr_fleet', 'zhr_ajustes', 'maintenance', 'stock', 'purchase', 'mail']
+'depends': ['fleet', 'hr_fleet', 'zhr_ajustes', 'maintenance', 'stock', 'mail']
 ```
 
-Esto significa que cualquier modificación debe considerar compatibilidad con esos módulos estándar.
+**Nota:** `purchase` fue eliminado de las dependencias en la revisión de Fase 6 por no tener uso en el código actual.
 
 ## Archivos clave
 
 - `models/maintenance_plan.py`: lógica central de planes preventivos y generación de avisos.
-- `models/maintenance_alert.py`: flujo de avisos, estados, creación de OT y cierre.
+- `models/maintenance_alert.py`: flujo de avisos, estados, fecha programada, creación de OT y cierre.
 - `models/maintenance_request_simple.py`: solicitud simple de mantención que puede originar un aviso.
 - `models/fleet_vehicle.py`: campos extendidos de vehículos, detección de seguro, alertas por cambios documentales/vencimientos y sincronización con equipos.
 - `models/fleet_alert_rule.py`: reglas/listas de distribución para alertas de flotilla.

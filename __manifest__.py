@@ -9,7 +9,6 @@
         'zhr_ajustes',
         'maintenance',
         'stock',
-        'purchase',
         'mail',
     ],
     'data': [

@@ -5,15 +5,17 @@
         <field name="name">barca.maintenance.workorder.line.list</field>
         <field name="model">barca.maintenance.workorder.line</field>
         <field name="arch" type="xml">
-            <list editable="bottom" open_form_view="1">
+            <list editable="bottom" open_form_view="1"
+                  decoration-warning="barca_added_after_return == True">
                 <field name="sequence" widget="handle"/>
+                <field name="barca_added_after_return" column_invisible="1"/>
                 <field name="technical_location_id"/>
                 <field name="intervention_type_id"/>
                 <field name="activity_id"/>
                 <field name="estimated_duration"/>
                 <field name="state"/>
                 <button name="action_start_line" string="Iniciar" type="object" class="btn-primary" invisible="state != 'pending'"/>
-                <button name="action_notify_line" string="Notificar" type="object" class="btn-primary" invisible="state != 'in_progress'"/>
+                <button name="action_notify_line_open_form" string="Notificar" type="object" class="btn-primary" invisible="state != 'in_progress'"/>
                 <button name="action_close_line" string="Cerrar línea" type="object" class="btn-primary" invisible="state != 'notified'"/>
                 <field name="material_count" readonly="1"/>
                 <field name="material_summary" readonly="1"/>
@@ -34,7 +36,7 @@
                 <field name="estimated_quantity"/>
                 <field name="reserved_quantity"/>
                 <field name="withdrawn_quantity"/>
-                <field name="consumed_quantity"/>
+                <field name="consumed_quantity" readonly="returned_quantity != 0"/>
                 <field name="returned_quantity"/>
                 <field
                     name="product_uom_id"
@@ -67,7 +69,7 @@
                         <group string="Cantidades operativas">
                             <field name="reserved_quantity"/>
                             <field name="withdrawn_quantity"/>
-                            <field name="consumed_quantity"/>
+                            <field name="consumed_quantity" readonly="returned_quantity != 0"/>
                             <field name="returned_quantity"/>
                         </group>
                     </group>
@@ -121,42 +123,12 @@
                         <page string="Materiales / Repuestos / Kits" name="materials">
                             <field
                                 name="material_line_ids"
-                                context="{'default_workorder_line_id': id, 'form_view_ref': 'zmm_ajustes.view_barca_maintenance_workorder_line_material_form'}"
-                            >
-                                <list editable="bottom" open_form_view="1">
-                                    <field name="sequence" widget="handle"/>
-                                    <field name="product_id"/>
-                                    <field name="estimated_quantity"/>
-                                    <field name="reserved_quantity"/>
-                                    <field name="withdrawn_quantity"/>
-                                    <field name="consumed_quantity"/>
-                                    <field name="returned_quantity"/>
-                                    <field
-                                        name="product_uom_id"
-                                        domain="[('category_id', '=', product_uom_category_id)]"
-                                    />
-                                    <field name="product_uom_category_id" column_invisible="1"/>
-                                    <field name="note"/>
-                                </list>
-                                <form string="Material OT">
-                                    <sheet>
-                                        <group>
-                                            <field name="product_id"/>
-                                            <field
-                                                name="product_uom_id"
-                                                domain="[('category_id', '=', product_uom_category_id)]"
-                                            />
-                                            <field name="product_uom_category_id" invisible="1"/>
-                                            <field name="estimated_quantity"/>
-                                            <field name="reserved_quantity"/>
-                                            <field name="withdrawn_quantity"/>
-                                            <field name="consumed_quantity"/>
-                                            <field name="returned_quantity"/>
-                                            <field name="note"/>
-                                        </group>
-                                    </sheet>
-                                </form>
-                            </field>
+                                context="{
+                                    'default_workorder_line_id': id,
+                                    'list_view_ref': 'zmm_ajustes.view_barca_maintenance_workorder_line_material_list',
+                                    'form_view_ref': 'zmm_ajustes.view_barca_maintenance_workorder_line_material_form'
+                                }"
+                            />
                         </page>
                         <page string="Notificación" name="notification">
                             <group>
@@ -188,7 +160,75 @@
             </xpath>
 
             <xpath expr="//form/header" position="inside">
-                <button name="action_barca_send_to_review" string="Enviar a revisión" type="object" class="btn-primary"/>
+                <!-- Flujo de revisión Barca -->
+                <button
+                    name="action_barca_send_to_review"
+                    string="Enviar a revisión"
+                    type="object"
+                    class="btn-primary"
+                    groups="zmm_ajustes.group_barca_ejecutor,zmm_ajustes.group_barca_admin"
+                    invisible="barca_state != 'in_progress'"
+                />
+                <button
+                    name="action_barca_approve"
+                    string="Aprobar OT"
+                    type="object"
+                    class="btn-primary"
+                    groups="zmm_ajustes.group_barca_programador,zmm_ajustes.group_barca_admin"
+                    invisible="barca_state != 'under_review'"
+                />
+                <button
+                    name="action_barca_return_to_progress"
+                    string="Devolver a ejecución"
+                    type="object"
+                    class="btn-secondary"
+                    groups="zmm_ajustes.group_barca_programador,zmm_ajustes.group_barca_admin"
+                    invisible="barca_state != 'under_review'"
+                />
+                <field
+                    name="barca_state"
+                    widget="statusbar"
+                    statusbar_visible="in_progress,under_review,approved"
+                />
+                <!-- Fase 5: botón reservar materiales, visible solo si no existe reserva -->
+                <button
+                    name="action_barca_reserve_materials"
+                    string="Reservar materiales"
+                    type="object"
+                    class="btn-secondary"
+                    invisible="barca_material_picking_id != False"
+                />
+                <!-- Fase 6: botón entregar materiales -->
+                <button
+                    name="action_barca_deliver_materials"
+                    string="Entregar materiales"
+                    type="object"
+                    class="btn-secondary"
+                    invisible="barca_material_withdrawn == True or barca_material_closed == True"
+                />
+                <!-- Fase 6: botón cerrar materiales -->
+                <button
+                    name="action_barca_close_materials"
+                    string="Cerrar materiales"
+                    type="object"
+                    class="btn-secondary"
+                    invisible="barca_material_withdrawn == False or barca_material_closed == True"
+                />
+            </xpath>
+
+            <!-- Fase 5: smart button para abrir picking de reserva -->
+            <xpath expr="//sheet" position="before">
+                <div class="oe_button_box" name="button_box">
+                    <button
+                        name="action_barca_open_material_picking"
+                        type="object"
+                        class="oe_stat_button"
+                        icon="fa-cubes"
+                        invisible="barca_material_picking_id == False"
+                    >
+                        <field name="barca_material_state" widget="statinfo" string="Reserva"/>
+                    </button>
+                </div>
             </xpath>
 
             <xpath expr="//sheet/group[1]" position="inside">
@@ -199,20 +239,85 @@
                 <field name="barca_closed_activity_count" readonly="1" invisible="1"/>
                 <field name="barca_all_activities_notified" readonly="1" invisible="1"/>
                 <field name="barca_all_activities_closed" readonly="1" invisible="1"/>
+                <field name="barca_state" readonly="1" invisible="1"/>
+                <field name="barca_return_count" readonly="1" invisible="1"/>
+            </xpath>
+
+            <!-- Fase 5: sección de estado de reserva de materiales (visible si ya hubo reserva) -->
+            <xpath expr="//sheet/notebook" position="before">
+                <group
+                    string="Reserva de materiales"
+                    invisible="barca_material_picking_id == False and barca_material_state == 'pending_reservation'"
+                >
+                    <group>
+                        <field name="barca_material_state" readonly="1"/>
+                        <field name="barca_pending_material" readonly="1"/>
+                    </group>
+                    <group>
+                        <field name="barca_material_picking_id" readonly="1"/>
+                    </group>
+                </group>
+
+                <!-- Módulo 3: sección revisión -->
+                <group string="Revisión"
+                       invisible="barca_state == 'in_progress' and barca_return_count == 0">
+                    <group string="Programador revisor">
+                        <field name="barca_reviewer_id"
+                               readonly="1"
+                               invisible="not barca_reviewer_id"/>
+                    </group>
+                    <group string="Devolución">
+                        <field name="barca_return_count" readonly="1"
+                               invisible="barca_return_count == 0"/>
+                        <field name="barca_return_reason"
+                               readonly="barca_state != 'under_review'"
+                               invisible="barca_state == 'in_progress' and barca_return_count == 0"
+                               groups="zmm_ajustes.group_barca_programador,zmm_ajustes.group_barca_admin"/>
+                    </group>
+                </group>
+
+                <!-- Fase 6: sección entrega y cierre de materiales -->
+                <group string="Entrega y cierre de materiales"
+                       invisible="barca_material_withdrawn == False and barca_material_closed == False">
+                    <group string="Entrega">
+                        <field name="barca_material_withdrawn" readonly="1"/>
+                        <field name="barca_material_delivery_date" readonly="1"/>
+                        <field name="barca_material_delivered_by_id" readonly="1"/>
+                    </group>
+                    <group string="Cierre">
+                        <field name="barca_material_closed" readonly="1"/>
+                        <field name="barca_material_closed_date" readonly="1"/>
+                        <field name="barca_material_closed_by_id" readonly="1"/>
+                    </group>
+                    <group string="Costos estimados vs reales" col="2">
+                        <field name="barca_currency_id" invisible="1"/>
+                        <field name="barca_estimated_material_cost" readonly="1"
+                               widget="monetary"
+                               options="{'currency_field': 'barca_currency_id'}"/>
+                        <field name="barca_real_material_cost" readonly="1"
+                               widget="monetary"
+                               options="{'currency_field': 'barca_currency_id'}"/>
+                    </group>
+                    <group string="Observación" col="1">
+                        <field name="barca_material_note" nolabel="1"/>
+                    </group>
+                </group>
             </xpath>
 
             <xpath expr="//sheet/notebook" position="inside">
                 <page string="Actividades" name="barca_activities">
                     <field name="barca_activity_line_ids" context="{'default_maintenance_request_id': id, 'form_view_ref': 'zmm_ajustes.view_barca_maintenance_workorder_line_form'}">
-                        <list editable="bottom" open_form_view="1">
+                        <list editable="bottom" open_form_view="1"
+                              decoration-warning="barca_added_after_return == True">
                             <field name="sequence" widget="handle"/>
+                            <field name="barca_added_after_return" column_invisible="1"/>
                             <field name="technical_location_id"/>
                             <field name="intervention_type_id"/>
                             <field name="activity_id"/>
                             <field name="estimated_duration"/>
                             <field name="state"/>
                             <button name="action_start_line" string="Iniciar" type="object" class="btn-primary" invisible="state != 'pending'"/>
-                            <button name="action_notify_line" string="Notificar" type="object" class="btn-primary" invisible="state != 'in_progress'"/>
+                            <button name="action_notify_line_open_form" string="Notificar" type="object" class="btn-primary" invisible="state != 'in_progress'"/>
                             <button name="action_close_line" string="Cerrar línea" type="object" class="btn-primary" invisible="state != 'notified'"/>
                             <field name="material_count" readonly="1"/>
                             <field name="material_summary" readonly="1"/>
@@ -254,41 +359,11 @@
                                         </group>
                                     </page>
                                     <page string="Materiales / Repuestos / Kits" name="materials">
-                                        <field name="material_line_ids" context="{'default_workorder_line_id': id, 'form_view_ref': 'zmm_ajustes.view_barca_maintenance_workorder_line_material_form'}">
-                                            <list editable="bottom" open_form_view="1">
-                                                <field name="sequence" widget="handle"/>
-                                                <field name="product_id"/>
-                                                <field name="estimated_quantity"/>
-                                                <field name="reserved_quantity"/>
-                                                <field name="withdrawn_quantity"/>
-                                                <field name="consumed_quantity"/>
-                                                <field name="returned_quantity"/>
-                                                <field
-                                                    name="product_uom_id"
-                                                    domain="[('category_id', '=', product_uom_category_id)]"
-                                                />
-                                                <field name="product_uom_category_id" column_invisible="1"/>
-                                                <field name="note"/>
-                                            </list>
-                                            <form string="Material OT">
-                                                <sheet>
-                                                    <group>
-                                                        <field name="product_id"/>
-                                                        <field
-                                                            name="product_uom_id"
-                                                            domain="[('category_id', '=', product_uom_category_id)]"
-                                                        />
-                                                        <field name="product_uom_category_id" invisible="1"/>
-                                                        <field name="estimated_quantity"/>
-                                                        <field name="reserved_quantity"/>
-                                                        <field name="withdrawn_quantity"/>
-                                                        <field name="consumed_quantity"/>
-                                                        <field name="returned_quantity"/>
-                                                        <field name="note"/>
-                                                    </group>
-                                                </sheet>
-                                            </form>
-                                        </field>
+                                        <field name="material_line_ids" context="{
+                                            'default_workorder_line_id': id,
+                                            'list_view_ref': 'zmm_ajustes.view_barca_maintenance_workorder_line_material_list',
+                                            'form_view_ref': 'zmm_ajustes.view_barca_maintenance_workorder_line_material_form'
+                                        }"/>
                                     </page>
                                     <page string="Notificación" name="notification">
                                         <group>
@@ -303,6 +378,30 @@
                         </form>
                     </field>
                 </page>
+            </xpath>
+
+            <!-- Ocultar "Recurrente": la frecuencia la gestionan los planes de mantenimiento -->
+            <xpath expr="//field[@name='recurring_maintenance']" position="attributes">
+                <attribute name="invisible">1</attribute>
+            </xpath>
+
+            <!-- Fecha programada: solo editable por programador y admin.
+                 Se traspasa desde el aviso y no debe ser modificada por el jefe de taller.
+                 En Odoo 18 no se puede usar user_has_groups() en atributos de vista:
+                 se oculta el campo nativo y se muestran dos versiones según grupo. -->
+            <xpath expr="//field[@name='schedule_date']" position="attributes">
+                <attribute name="invisible">1</attribute>
+            </xpath>
+            <xpath expr="//field[@name='schedule_date']" position="after">
+                <!-- Versión editable: solo programador y admin -->
+                <field name="schedule_date"
+                       string="Fecha programada"
+                       groups="zmm_ajustes.group_barca_programador,zmm_ajustes.group_barca_admin"/>
+                <!-- Versión readonly: resto de roles -->
+                <field name="schedule_date"
+                       string="Fecha programada"
+                       readonly="1"
+                       groups="zmm_ajustes.group_barca_ejecutor,zmm_ajustes.group_barca_bodega,zmm_ajustes.group_barca_conductor"/>
             </xpath>
         </field>
     </record>

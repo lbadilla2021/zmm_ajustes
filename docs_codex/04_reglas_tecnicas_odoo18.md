@@ -40,13 +40,46 @@ Este XML ID corresponde al formulario estándar vigente de `maintenance.request`
 
 No insertar un nuevo `<header>` con `//sheet position="before"` salvo que se confirme en una versión futura que la vista base ya no trae header, porque eso puede generar doble header en el formulario de OT.
 
-Antes de cambiar este XML ID, confirmar en la instalación real:
+## Dos barras de estado en la OT
 
-```bash
-docker exec -it <odoo_container> odoo shell -d <db>
+La OT (`maintenance.request`) tiene **dos barras de estado**:
+
+1. **`stage_id`** (statusbar nativo de Odoo): columnas del Kanban (`Nueva solicitud`, `En progreso`, `Reparado`, `Desechar`). **No ocultar** — controla la vista Kanban.
+2. **`barca_state`** (statusbar propio): flujo operativo Barca (`En ejecución`, `En revisión`, `Aprobada`). Pendiente decisión sobre integración con Kanban.
+
+Decisión pendiente: si el Kanban se usa activamente, evaluar sincronizar `barca_state` con `stage_id` o crear una vista Kanban personalizada basada en `barca_state`. Por ahora conviven.
+
+## Readonly por rol en vistas de Odoo 18
+
+En Odoo 18, `user_has_groups()` **no se puede usar** como expresión en atributos `readonly=`, `invisible=` de vistas XML. El ORM no lo expone como campo del modelo en el contexto de evaluación de vistas.
+
+La forma correcta para controlar readonly por grupo es declarar el campo **dos veces** con el atributo `groups=`:
+
+```xml
+<!-- Editable para programador y admin -->
+<field name="schedule_date" groups="zmm_ajustes.group_barca_programador,zmm_ajustes.group_barca_admin"/>
+<!-- Readonly para el resto -->
+<field name="schedule_date" readonly="1"
+       groups="zmm_ajustes.group_barca_ejecutor,zmm_ajustes.group_barca_bodega,zmm_ajustes.group_barca_conductor"/>
 ```
 
-y consultar `ir.model.data` si es necesario.
+Si el campo nativo debe ocultarse primero, usar un xpath previo con `invisible=1`.
+
+## `parent.state` en listas inline
+
+Cuando un campo está dentro de un `<list>` de un `One2many`, las expresiones `readonly=`, `invisible=`, `create=`, `delete=` se evalúan en el contexto del **modelo hijo**, no del padre. Para referir el estado del padre usar `parent.state`.
+
+Solo hay **un nivel** de `parent.` disponible en Odoo 18. Para listas anidadas en dos niveles (ej: materiales dentro de actividades del aviso), usar `readonly="1"` fijo si no se puede acceder al estado del abuelo.
+
+Ejemplo correcto:
+```xml
+<!-- En lista de alert_line_ids (modelo hijo = alert.line) -->
+<field name="note" readonly="parent.state in ['in_progress', 'rejected', 'closed']"/>
+
+<!-- En lista de material_line_ids dentro de alert_line (modelo hijo = alert.line.material) -->
+<!-- parent = alert.line (no tiene state) → usar readonly fijo -->
+<field name="product_id" readonly="1"/>
+```
 
 ## Domains dinámicos
 
@@ -149,6 +182,43 @@ Revisar logs por:
 - Errores de dominio en vistas.
 - Errores de permisos ACL.
 
-## Cron de vencimientos de flotilla
+## Fase 5: stock.picking y stock.move
 
-`data/cron_fleet_expiration_alerts.xml` crea `ir_cron_send_fleet_expiration_alerts` sobre `fleet.vehicle`. Ejecuta `cron_send_expiration_alerts()` diariamente a las 08:00 para enviar vencimientos próximos de licencia de conducir, permiso de circulación y revisión técnica a la regla `Vencimientos`. La implementación busca todos los vehículos, usa la ventana `x_alert_days_before` de cada registro y retorna la cantidad total de ítems enviados; si no hay destinatarios configurados o no hay vencimientos próximos, retorna `0`.
+### Cantidad reservada en stock.move (Odoo 18)
+
+El campo estándar para leer la cantidad ya reservada de un movimiento es `reserved_availability` (float computed). Se lee directamente sin `hasattr()` — en el ORM de Odoo, `hasattr` siempre retorna `True` aunque el campo no exista en ese modelo concreto, haciendo el fallback inalcanzable. La forma correcta es:
+
+```python
+try:
+    return move.reserved_availability
+except AttributeError:
+    # Fallback real para versiones anteriores
+    return sum(ml.reserved_uom_qty for ml in move.move_line_ids)
+```
+
+### stock.picking de tipo internal
+
+En Odoo 18 el tipo de operación interno del warehouse es `warehouse.int_type_id`. Si no está configurado, se busca cualquier `stock.picking.type` con `code == 'internal'` activo para la compañía.
+
+### No invocar button_validate
+
+En Fase 5 solo se llaman `action_confirm()` y `action_assign()`. Nunca `button_validate()` ni `_action_done()`. El stock físico no se descuenta hasta Fase 6.
+
+### Agrupación de movimientos
+
+Los materiales de varias actividades de la OT con el mismo producto y UdM se agrupan en un solo `stock.move`. Esto respeta la práctica estándar de Odoo de no crear movimientos duplicados por producto.
+
+
+## Fase 6: campos de entrega y cierre
+
+### Campos readonly en maintenance.request
+
+Los campos `barca_material_withdrawn`, `barca_material_closed` y fechas asociadas son `readonly=True` en el modelo Python. No se editan manualmente; solo se modifican mediante los métodos `action_barca_deliver_materials` y `action_barca_close_materials` usando `write()` interno.
+
+### Costos computados almacenados (`store=True`)
+
+`barca_estimated_material_cost` y `barca_real_material_cost` son `Monetary` (no Float) con `currency_field="barca_currency_id"` y `store=True`. Los depends incluyen `product_id.standard_price` para que se recalculen si cambia el precio del producto.
+
+### No usar `button_validate` en Fase 6
+
+La Fase 6 no valida ningún picking. El picking de reserva de Fase 5 queda en estado asignado/confirmado hasta que una futura fase lo gestione si corresponde.

@@ -109,6 +109,14 @@ class BarcaMaintenanceAlert(models.Model):
     review_date = fields.Datetime(string="Fecha de revisión")
     close_date = fields.Datetime(string="Fecha de cierre")
 
+    barca_scheduled_date = fields.Datetime(
+        string="Fecha programada",
+        tracking=True,
+        help="Fecha en que se programará la ejecución de la OT. "
+             "Obligatoria antes de generar la OT. "
+             "Se traspasa automáticamente a la Orden de Trabajo.",
+    )
+
     evaluated_by_id = fields.Many2one("res.users", string="Evaluado por")
     approved_by_id = fields.Many2one(
         "res.users",
@@ -282,6 +290,10 @@ class BarcaMaintenanceAlert(models.Model):
                 raise ValidationError(
                     "Debe existir un equipo de mantenimiento para crear la OT."
                 )
+            if not alert.barca_scheduled_date:
+                raise ValidationError(
+                    "Debe ingresar la Fecha programada en el aviso antes de generar la OT."
+                )
 
             # Construir descripción enriquecida con las actividades del aviso
             activities_summary = ""
@@ -301,6 +313,7 @@ class BarcaMaintenanceAlert(models.Model):
             request_vals = {
                 "name": alert.name,
                 "request_date": fields.Datetime.now(),
+                "schedule_date": alert.barca_scheduled_date,
                 "maintenance_type": "corrective",
                 "description": (alert.description or "") + activities_summary,
                 "equipment_id": alert.equipment_id.id,

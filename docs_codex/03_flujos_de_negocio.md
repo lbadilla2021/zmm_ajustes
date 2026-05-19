@@ -454,3 +454,121 @@ Fase 4 no implementa ni dispara:
 - Compras.
 - Devoluciones.
 - Consumos reales de inventario.
+
+
+## Fase 5: reserva de materiales desde la OT
+
+Desde la OT estándar `maintenance.request` se puede crear una reserva de materiales presionando el botón **Reservar materiales**, visible solo cuando no existe reserva previa.
+
+### Qué hace la reserva
+
+1. Recopila todos los materiales (`barca.maintenance.workorder.line.material`) de todas las actividades de la OT, considerando solo líneas con `product_id` y `estimated_quantity > 0`.
+2. Agrupa las líneas por producto (`product_id`) y unidad de medida (`product_uom_id`).
+3. Crea un `stock.picking` de tipo operación interna vinculado a la OT (`origin = "OT <nombre>"`).
+4. Crea un `stock.move` por cada grupo producto/UdM con la cantidad total estimada.
+5. Confirma el picking con `action_confirm()` y asigna stock con `action_assign()`.
+6. **No valida el picking**: el stock físico no se descuenta en Fase 5.
+7. Actualiza `reserved_quantity` en las líneas de material de OT con distribución secuencial.
+8. Publica resumen en el chatter de la OT.
+
+### Estados de materiales
+
+- `no_materials`: no hay materiales válidos.
+- `pending_reservation`: estado inicial (antes de reservar).
+- `reserved`: reserva completa (total reservado == total solicitado).
+- `partial`: reserva parcial (algo reservado, menos que lo solicitado).
+- `missing`: sin stock suficiente (reservado == 0).
+
+### Determinación de ubicaciones
+
+- **Origen**: `warehouse.lot_stock_id` (stock principal del almacén).
+- **Tipo de picking**: `warehouse.int_type_id`; si no existe, se busca cualquier tipo `internal` activo para la compañía.
+- **Destino**: se busca primero una ubicación interna cuyo nombre contenga "mantenimiento"; si no existe, se usa `picking_type.default_location_dest_id`. Si destino == origen, se lanza `ValidationError`.
+
+No se crean ubicaciones automáticamente.
+
+### Distribución de reserved_quantity
+
+Como los movimientos se agrupan, la cantidad reservada se distribuye secuencialmente entre las líneas originales del mismo producto/UdM, en orden por actividad/secuencia/id, hasta agotar la reserva disponible. Ninguna línea recibe más que su `estimated_quantity` ni valor negativo.
+
+### Restricciones
+
+- No se permite crear una segunda reserva si ya existe `barca_material_picking_id`.
+- El retiro físico se implementará en Fase 6.
+- La devolución y consumo real se implementarán en Fase 6.
+- Los kits se reservan como productos normales sin explosión de componentes.
+
+### Campos en maintenance.request
+
+| Campo | Descripción |
+|---|---|
+| `barca_material_picking_id` | Many2one al `stock.picking` de reserva |
+| `barca_material_state` | Estado de la reserva (selection) |
+| `barca_pending_material` | True si estado es `partial` o `missing` |
+| `barca_material_picking_count` | Integer calculado para smart button |
+
+
+## Fase 6: entrega, consumo y cierre de materiales (versión simplificada Barca)
+
+Barca opera con una bodega simple. No se implementa flujo complejo de inventario. La entrega de materiales es un registro operativo sin generación de picking adicional.
+
+### Flujo de materiales en Fase 6
+
+```
+[Fase 5: reservado] → Entregar materiales → Registrar consumo real → Cerrar materiales
+```
+
+La Fase 6 funciona aunque no se haya ejecutado la Fase 5 (sin reserva previa).
+
+### Botón "Entregar materiales" (`action_barca_deliver_materials`)
+
+- Si `reserved_quantity > 0` → usa `reserved_quantity` como `withdrawn_quantity`.
+- Si `reserved_quantity == 0` → usa `estimated_quantity` como `withdrawn_quantity`.
+- Marca `barca_material_withdrawn = True`, registra fecha y usuario.
+- Publica resumen en chatter indicando base usada (reserva o estimado).
+- No se crea picking adicional.
+- No se puede ejecutar dos veces.
+
+### Registro de consumo real
+
+El campo `consumed_quantity` en cada línea de material (`barca.maintenance.workorder.line.material`) es editable. Representa la cantidad realmente utilizada por el técnico. No bloquea la notificación de actividades.
+
+### Botón "Cerrar materiales" (`action_barca_close_materials`)
+
+- Requiere que `barca_material_withdrawn == True`.
+- Valida que `consumed_quantity <= withdrawn_quantity` por línea.
+- Calcula `returned_quantity = withdrawn_quantity - consumed_quantity`.
+- Marca `barca_material_closed = True`, registra fecha y usuario.
+- Publica en chatter: totales entregado, consumido, devuelto, costo estimado, costo real, diferencia.
+- No crea picking de devolución.
+
+### Costos
+
+- `barca_estimated_material_cost` = suma de `estimated_quantity * product_id.standard_price`.
+- `barca_real_material_cost` = suma de `consumed_quantity * product_id.standard_price`.
+- Si el producto no tiene `standard_price`, contribuye con 0.
+- Ambos son campos computados almacenados.
+
+### Campos nuevos en `maintenance.request` (Fase 6)
+
+| Campo | Tipo | Descripción |
+|---|---|---|
+| `barca_material_withdrawn` | Boolean | Materiales entregados |
+| `barca_material_delivery_date` | Datetime | Fecha entrega |
+| `barca_material_delivered_by_id` | Many2one res.users | Entregado por |
+| `barca_material_closed` | Boolean | Ciclo cerrado |
+| `barca_material_closed_date` | Datetime | Fecha cierre |
+| `barca_material_closed_by_id` | Many2one res.users | Cerrado por |
+| `barca_material_note` | Text | Observación libre |
+| `barca_estimated_material_cost` | Float | Costo estimado calculado |
+| `barca_real_material_cost` | Float | Costo real calculado |
+
+### Fase 6 NO implementa
+
+- Picking formal de devolución.
+- Órdenes de compra.
+- Aprobaciones de bodega.
+- Múltiples bodegas.
+- Explosión de kits.
+- Recepción de compras.
+- Fase 7.
