@@ -9,14 +9,15 @@
                   decoration-warning="barca_added_after_return == True">
                 <field name="sequence" widget="handle"/>
                 <field name="barca_added_after_return" column_invisible="1"/>
-                <field name="technical_location_id"/>
-                <field name="intervention_type_id"/>
-                <field name="activity_id"/>
-                <field name="estimated_duration"/>
-                <field name="state"/>
-                <button name="action_start_line" string="Iniciar" type="object" class="btn-primary" invisible="state != 'pending'"/>
-                <button name="action_notify_line_open_form" string="Notificar" type="object" class="btn-primary" invisible="state != 'in_progress'"/>
-                <button name="action_close_line" string="Cerrar línea" type="object" class="btn-primary" invisible="state != 'notified'"/>
+                <field name="barca_locked_for_executor" column_invisible="1"/>
+                <field name="technical_location_id" readonly="barca_locked_for_executor"/>
+                <field name="intervention_type_id" readonly="barca_locked_for_executor"/>
+                <field name="activity_id" readonly="barca_locked_for_executor"/>
+                <field name="estimated_duration" readonly="barca_locked_for_executor"/>
+                <field name="state" readonly="barca_locked_for_executor"/>
+                <button name="action_start_line" string="Iniciar" type="object" class="btn-primary" invisible="state != 'pending' or barca_locked_for_executor"/>
+                <button name="action_notify_line_open_form" string="Notificar" type="object" class="btn-primary" invisible="state != 'in_progress' or barca_locked_for_executor"/>
+                <button name="action_close_line" string="Cerrar línea" type="object" class="btn-primary" invisible="state != 'notified' or barca_locked_for_executor"/>
                 <field name="material_count" readonly="1"/>
                 <field name="material_summary" readonly="1"/>
                 <field name="alert_line_id" readonly="1" optional="hide"/>
@@ -31,19 +32,21 @@
         <field name="model">barca.maintenance.workorder.line.material</field>
         <field name="arch" type="xml">
             <list editable="bottom" open_form_view="1">
-                <field name="sequence" widget="handle"/>
-                <field name="product_id"/>
-                <field name="estimated_quantity"/>
-                <field name="reserved_quantity"/>
-                <field name="withdrawn_quantity"/>
-                <field name="consumed_quantity" readonly="returned_quantity != 0"/>
-                <field name="returned_quantity"/>
+                <field name="barca_locked_for_executor" column_invisible="1"/>
+                <field name="sequence" widget="handle" readonly="barca_locked_for_executor"/>
+                <field name="product_id" readonly="barca_locked_for_executor"/>
+                <field name="estimated_quantity" readonly="barca_locked_for_executor"/>
+                <field name="reserved_quantity" readonly="barca_locked_for_executor"/>
+                <field name="withdrawn_quantity" readonly="barca_locked_for_executor"/>
+                <field name="consumed_quantity" readonly="returned_quantity != 0 or barca_locked_for_executor"/>
+                <field name="returned_quantity" readonly="barca_locked_for_executor"/>
                 <field
                     name="product_uom_id"
                     domain="[('category_id', '=', product_uom_category_id)]"
+                    readonly="barca_locked_for_executor"
                 />
                 <field name="product_uom_category_id" column_invisible="1"/>
-                <field name="note"/>
+                <field name="note" readonly="barca_locked_for_executor"/>
             </list>
         </field>
     </record>
@@ -54,23 +57,25 @@
         <field name="arch" type="xml">
             <form string="Material OT">
                 <sheet>
+                    <field name="barca_locked_for_executor" invisible="1"/>
                     <group>
                         <group string="Material">
-                            <field name="sequence"/>
-                            <field name="product_id"/>
+                            <field name="sequence" readonly="barca_locked_for_executor"/>
+                            <field name="product_id" readonly="barca_locked_for_executor"/>
                             <field
                                 name="product_uom_id"
                                 domain="[('category_id', '=', product_uom_category_id)]"
+                                readonly="barca_locked_for_executor"
                             />
                             <field name="product_uom_category_id" invisible="1"/>
-                            <field name="estimated_quantity"/>
-                            <field name="note"/>
+                            <field name="estimated_quantity" readonly="barca_locked_for_executor"/>
+                            <field name="note" readonly="barca_locked_for_executor"/>
                         </group>
                         <group string="Cantidades operativas">
-                            <field name="reserved_quantity"/>
-                            <field name="withdrawn_quantity"/>
-                            <field name="consumed_quantity" readonly="returned_quantity != 0"/>
-                            <field name="returned_quantity"/>
+                            <field name="reserved_quantity" readonly="barca_locked_for_executor"/>
+                            <field name="withdrawn_quantity" readonly="barca_locked_for_executor"/>
+                            <field name="consumed_quantity" readonly="returned_quantity != 0 or barca_locked_for_executor"/>
+                            <field name="returned_quantity" readonly="barca_locked_for_executor"/>
                         </group>
                     </group>
                     <group string="Trazabilidad">
@@ -89,22 +94,23 @@
         <field name="arch" type="xml">
             <form string="Actividad de OT">
                 <header>
-                    <button name="action_start_line" string="Iniciar" type="object" class="btn-primary" invisible="state != 'pending'"/>
-                    <button name="action_notify_line" string="Notificar" type="object" class="btn-primary" invisible="state != 'in_progress'"/>
-                    <button name="action_close_line" string="Cerrar línea" type="object" class="btn-primary" invisible="state != 'notified'"/>
+                    <button name="action_start_line" string="Iniciar" type="object" class="btn-primary" invisible="state != 'pending' or barca_locked_for_executor"/>
+                    <button name="action_notify_line" string="Notificar" type="object" class="btn-primary" invisible="state != 'in_progress' or barca_locked_for_executor"/>
+                    <button name="action_close_line" string="Cerrar línea" type="object" class="btn-primary" invisible="state != 'notified' or barca_locked_for_executor"/>
                     <button name="action_reset_to_pending" string="Reabrir a pendiente" type="object" groups="zmm_ajustes.group_barca_admin,zmm_ajustes.group_barca_programador" invisible="state not in ('in_progress', 'notified', 'closed')"/>
                 </header>
                 <sheet>
+                    <field name="barca_locked_for_executor" invisible="1"/>
                     <notebook>
                         <page string="Actividad" name="activity">
                             <group>
                                 <group string="Datos técnicos">
-                                    <field name="sequence"/>
-                                    <field name="technical_location_id"/>
-                                    <field name="intervention_type_id"/>
-                                    <field name="activity_id"/>
-                                    <field name="estimated_duration"/>
-                                    <field name="state"/>
+                                    <field name="sequence" readonly="barca_locked_for_executor"/>
+                                    <field name="technical_location_id" readonly="barca_locked_for_executor"/>
+                                    <field name="intervention_type_id" readonly="barca_locked_for_executor"/>
+                                    <field name="activity_id" readonly="barca_locked_for_executor"/>
+                                    <field name="estimated_duration" readonly="barca_locked_for_executor"/>
+                                    <field name="state" readonly="barca_locked_for_executor"/>
                                     <field name="material_count" readonly="1"/>
                                     <field name="material_summary" readonly="1"/>
                                 </group>
@@ -116,13 +122,14 @@
                                 </group>
                             </group>
                             <group string="Descripción y observaciones">
-                                <field name="description" nolabel="1"/>
-                                <field name="note" nolabel="1"/>
+                                <field name="description" nolabel="1" readonly="barca_locked_for_executor"/>
+                                <field name="note" nolabel="1" readonly="barca_locked_for_executor"/>
                             </group>
                         </page>
                         <page string="Materiales / Repuestos / Kits" name="materials">
                             <field
                                 name="material_line_ids"
+                                readonly="barca_locked_for_executor"
                                 context="{
                                     'default_workorder_line_id': id,
                                     'list_view_ref': 'zmm_ajustes.view_barca_maintenance_workorder_line_material_list',
@@ -132,8 +139,8 @@
                         </page>
                         <page string="Notificación" name="notification">
                             <group>
-                                <field name="notification_note" placeholder="Describa el trabajo realizado"/>
-                                <field name="result"/>
+                                <field name="notification_note" placeholder="Describa el trabajo realizado" readonly="barca_locked_for_executor"/>
+                                <field name="result" readonly="barca_locked_for_executor"/>
                                 <field name="notification_date" readonly="1"/>
                                 <field name="notified_by_id" readonly="1"/>
                             </group>
@@ -157,6 +164,19 @@
         <field name="arch" type="xml">
             <xpath expr="//field[@name='name']" position="attributes">
                 <attribute name="placeholder">Orden de Trabajo</attribute>
+                <attribute name="readonly">barca_locked_for_executor</attribute>
+            </xpath>
+
+            <xpath expr="//field[@name='request_date']" position="attributes">
+                <attribute name="readonly">barca_locked_for_executor</attribute>
+            </xpath>
+
+            <xpath expr="//field[@name='equipment_id']" position="attributes">
+                <attribute name="readonly">barca_locked_for_executor</attribute>
+            </xpath>
+
+            <xpath expr="//field[@name='user_id']" position="attributes">
+                <attribute name="readonly">barca_locked_for_executor</attribute>
             </xpath>
 
             <xpath expr="//form/header" position="inside">
@@ -196,7 +216,7 @@
                     string="Reservar materiales"
                     type="object"
                     class="btn-secondary"
-                    invisible="barca_material_picking_id != False"
+                    invisible="barca_material_picking_id != False or barca_locked_for_executor"
                 />
                 <!-- Fase 6: botón entregar materiales -->
                 <button
@@ -204,7 +224,7 @@
                     string="Entregar materiales"
                     type="object"
                     class="btn-secondary"
-                    invisible="barca_material_withdrawn == True or barca_material_closed == True"
+                    invisible="barca_material_withdrawn == True or barca_material_closed == True or barca_locked_for_executor"
                 />
                 <!-- Fase 6: botón cerrar materiales -->
                 <button
@@ -212,7 +232,7 @@
                     string="Cerrar materiales"
                     type="object"
                     class="btn-secondary"
-                    invisible="barca_material_withdrawn == False or barca_material_closed == True"
+                    invisible="barca_material_withdrawn == False or barca_material_closed == True or barca_locked_for_executor"
                 />
             </xpath>
 
@@ -240,6 +260,7 @@
                 <field name="barca_all_activities_notified" readonly="1" invisible="1"/>
                 <field name="barca_all_activities_closed" readonly="1" invisible="1"/>
                 <field name="barca_state" readonly="1" invisible="1"/>
+                <field name="barca_locked_for_executor" readonly="1" invisible="1"/>
                 <field name="barca_return_count" readonly="1" invisible="1"/>
             </xpath>
 
@@ -299,26 +320,26 @@
                                options="{'currency_field': 'barca_currency_id'}"/>
                     </group>
                     <group string="Observación" col="1">
-                        <field name="barca_material_note" nolabel="1"/>
+                        <field name="barca_material_note" nolabel="1" readonly="barca_locked_for_executor"/>
                     </group>
                 </group>
             </xpath>
 
             <xpath expr="//sheet/notebook" position="inside">
                 <page string="Actividades" name="barca_activities">
-                    <field name="barca_activity_line_ids" context="{'default_maintenance_request_id': id, 'form_view_ref': 'zmm_ajustes.view_barca_maintenance_workorder_line_form'}">
+                    <field name="barca_activity_line_ids" readonly="barca_locked_for_executor" context="{'default_maintenance_request_id': id, 'form_view_ref': 'zmm_ajustes.view_barca_maintenance_workorder_line_form'}">
                         <list editable="bottom" open_form_view="1"
                               decoration-warning="barca_added_after_return == True">
-                            <field name="sequence" widget="handle"/>
+                            <field name="sequence" widget="handle" readonly="parent.barca_locked_for_executor"/>
                             <field name="barca_added_after_return" column_invisible="1"/>
-                            <field name="technical_location_id"/>
-                            <field name="intervention_type_id"/>
-                            <field name="activity_id"/>
-                            <field name="estimated_duration"/>
-                            <field name="state"/>
-                            <button name="action_start_line" string="Iniciar" type="object" class="btn-primary" invisible="state != 'pending'"/>
-                            <button name="action_notify_line_open_form" string="Notificar" type="object" class="btn-primary" invisible="state != 'in_progress'"/>
-                            <button name="action_close_line" string="Cerrar línea" type="object" class="btn-primary" invisible="state != 'notified'"/>
+                            <field name="technical_location_id" readonly="parent.barca_locked_for_executor"/>
+                            <field name="intervention_type_id" readonly="parent.barca_locked_for_executor"/>
+                            <field name="activity_id" readonly="parent.barca_locked_for_executor"/>
+                            <field name="estimated_duration" readonly="parent.barca_locked_for_executor"/>
+                            <field name="state" readonly="parent.barca_locked_for_executor"/>
+                            <button name="action_start_line" string="Iniciar" type="object" class="btn-primary" invisible="state != 'pending' or parent.barca_locked_for_executor"/>
+                            <button name="action_notify_line_open_form" string="Notificar" type="object" class="btn-primary" invisible="state != 'in_progress' or parent.barca_locked_for_executor"/>
+                            <button name="action_close_line" string="Cerrar línea" type="object" class="btn-primary" invisible="state != 'notified' or parent.barca_locked_for_executor"/>
                             <field name="material_count" readonly="1"/>
                             <field name="material_summary" readonly="1"/>
                             <field name="alert_line_id" readonly="1" optional="hide"/>
@@ -327,22 +348,23 @@
                         </list>
                         <form string="Actividad de OT">
                             <header>
-                                <button name="action_start_line" string="Iniciar" type="object" class="btn-primary" invisible="state != 'pending'"/>
-                                <button name="action_notify_line" string="Notificar" type="object" class="btn-primary" invisible="state != 'in_progress'"/>
-                                <button name="action_close_line" string="Cerrar línea" type="object" class="btn-primary" invisible="state != 'notified'"/>
+                                <button name="action_start_line" string="Iniciar" type="object" class="btn-primary" invisible="state != 'pending' or barca_locked_for_executor"/>
+                                <button name="action_notify_line" string="Notificar" type="object" class="btn-primary" invisible="state != 'in_progress' or barca_locked_for_executor"/>
+                                <button name="action_close_line" string="Cerrar línea" type="object" class="btn-primary" invisible="state != 'notified' or barca_locked_for_executor"/>
                                 <button name="action_reset_to_pending" string="Reabrir a pendiente" type="object" groups="zmm_ajustes.group_barca_admin,zmm_ajustes.group_barca_programador" invisible="state not in ('in_progress', 'notified', 'closed')"/>
                             </header>
                             <sheet>
+                                <field name="barca_locked_for_executor" invisible="1"/>
                                 <notebook>
                                     <page string="Actividad" name="activity">
                                         <group>
                                             <group string="Datos técnicos">
-                                                <field name="sequence"/>
-                                                <field name="technical_location_id"/>
-                                                <field name="intervention_type_id"/>
-                                                <field name="activity_id"/>
-                                                <field name="estimated_duration"/>
-                                                <field name="state"/>
+                                                <field name="sequence" readonly="barca_locked_for_executor"/>
+                                                <field name="technical_location_id" readonly="barca_locked_for_executor"/>
+                                                <field name="intervention_type_id" readonly="barca_locked_for_executor"/>
+                                                <field name="activity_id" readonly="barca_locked_for_executor"/>
+                                                <field name="estimated_duration" readonly="barca_locked_for_executor"/>
+                                                <field name="state" readonly="barca_locked_for_executor"/>
                                                 <field name="material_count" readonly="1"/>
                                                 <field name="material_summary" readonly="1"/>
                                             </group>
@@ -354,12 +376,12 @@
                                             </group>
                                         </group>
                                         <group string="Descripción y observaciones">
-                                            <field name="description" nolabel="1"/>
-                                            <field name="note" nolabel="1"/>
+                                            <field name="description" nolabel="1" readonly="barca_locked_for_executor"/>
+                                            <field name="note" nolabel="1" readonly="barca_locked_for_executor"/>
                                         </group>
                                     </page>
                                     <page string="Materiales / Repuestos / Kits" name="materials">
-                                        <field name="material_line_ids" context="{
+                                        <field name="material_line_ids" readonly="barca_locked_for_executor" context="{
                                             'default_workorder_line_id': id,
                                             'list_view_ref': 'zmm_ajustes.view_barca_maintenance_workorder_line_material_list',
                                             'form_view_ref': 'zmm_ajustes.view_barca_maintenance_workorder_line_material_form'
@@ -367,8 +389,8 @@
                                     </page>
                                     <page string="Notificación" name="notification">
                                         <group>
-                                            <field name="notification_note" placeholder="Describa el trabajo realizado"/>
-                                            <field name="result"/>
+                                            <field name="notification_note" placeholder="Describa el trabajo realizado" readonly="barca_locked_for_executor"/>
+                                            <field name="result" readonly="barca_locked_for_executor"/>
                                             <field name="notification_date" readonly="1"/>
                                             <field name="notified_by_id" readonly="1"/>
                                         </group>

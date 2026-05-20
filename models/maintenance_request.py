@@ -671,6 +671,11 @@ class MaintenanceRequest(models.Model):
         copy=False,
     )
 
+    barca_locked_for_executor = fields.Boolean(
+        string="Bloqueada para ejecutor",
+        compute="_compute_barca_locked_for_executor",
+    )
+
     barca_reviewer_id = fields.Many2one(
         "res.users",
         string="Programador revisor",
@@ -757,6 +762,15 @@ class MaintenanceRequest(models.Model):
             and not user.has_group("zmm_ajustes.group_barca_programador")
             and not user.has_group("zmm_ajustes.group_barca_admin")
         )
+
+    @api.depends("barca_state")
+    @api.depends_context("uid")
+    def _compute_barca_locked_for_executor(self):
+        restricted_executor = self._barca_is_restricted_executor()
+        for request in self:
+            request.barca_locked_for_executor = (
+                restricted_executor and request.barca_state != "in_progress"
+            )
 
     def _barca_check_executor_write_access(self, vals):
         if not self._barca_is_restricted_executor():
@@ -1069,6 +1083,11 @@ class BarcaMaintenanceWorkorderLine(models.Model):
         compute="_compute_material_summary",
     )
 
+    barca_locked_for_executor = fields.Boolean(
+        string="Bloqueada para ejecutor",
+        compute="_compute_barca_locked_for_executor",
+    )
+
     # -------------------------------------------------------------------------
     # Módulo 4: marcado visual post-devolución
     # -------------------------------------------------------------------------
@@ -1086,6 +1105,16 @@ class BarcaMaintenanceWorkorderLine(models.Model):
             and not user.has_group("zmm_ajustes.group_barca_programador")
             and not user.has_group("zmm_ajustes.group_barca_admin")
         )
+
+    @api.depends("maintenance_request_id.barca_state")
+    @api.depends_context("uid")
+    def _compute_barca_locked_for_executor(self):
+        restricted_executor = self._barca_is_restricted_executor()
+        for line in self:
+            line.barca_locked_for_executor = (
+                restricted_executor
+                and line.maintenance_request_id.barca_state != "in_progress"
+            )
 
     def _barca_check_executor_parent_state(self):
         if not self._barca_is_restricted_executor():
@@ -1382,6 +1411,11 @@ class BarcaMaintenanceWorkorderLineMaterial(models.Model):
 
     note = fields.Text(string="Observación")
 
+    barca_locked_for_executor = fields.Boolean(
+        string="Bloqueada para ejecutor",
+        compute="_compute_barca_locked_for_executor",
+    )
+
     def _barca_is_restricted_executor(self):
         user = self.env.user
         return (
@@ -1389,6 +1423,17 @@ class BarcaMaintenanceWorkorderLineMaterial(models.Model):
             and not user.has_group("zmm_ajustes.group_barca_programador")
             and not user.has_group("zmm_ajustes.group_barca_admin")
         )
+
+    @api.depends("workorder_line_id.maintenance_request_id.barca_state")
+    @api.depends_context("uid")
+    def _compute_barca_locked_for_executor(self):
+        restricted_executor = self._barca_is_restricted_executor()
+        for material in self:
+            material.barca_locked_for_executor = (
+                restricted_executor
+                and material.workorder_line_id.maintenance_request_id.barca_state
+                != "in_progress"
+            )
 
     def _barca_check_executor_parent_state(self):
         if not self._barca_is_restricted_executor():
