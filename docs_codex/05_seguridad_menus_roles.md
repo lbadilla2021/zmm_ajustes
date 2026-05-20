@@ -172,3 +172,13 @@ Cuando se agregue un modelo nuevo:
 No se observan reglas de registro multiempresa. Aunque algunos modelos tienen `company_id`, el aislamiento por compañía no está reforzado con `ir.rule` en este módulo.
 
 Si el sistema se usará multiempresa real, se debería diseñar seguridad por compañía antes de producción amplia.
+
+## Bloqueo de OT para Ejecutor por estado
+
+El rol `group_barca_ejecutor` tiene una restricción en Python, no solo en menús o vistas:
+
+- Puede editar la OT, sus actividades y sus materiales solo cuando `maintenance.request.barca_state == 'in_progress'`.
+- Si la OT está en `under_review` o `approved`, el ejecutor queda bloqueado aunque conozca la URL o intente escribir por RPC.
+- El botón **Enviar a revisión** es la única transición permitida para que el ejecutor cambie la OT desde `in_progress` a `under_review`.
+- Aunque la OT esté en `in_progress`, el ejecutor no puede modificar `name`, `request_date` ni `schedule_date`.
+- Programador y Administrador no quedan afectados por este bloqueo.

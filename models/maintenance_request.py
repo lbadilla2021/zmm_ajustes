@@ -653,6 +653,12 @@ class MaintenanceRequest(models.Model):
     # Módulo 3: flujo de revisión
     # -------------------------------------------------------------------------
 
+    _BARCA_EXECUTOR_PROTECTED_FIELDS = {
+        "name",
+        "request_date",
+        "schedule_date",
+    }
+
     barca_state = fields.Selection(
         [
             ("in_progress", "En ejecución"),
@@ -744,6 +750,53 @@ class MaintenanceRequest(models.Model):
             request.barca_all_activities_notified = total > 0 and notified == total
             request.barca_all_activities_closed = total > 0 and closed == total
 
+    def _barca_is_restricted_executor(self):
+        user = self.env.user
+        return (
+            user.has_group("zmm_ajustes.group_barca_ejecutor")
+            and not user.has_group("zmm_ajustes.group_barca_programador")
+            and not user.has_group("zmm_ajustes.group_barca_admin")
+        )
+
+    def _barca_check_executor_write_access(self, vals):
+        if not self._barca_is_restricted_executor():
+            return
+
+        protected_fields = self._BARCA_EXECUTOR_PROTECTED_FIELDS & set(vals)
+        if protected_fields:
+            labels = [
+                self._fields[field_name].string
+                for field_name in sorted(protected_fields)
+                if field_name in self._fields
+            ]
+            raise ValidationError(
+                "El ejecutor no puede modificar estos campos de la OT: %s."
+                % ", ".join(labels)
+            )
+
+        if (
+            "barca_state" in vals
+            and not self.env.context.get("allow_barca_executor_state_write")
+        ):
+            raise ValidationError(
+                "El ejecutor no puede cambiar manualmente el estado de revision "
+                "de la OT. Use las acciones disponibles."
+            )
+
+        blocked_requests = self.filtered(
+            lambda request: request.barca_state != "in_progress"
+        )
+        if blocked_requests:
+            raise ValidationError(
+                "El ejecutor solo puede editar una OT cuando esta en estado "
+                "En ejecucion. Si la OT esta en revision o aprobada, debe "
+                "esperar la devolucion del programador."
+            )
+
+    def write(self, vals):
+        self._barca_check_executor_write_access(vals)
+        return super().write(vals)
+
     def action_barca_send_to_review(self):
         """Envía la OT a revisión del programador.
 
@@ -778,10 +831,12 @@ class MaintenanceRequest(models.Model):
             if self.barca_alert_id and self.barca_alert_id.approved_by_id
             else self.create_uid
         )
-        self.write({
-            "barca_state": "under_review",
-            "barca_reviewer_id": reviewer.id,
-        })
+        self.with_context(allow_barca_executor_state_write=True).write(
+            {
+                "barca_state": "under_review",
+                "barca_reviewer_id": reviewer.id,
+            }
+        )
 
         self.message_post(
             body=(
@@ -1024,6 +1079,57 @@ class BarcaMaintenanceWorkorderLine(models.Model):
         "estimated_duration", "description", "note", "sequence",
     }
 
+    def _barca_is_restricted_executor(self):
+        user = self.env.user
+        return (
+            user.has_group("zmm_ajustes.group_barca_ejecutor")
+            and not user.has_group("zmm_ajustes.group_barca_programador")
+            and not user.has_group("zmm_ajustes.group_barca_admin")
+        )
+
+    def _barca_check_executor_parent_state(self):
+        if not self._barca_is_restricted_executor():
+            return
+
+        blocked_lines = self.filtered(
+            lambda line: line.maintenance_request_id.barca_state != "in_progress"
+        )
+        if blocked_lines:
+            raise ValidationError(
+                "El ejecutor solo puede modificar actividades cuando la OT esta "
+                "en estado En ejecucion. Si la OT esta en revision o aprobada, "
+                "debe esperar la devolucion del programador."
+            )
+
+    @api.model
+    def _barca_check_executor_create_parent_state(self, vals_list):
+        if not self._barca_is_restricted_executor():
+            return
+
+        request_ids = set()
+        default_request_id = self.env.context.get("default_maintenance_request_id")
+        if default_request_id:
+            request_ids.add(default_request_id)
+
+        for vals in vals_list:
+            request_id = vals.get("maintenance_request_id")
+            if isinstance(request_id, (list, tuple)):
+                request_id = request_id[0] if request_id else False
+            if request_id:
+                request_ids.add(request_id)
+
+        if not request_ids:
+            return
+
+        blocked_requests = self.env["maintenance.request"].browse(
+            list(request_ids)
+        ).filtered(lambda request: request.barca_state != "in_progress")
+        if blocked_requests:
+            raise ValidationError(
+                "El ejecutor solo puede crear actividades cuando la OT esta "
+                "en estado En ejecucion."
+            )
+
     def _should_mark_after_return(self):
         """True si la OT asociada tiene devoluciones, sigue en ejecución,
         y el usuario es programador o admin.
@@ -1045,6 +1151,7 @@ class BarcaMaintenanceWorkorderLine(models.Model):
 
     @api.model_create_multi
     def create(self, vals_list):
+        self._barca_check_executor_create_parent_state(vals_list)
         records = super().create(vals_list)
         for record in records:
             if record._should_mark_after_return():
@@ -1052,6 +1159,7 @@ class BarcaMaintenanceWorkorderLine(models.Model):
         return records
 
     def write(self, vals):
+        self._barca_check_executor_parent_state()
         result = super().write(vals)
         if self._PLANNING_FIELDS & set(vals.keys()):
             for record in self:
@@ -1273,6 +1381,71 @@ class BarcaMaintenanceWorkorderLineMaterial(models.Model):
     returned_quantity = fields.Float(string="Cantidad devuelta", default=0.0)
 
     note = fields.Text(string="Observación")
+
+    def _barca_is_restricted_executor(self):
+        user = self.env.user
+        return (
+            user.has_group("zmm_ajustes.group_barca_ejecutor")
+            and not user.has_group("zmm_ajustes.group_barca_programador")
+            and not user.has_group("zmm_ajustes.group_barca_admin")
+        )
+
+    def _barca_check_executor_parent_state(self):
+        if not self._barca_is_restricted_executor():
+            return
+
+        blocked_materials = self.filtered(
+            lambda material: (
+                material.workorder_line_id.maintenance_request_id.barca_state
+                != "in_progress"
+            )
+        )
+        if blocked_materials:
+            raise ValidationError(
+                "El ejecutor solo puede modificar materiales cuando la OT esta "
+                "en estado En ejecucion. Si la OT esta en revision o aprobada, "
+                "debe esperar la devolucion del programador."
+            )
+
+    @api.model
+    def _barca_check_executor_create_parent_state(self, vals_list):
+        if not self._barca_is_restricted_executor():
+            return
+
+        line_ids = set()
+        default_line_id = self.env.context.get("default_workorder_line_id")
+        if default_line_id:
+            line_ids.add(default_line_id)
+
+        for vals in vals_list:
+            line_id = vals.get("workorder_line_id")
+            if isinstance(line_id, (list, tuple)):
+                line_id = line_id[0] if line_id else False
+            if line_id:
+                line_ids.add(line_id)
+
+        if not line_ids:
+            return
+
+        blocked_lines = self.env["barca.maintenance.workorder.line"].browse(
+            list(line_ids)
+        ).filtered(
+            lambda line: line.maintenance_request_id.barca_state != "in_progress"
+        )
+        if blocked_lines:
+            raise ValidationError(
+                "El ejecutor solo puede crear materiales cuando la OT esta "
+                "en estado En ejecucion."
+            )
+
+    @api.model_create_multi
+    def create(self, vals_list):
+        self._barca_check_executor_create_parent_state(vals_list)
+        return super().create(vals_list)
+
+    def write(self, vals):
+        self._barca_check_executor_parent_state()
+        return super().write(vals)
 
     @api.depends(
         "sequence",
