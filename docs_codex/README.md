@@ -4,6 +4,9 @@ Este directorio guarda notas de contexto funcional y técnico para futuras modif
 
 ## Documentos
 
+- `diagrama_flujo_ciclo_mantenimiento.md`: diagrama Mermaid detallado del ciclo completo de mantenimiento.
+- `diagramas_macro_por_tramo_mantenimiento.md`: diagrama macro y diagramas individuales para los 8 tramos del ciclo.
+- `manual_usuario_ciclo_mantenimiento.md`: manual funcional de usuario del ciclo completo de mantenimiento de vehiculos.
 - `00_contexto_general.md`: propósito, dependencias y archivos clave del módulo.
 - `01_mapa_del_modulo.md`: estructura de archivos, orden de carga, modelos, menús y cron.
 - `02_modelo_de_datos.md`: modelos propios/extendidos, incluyendo la ampliación productiva de Flotilla.
