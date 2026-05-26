@@ -207,7 +207,7 @@ class BarcaMaintenanceAlert(models.Model):
             if not alert._is_maintenance_request_ready_to_close():
                 raise ValidationError(
                     "Solo se puede cerrar el aviso cuando la OT esté en "
-                    "Reparado o Desechar."
+                    "Desechar, Cierre Total o Cierre Parcial."
                 )
         self._write_state_transition(
             "closed",
@@ -223,7 +223,7 @@ class BarcaMaintenanceAlert(models.Model):
     def _is_maintenance_request_ready_to_close(self):
         self.ensure_one()
         request = self.maintenance_request_id
-        return bool(request and request.stage_id and request.stage_id.done)
+        return bool(request and request._barca_is_stage_final_close())
 
     def action_view_maintenance_request(self):
         self.ensure_one()
@@ -320,6 +320,11 @@ class BarcaMaintenanceAlert(models.Model):
                 "barca_alert_id": alert.id,
                 "barca_activity_line_ids": alert._prepare_workorder_activity_commands(),
             }
+            progress_stage = (
+                self.env["maintenance.request"]._barca_get_progress_stage()
+            )
+            if progress_stage:
+                request_vals["stage_id"] = progress_stage.id
             if "category_id" in self.env["maintenance.request"]._fields:
                 equipment_category = alert.equipment_id.category_id
                 if equipment_category:

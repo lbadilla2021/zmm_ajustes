@@ -164,12 +164,12 @@ flowchart TD
 ## 6. Tramo 5 - Orden de Trabajo
 
 Documento: **Orden de Trabajo**  
-Estado inicial: **En ejecucion**  
-Estado final esperado: **En revision** o **Aprobada**
+Estado inicial: **En progreso**  
+Estado final esperado: **Cierre Total** o **Cierre Parcial**
 
 ```mermaid
 flowchart TD
-    A["OT En ejecucion"] --> B["Actividades copiadas desde aviso"]
+    A["OT En progreso"] --> B["Actividades copiadas desde aviso"]
     B --> C["Ejecutor trabaja actividades"]
     C --> D{"Enviar a revision"}
     D --> E{"Tiene actividades?"}
@@ -177,13 +177,15 @@ flowchart TD
     E -->|Si| F{"Todas notificadas o cerradas?"}
     F -->|No| F1["Error: actividades pendientes"]
     F -->|Si| G["Resolver revisor automaticamente"]
-    G --> H["Estado En revision"]
+    G --> H["Etapa Reparado"]
     H --> I{"Decision Programador/Admin"}
-    I -->|Aprobar OT| J["Estado Aprobada"]
+    I -->|Cierre Total| J["Etapa Cierre Total"]
+    I -->|Cierre Parcial| J2["Etapa Cierre Parcial"]
     J --> K["Notificar responsable"]
+    J2 --> K
     I -->|Devolver a ejecucion| L{"Motivo informado?"}
     L -->|No| L1["Error: completar motivo"]
-    L -->|Si| M["Estado En ejecucion"]
+    L -->|Si| M["Etapa En progreso"]
     M --> N["Incrementar contador de devoluciones"]
     N --> O["Notificar responsable"]
     O --> C
@@ -276,4 +278,3 @@ flowchart TD
     M -->|No| M1["No enviar correo"]
     M -->|Si| N["Enviar correo de vencimientos"]
 ```
-

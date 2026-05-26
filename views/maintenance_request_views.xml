@@ -187,28 +187,31 @@
                     type="object"
                     class="btn-primary"
                     groups="zmm_ajustes.group_barca_ejecutor,zmm_ajustes.group_barca_admin"
-                    invisible="barca_state != 'in_progress'"
+                    invisible="not barca_stage_is_in_progress"
                 />
                 <button
-                    name="action_barca_approve"
-                    string="Aprobar OT"
+                    name="action_barca_close_total"
+                    string="Cierre Total"
                     type="object"
                     class="btn-primary"
                     groups="zmm_ajustes.group_barca_programador,zmm_ajustes.group_barca_admin"
-                    invisible="barca_state != 'under_review'"
+                    invisible="not barca_stage_is_repaired"
                 />
                 <button
-                    name="action_barca_return_to_progress"
-                    string="Devolver a ejecución"
+                    name="action_barca_close_partial"
+                    string="Cierre Parcial"
                     type="object"
                     class="btn-secondary"
                     groups="zmm_ajustes.group_barca_programador,zmm_ajustes.group_barca_admin"
-                    invisible="barca_state != 'under_review'"
+                    invisible="not barca_stage_is_repaired"
                 />
-                <field
-                    name="barca_state"
-                    widget="statusbar"
-                    statusbar_visible="in_progress,under_review,approved"
+                <button
+                    name="action_barca_return_to_progress"
+                    string="Devolver a progreso"
+                    type="object"
+                    class="btn-secondary"
+                    groups="zmm_ajustes.group_barca_programador,zmm_ajustes.group_barca_admin"
+                    invisible="not barca_stage_is_repaired"
                 />
                 <!-- Fase 5: botón reservar materiales, visible solo si no existe reserva -->
                 <button
@@ -259,7 +262,8 @@
                 <field name="barca_closed_activity_count" readonly="1" invisible="1"/>
                 <field name="barca_all_activities_notified" readonly="1" invisible="1"/>
                 <field name="barca_all_activities_closed" readonly="1" invisible="1"/>
-                <field name="barca_state" readonly="1" invisible="1"/>
+                <field name="barca_stage_is_in_progress" readonly="1" invisible="1"/>
+                <field name="barca_stage_is_repaired" readonly="1" invisible="1"/>
                 <field name="barca_locked_for_executor" readonly="1" invisible="1"/>
                 <field name="barca_return_count" readonly="1" invisible="1"/>
             </xpath>
@@ -281,7 +285,7 @@
 
                 <!-- Módulo 3: sección revisión -->
                 <group string="Revisión"
-                       invisible="barca_state == 'in_progress' and barca_return_count == 0">
+                       invisible="barca_stage_is_in_progress and barca_return_count == 0">
                     <group string="Programador revisor">
                         <field name="barca_reviewer_id"
                                readonly="1"
@@ -291,8 +295,8 @@
                         <field name="barca_return_count" readonly="1"
                                invisible="barca_return_count == 0"/>
                         <field name="barca_return_reason"
-                               readonly="barca_state != 'under_review'"
-                               invisible="barca_state == 'in_progress' and barca_return_count == 0"
+                               readonly="not barca_stage_is_repaired"
+                               invisible="barca_stage_is_in_progress and barca_return_count == 0"
                                groups="zmm_ajustes.group_barca_programador,zmm_ajustes.group_barca_admin"/>
                     </group>
                 </group>

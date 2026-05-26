@@ -20,6 +20,7 @@
         'data/maintenance_request_simple_sequence.xml',
         'data/maintenance_checklist_sequence.xml',
         'data/maintenance_checklist_items.xml',
+        'data/maintenance_stage_data.xml',
         'views/technical_location_views.xml',
         'views/intervention_type_views.xml',
         'views/maintenance_activity_views.xml',

@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="stage_barca_maintenance_close_total" model="maintenance.stage">
+        <field name="name">Cierre Total</field>
+        <field name="sequence">50</field>
+        <field name="fold">1</field>
+        <field name="done">1</field>
+    </record>
+
+    <record id="stage_barca_maintenance_close_partial" model="maintenance.stage">
+        <field name="name">Cierre Parcial</field>
+        <field name="sequence">60</field>
+        <field name="fold">1</field>
+        <field name="done">1</field>
+    </record>
+</odoo>

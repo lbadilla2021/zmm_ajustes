@@ -586,7 +586,7 @@ Extensión en `models/maintenance_request.py`.
 
 La Solicitud de Mantención estándar de Odoo se renombra funcionalmente como Orden de Trabajo. Su ciclo de programación, ejecución, revisión y cierre queda separado del ciclo del aviso `barca.maintenance.alert`.
 
-El aviso asociado queda en estado técnico `in_progress` / funcional `Con OT creada` hasta que el usuario lo cierre explícitamente. El cierre del aviso solo se permite si la OT asociada está en una etapa terminada (`stage_id.done`), equivalente funcionalmente a Reparado o Desechar. La descripción de la OT puede guardar un resumen textual de actividades, pero el detalle operativo estable se guarda en `barca_activity_line_ids` y en sus materiales.
+El aviso asociado queda en estado técnico `in_progress` / funcional `Con OT creada` hasta que el usuario lo cierre explícitamente. El cierre del aviso solo se permite si la OT asociada está en una etapa final distinta de **Reparado**: **Desechar**, **Cierre Total** o **Cierre Parcial**. **Reparado** representa revisión del programador y no cierre final. La descripción de la OT puede guardar un resumen textual de actividades, pero el detalle operativo estable se guarda en `barca_activity_line_ids` y en sus materiales.
 
 ### Fase 4: ciclo operativo de actividades de OT
 

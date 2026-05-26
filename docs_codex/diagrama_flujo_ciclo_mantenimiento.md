@@ -114,15 +114,17 @@ flowchart TD
     OTREV0 -->|No| ACT1
     OTREV0 -->|Si| OTREV1["Boton Enviar a revision"]
     OTREV1 --> OTREV2["Sistema asigna revisor"]
-    OTREV2 --> OTREV3["OT Estado En revision"]
+    OTREV2 --> OTREV3["OT Etapa Reparado"]
 
     OTREV3 --> OTDES{"Decision Programador/Admin"}
     OTDES -->|Devolver a ejecucion| OTD1["Requiere motivo de devolucion"]
     OTD1 --> OTD2["Incrementa contador de devoluciones"]
     OTD2 --> OTD3["Notifica responsable"]
     OTD3 --> OT
-    OTDES -->|Aprobar OT| OTA1["OT Estado Aprobada"]
+    OTDES -->|Cierre Total| OTA1["OT Etapa Cierre Total"]
+    OTDES -->|Cierre Parcial| OTA1B["OT Etapa Cierre Parcial"]
     OTA1 --> OTA2["Notifica responsable"]
+    OTA1B --> OTA2
 
     OTA2 --> MATC0{"Materiales entregados?"}
     MATC0 -->|No| OTCLOSESTD["Cerrar/terminar etapa estandar de OT si corresponde"]
@@ -170,7 +172,7 @@ flowchart TD
 | Solicitud | Solicitud de Mantencion | Nueva | Aviso creado o Cancelada |
 | Checklist | Checklist | Nuevo | Aviso generado, Cerrado sin aviso o Cancelado |
 | Aviso | Avisos | Nuevo | Con OT creada, Rechazado o Cerrado |
-| OT | Orden de Trabajo | En ejecucion | En revision o Aprobada |
+| OT | Orden de Trabajo | En progreso | Cierre Total o Cierre Parcial |
 | Actividad OT | Actividades de OT | Pendiente | Notificada o Cerrada |
 | Materiales | Materiales de OT | Pendiente reserva | Reservado/parcial/sin stock, entregado y cerrado |
 | Flotilla | Vehiculo | Cambio documental o revision programada | Correo enviado o sin envio por falta de vencimientos/destinatarios |

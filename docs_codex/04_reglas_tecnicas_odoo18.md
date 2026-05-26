@@ -40,14 +40,24 @@ Este XML ID corresponde al formulario estándar vigente de `maintenance.request`
 
 No insertar un nuevo `<header>` con `//sheet position="before"` salvo que se confirme en una versión futura que la vista base ya no trae header, porque eso puede generar doble header en el formulario de OT.
 
-## Dos barras de estado en la OT
+## Barra única de estado en la OT
 
-La OT (`maintenance.request`) tiene **dos barras de estado**:
+La OT (`maintenance.request`) usa una sola barra de estado: **`stage_id`**, el flujo nativo de Odoo que también controla las columnas del Kanban.
 
-1. **`stage_id`** (statusbar nativo de Odoo): columnas del Kanban (`Nueva solicitud`, `En progreso`, `Reparado`, `Desechar`). **No ocultar** — controla la vista Kanban.
-2. **`barca_state`** (statusbar propio): flujo operativo Barca (`En ejecución`, `En revisión`, `Aprobada`). Pendiente decisión sobre integración con Kanban.
+Flujo funcional vigente:
 
-Decisión pendiente: si el Kanban se usa activamente, evaluar sincronizar `barca_state` con `stage_id` o crear una vista Kanban personalizada basada en `barca_state`. Por ahora conviven.
+```text
+Nueva solicitud → En progreso → Reparado → Desechar → Cierre Total / Cierre Parcial
+```
+
+Equivalencias Barca:
+
+- **En progreso** reemplaza al antiguo estado Barca `En ejecución`.
+- Al presionar **Enviar a revisión**, la OT pasa automáticamente a **Reparado**. Esa etapa representa la revisión del programador y mantiene el bloqueo de edición para el ejecutor.
+- Si el programador devuelve la OT, vuelve desde **Reparado** a **En progreso**.
+- La antigua aprobación se reemplaza por **Cierre Total** o **Cierre Parcial**.
+
+No reintroducir una segunda barra `barca_state` en el formulario; cualquier nueva decisión de flujo debe integrarse con `stage_id`.
 
 ## Readonly por rol en vistas de Odoo 18
 

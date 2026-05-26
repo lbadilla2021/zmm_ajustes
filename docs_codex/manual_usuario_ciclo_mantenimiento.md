@@ -346,7 +346,7 @@ Cuando el aviso viene de un plan, hereda ubicacion tecnica, tipo de intervencion
 
 Ruta: **Mantencion Barca > Mantenimiento > Orden de Trabajo**.
 
-La OT corresponde al modelo estandar `maintenance.request`, mostrado funcionalmente como **Orden de Trabajo**. El modulo agrega estados Barca, actividades, materiales y revision.
+La OT corresponde al modelo estandar `maintenance.request`, mostrado funcionalmente como **Orden de Trabajo**. El modulo agrega actividades, materiales y revision usando la misma barra de etapas estandar que controla el Kanban.
 
 Al presionar **Generar OT** en el aviso:
 
@@ -358,21 +358,23 @@ Al presionar **Generar OT** en el aviso:
 6. Se copian los materiales de cada actividad.
 7. El aviso queda en estado **Con OT creada**.
 
-Estado Barca de la OT:
+Etapas principales de la OT:
 
 | Estado | Significado |
 |---|---|
-| En ejecucion | OT en trabajo operativo. |
-| En revision | Ejecutor/Admin envio la OT para revision del programador. |
-| Aprobada | Programador/Admin aprobo la OT. |
+| En progreso | OT en trabajo operativo. |
+| Reparado | Ejecutor/Admin envio la OT para revision del programador. |
+| Cierre Total | Programador/Admin cerro totalmente la OT. |
+| Cierre Parcial | Programador/Admin cerro parcialmente la OT. |
 
 Botones principales:
 
 | Boton | Disponible cuando | Funcion |
 |---|---|---|
-| Enviar a revision | Estado Barca En ejecucion, Ejecutor/Admin | Valida actividades notificadas y envia a revision. |
-| Aprobar OT | Estado Barca En revision, Programador/Admin | Aprueba la OT y notifica al responsable. |
-| Devolver a ejecucion | Estado Barca En revision, Programador/Admin | Requiere motivo; vuelve a En ejecucion y notifica al responsable. |
+| Enviar a revision | Etapa En progreso, Ejecutor/Admin | Valida actividades notificadas y cambia la OT a Reparado. |
+| Cierre Total | Etapa Reparado, Programador/Admin | Cierra totalmente la OT y notifica al responsable. |
+| Cierre Parcial | Etapa Reparado, Programador/Admin | Cierra parcialmente la OT y notifica al responsable. |
+| Devolver a progreso | Etapa Reparado, Programador/Admin | Requiere motivo; vuelve a En progreso y notifica al responsable. |
 | Reservar materiales | Sin reserva previa | Crea picking interno de reserva y asigna stock disponible. |
 | Entregar materiales | Materiales no entregados ni cerrados | Registra entrega al tecnico. |
 | Cerrar materiales | Materiales entregados y no cerrados | Calcula consumos, devoluciones y costos. |
@@ -418,36 +420,36 @@ Para enviar la OT a revision, todas las actividades deben estar **Notificadas** 
 ## 11. Revision de OT
 
 ```text
-En ejecucion -> En revision -> Aprobada
-              \-> Devuelta a ejecucion
+En progreso -> Reparado -> Cierre Total / Cierre Parcial
+             \-> Devuelta a En progreso
 ```
 
 **Enviar a revision**
 
-- Solo se permite en estado Barca **En ejecucion**.
+- Solo se permite en etapa **En progreso**.
 - Requiere al menos una actividad.
 - Todas las actividades deben estar notificadas o cerradas.
 - El revisor se resuelve automaticamente: usuario que tomo el aviso para evaluacion; si no existe, el creador de la OT.
-- Publica mensaje en el chatter y notifica al revisor.
+- Cambia la OT a **Reparado**, publica mensaje en el chatter y notifica al revisor.
 
-**Aprobar OT**
+**Cierre Total / Cierre Parcial**
 
-- Solo desde **En revision**.
+- Solo desde **Reparado**.
 - Disponible para Programador/Admin.
-- Cambia a **Aprobada**.
+- Cambia a la etapa de cierre seleccionada.
 - Limpia marcas de actividades agregadas/modificadas tras devolucion.
 - Notifica al responsable de ejecucion de la OT.
 
-**Devolver a ejecucion**
+**Devolver a progreso**
 
-- Solo desde **En revision**.
+- Solo desde **Reparado**.
 - Disponible para Programador/Admin.
 - Requiere completar **Motivo de devolucion**.
-- Cambia a **En ejecucion**.
+- Cambia a **En progreso**.
 - Incrementa contador de devoluciones.
 - Notifica al responsable de ejecucion.
 
-Si despues de una devolucion un Programador/Admin agrega o modifica actividades de planificacion, estas quedan marcadas como agregadas/modificadas tras devolucion hasta que la OT sea aprobada.
+Si despues de una devolucion un Programador/Admin agrega o modifica actividades de planificacion, estas quedan marcadas como agregadas/modificadas tras devolucion hasta que la OT tenga cierre total o parcial.
 
 ## 12. Materiales de la OT
 
@@ -688,8 +690,9 @@ En evaluacion -> Rechazado
 OT Barca:
 
 ```text
-En ejecucion -> En revision -> Aprobada
-En revision -> En ejecucion
+En progreso -> Reparado -> Cierre Total
+En progreso -> Reparado -> Cierre Parcial
+Reparado -> En progreso
 ```
 
 Actividad de OT:

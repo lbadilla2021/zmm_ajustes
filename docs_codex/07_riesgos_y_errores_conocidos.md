@@ -66,7 +66,7 @@ El cron ordena por menor trigger.
 
 La OT gestiona programación, ejecución y revisión. El aviso no pasa automáticamente a `in_review` cuando cambia la OT.
 
-El aviso permanece en `Con OT creada` y debe cerrarse explícitamente. `action_close()` valida que exista una OT asociada y que la OT esté en una etapa terminada (`stage_id.done`), equivalente funcionalmente a Reparado o Desechar.
+El aviso permanece en `Con OT creada` y debe cerrarse explícitamente. `action_close()` valida que exista una OT asociada y que la OT esté en una etapa final distinta de **Reparado**: **Desechar**, **Cierre Total** o **Cierre Parcial**. **Reparado** se usa como revisión del programador, no como cierre final.
 
 ## 7. Equipo de mantenimiento requerido para crear OT
 
@@ -148,9 +148,11 @@ el campo "user_has_groups" no existe en el modelo "..."
 
 Dentro de un `<list>` de `One2many`, `state` se evalúa en el modelo hijo. Si el campo `state` existe en el padre pero no en el hijo, Odoo lanzará error de validación de vista. Usar `parent.state` para acceder al padre. Solo hay un nivel disponible; para bisnietos usar `readonly="1"` fijo.
 
-## 18. Dos barras de estado en la OT (pendiente de decisión)
+## 18. Estado de OT y Kanban deben usar el mismo flujo
 
-La OT muestra dos statusbars simultáneamente: el nativo de Odoo (`stage_id`) y el propio de Barca (`barca_state`). El nativo no debe ocultarse porque controla las columnas del Kanban. Pendiente decisión sobre integración entre ambos estados o creación de vista Kanban personalizada basada en `barca_state`.
+La OT debe mostrar una sola barra de estado basada en `stage_id`, porque ese campo controla también las columnas del Kanban. No reintroducir una segunda barra `barca_state`.
+
+El botón **Enviar a revisión** mueve la OT desde **En progreso** a **Reparado**. Mientras está en **Reparado**, el ejecutor queda bloqueado y el programador puede devolverla a **En progreso** o cerrarla como **Cierre Total** / **Cierre Parcial**.
 
 ## 19. Fecha programada obligatoria para generar OT desde aviso
 

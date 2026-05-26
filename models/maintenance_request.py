@@ -11,6 +11,57 @@ class MaintenanceRequest(models.Model):
     # El aviso asociado permanece en "Con OT creada" hasta que el usuario lo cierre
     # explícitamente, una vez que la OT esté en una etapa terminada.
 
+    _BARCA_PROGRESS_STAGE_NAMES = ("En progreso", "In Progress")
+    _BARCA_REPAIRED_STAGE_NAMES = ("Reparado", "Repaired")
+
+    def _barca_find_stage(self, names=(), xmlids=()):
+        Stage = self.env["maintenance.stage"]
+        for xmlid in xmlids:
+            stage = self.env.ref(xmlid, raise_if_not_found=False)
+            if stage:
+                return stage
+        if names:
+            stage = Stage.search([("name", "in", list(names))], order="sequence, id", limit=1)
+            if stage:
+                return stage
+        return Stage.browse()
+
+    def _barca_get_progress_stage(self):
+        return self._barca_find_stage(names=self._BARCA_PROGRESS_STAGE_NAMES)
+
+    def _barca_get_repaired_stage(self):
+        return self._barca_find_stage(names=self._BARCA_REPAIRED_STAGE_NAMES)
+
+    def _barca_get_close_total_stage(self):
+        return self._barca_find_stage(
+            xmlids=("zmm_ajustes.stage_barca_maintenance_close_total",),
+            names=("Cierre Total",),
+        )
+
+    def _barca_get_close_partial_stage(self):
+        return self._barca_find_stage(
+            xmlids=("zmm_ajustes.stage_barca_maintenance_close_partial",),
+            names=("Cierre Parcial",),
+        )
+
+    def _barca_is_stage_in_progress(self):
+        self.ensure_one()
+        progress_stage = self._barca_get_progress_stage()
+        return bool(progress_stage and self.stage_id == progress_stage)
+
+    def _barca_is_stage_repaired(self):
+        self.ensure_one()
+        repaired_stage = self._barca_get_repaired_stage()
+        return bool(repaired_stage and self.stage_id == repaired_stage)
+
+    def _barca_is_stage_final_close(self):
+        self.ensure_one()
+        return bool(
+            self.stage_id
+            and self.stage_id.done
+            and not self._barca_is_stage_repaired()
+        )
+
     # -------------------------------------------------------------------------
     # Fase 5: Reserva de materiales
     # -------------------------------------------------------------------------
@@ -665,15 +716,24 @@ class MaintenanceRequest(models.Model):
             ("under_review", "En revisión"),
             ("approved", "Aprobada"),
         ],
-        string="Estado Barca",
+        string="Estado Barca legado",
         default="in_progress",
         tracking=True,
         copy=False,
+        help="Campo histórico. El flujo vigente de OT usa stage_id.",
     )
 
     barca_locked_for_executor = fields.Boolean(
         string="Bloqueada para ejecutor",
         compute="_compute_barca_locked_for_executor",
+    )
+    barca_stage_is_in_progress = fields.Boolean(
+        string="Etapa En progreso",
+        compute="_compute_barca_stage_flags",
+    )
+    barca_stage_is_repaired = fields.Boolean(
+        string="Etapa Reparado",
+        compute="_compute_barca_stage_flags",
     )
 
     barca_reviewer_id = fields.Many2one(
@@ -763,13 +823,25 @@ class MaintenanceRequest(models.Model):
             and not user.has_group("zmm_ajustes.group_barca_admin")
         )
 
-    @api.depends("barca_state")
+    @api.depends("stage_id")
+    def _compute_barca_stage_flags(self):
+        progress_stage = self._barca_get_progress_stage()
+        repaired_stage = self._barca_get_repaired_stage()
+        for request in self:
+            request.barca_stage_is_in_progress = bool(
+                progress_stage and request.stage_id == progress_stage
+            )
+            request.barca_stage_is_repaired = bool(
+                repaired_stage and request.stage_id == repaired_stage
+            )
+
+    @api.depends("stage_id")
     @api.depends_context("uid")
     def _compute_barca_locked_for_executor(self):
         restricted_executor = self._barca_is_restricted_executor()
         for request in self:
             request.barca_locked_for_executor = (
-                restricted_executor and request.barca_state != "in_progress"
+                restricted_executor and not request._barca_is_stage_in_progress()
             )
 
     def _barca_check_executor_write_access(self, vals):
@@ -789,21 +861,21 @@ class MaintenanceRequest(models.Model):
             )
 
         if (
-            "barca_state" in vals
-            and not self.env.context.get("allow_barca_executor_state_write")
+            "stage_id" in vals
+            and not self.env.context.get("allow_barca_executor_stage_write")
         ):
             raise ValidationError(
-                "El ejecutor no puede cambiar manualmente el estado de revision "
+                "El ejecutor no puede cambiar manualmente la etapa de revision "
                 "de la OT. Use las acciones disponibles."
             )
 
         blocked_requests = self.filtered(
-            lambda request: request.barca_state != "in_progress"
+            lambda request: not request._barca_is_stage_in_progress()
         )
         if blocked_requests:
             raise ValidationError(
                 "El ejecutor solo puede editar una OT cuando esta en estado "
-                "En ejecucion. Si la OT esta en revision o aprobada, debe "
+                "En progreso. Si la OT esta en revision o cerrada, debe "
                 "esperar la devolucion del programador."
             )
 
@@ -817,13 +889,14 @@ class MaintenanceRequest(models.Model):
         El revisor se resuelve automáticamente: es el usuario que tomó
         el aviso para evaluación (barca_alert_id.approved_by_id).
         Si la OT no tiene aviso asociado, se usa el create_uid de la OT.
-        No requiere que el jefe de taller asigne un revisor manualmente.
+        La revisión usa la etapa estándar "Reparado" para mantener un único
+        flujo visible y consistente con el Kanban.
         """
         self.ensure_one()
 
-        if self.barca_state != "in_progress":
+        if not self._barca_is_stage_in_progress():
             raise ValidationError(
-                "Solo se puede enviar a revisión una OT en estado En ejecución."
+                "Solo se puede enviar a revisión una OT en etapa En progreso."
             )
         if not self.barca_activity_line_ids:
             raise ValidationError(
@@ -839,15 +912,21 @@ class MaintenanceRequest(models.Model):
                 % ", ".join(l.activity_id.name or str(l.id) for l in pending_lines)
             )
 
+        repaired_stage = self._barca_get_repaired_stage()
+        if not repaired_stage:
+            raise ValidationError(
+                "No se encontró la etapa Reparado para enviar la OT a revisión."
+            )
+
         # Resolver revisor automáticamente desde el aviso origen
         reviewer = (
             self.barca_alert_id.approved_by_id
             if self.barca_alert_id and self.barca_alert_id.approved_by_id
             else self.create_uid
         )
-        self.with_context(allow_barca_executor_state_write=True).write(
+        self.with_context(allow_barca_executor_stage_write=True).write(
             {
-                "barca_state": "under_review",
+                "stage_id": repaired_stage.id,
                 "barca_reviewer_id": reviewer.id,
             }
         )
@@ -872,20 +951,16 @@ class MaintenanceRequest(models.Model):
             },
         }
 
-    def action_barca_approve(self):
-        """Aprueba la OT. Solo programador y admin.
-
-        Notifica al responsable de ejecución (user_id de la OT).
-        Limpia los flags barca_added_after_return de las actividades.
-        """
+    def _barca_close_from_review(self, close_stage, close_label):
         self.ensure_one()
-
-        if self.barca_state != "under_review":
+        if not self._barca_is_stage_repaired():
             raise ValidationError(
-                "Solo se puede aprobar una OT que esté en revisión."
+                "Solo se puede cerrar una OT que esté en etapa Reparado."
             )
+        if not close_stage:
+            raise ValidationError("No se encontró la etapa %s." % close_label)
 
-        self.write({"barca_state": "approved"})
+        self.write({"stage_id": close_stage.id})
 
         # Limpiar marcas visuales de actividades post-devolución
         self.barca_activity_line_ids.filtered(
@@ -897,9 +972,9 @@ class MaintenanceRequest(models.Model):
         partner_ids = responsible.partner_id.ids if responsible else []
         self.message_post(
             body=(
-                "<b>OT aprobada</b><br/>"
-                "Aprobada por: <b>%s</b>"
-            ) % self.env.user.name,
+                "<b>OT cerrada: %s</b><br/>"
+                "Cerrada por: <b>%s</b>"
+            ) % (close_label, self.env.user.name),
             partner_ids=partner_ids,
         )
 
@@ -907,12 +982,30 @@ class MaintenanceRequest(models.Model):
             "type": "ir.actions.client",
             "tag": "display_notification",
             "params": {
-                "title": "OT aprobada",
-                "message": "La OT ha sido aprobada.",
+                "title": close_label,
+                "message": "La OT quedó en %s." % close_label,
                 "type": "success",
                 "sticky": False,
             },
         }
+
+    def action_barca_close_total(self):
+        """Cierra totalmente la OT desde la etapa Reparado."""
+        return self._barca_close_from_review(
+            self._barca_get_close_total_stage(),
+            "Cierre Total",
+        )
+
+    def action_barca_close_partial(self):
+        """Cierra parcialmente la OT desde la etapa Reparado."""
+        return self._barca_close_from_review(
+            self._barca_get_close_partial_stage(),
+            "Cierre Parcial",
+        )
+
+    def action_barca_approve(self):
+        """Compatibilidad: la antigua aprobación equivale a Cierre Total."""
+        return self.action_barca_close_total()
 
     def action_barca_return_to_progress(self):
         """Devuelve la OT a ejecución. Solo programador y admin.
@@ -922,17 +1015,23 @@ class MaintenanceRequest(models.Model):
         """
         self.ensure_one()
 
-        if self.barca_state != "under_review":
+        if not self._barca_is_stage_repaired():
             raise ValidationError(
-                "Solo se puede devolver una OT que esté en revisión."
+                "Solo se puede devolver una OT que esté en etapa Reparado."
             )
         if not self.barca_return_reason or not self.barca_return_reason.strip():
             raise ValidationError(
                 "Debe ingresar el motivo de devolución antes de devolver la OT."
             )
 
+        progress_stage = self._barca_get_progress_stage()
+        if not progress_stage:
+            raise ValidationError(
+                "No se encontró la etapa En progreso para devolver la OT."
+            )
+
         self.write({
-            "barca_state": "in_progress",
+            "stage_id": progress_stage.id,
             "barca_return_count": self.barca_return_count + 1,
         })
 
@@ -1106,14 +1205,15 @@ class BarcaMaintenanceWorkorderLine(models.Model):
             and not user.has_group("zmm_ajustes.group_barca_admin")
         )
 
-    @api.depends("maintenance_request_id.barca_state")
+    @api.depends("maintenance_request_id.stage_id")
     @api.depends_context("uid")
     def _compute_barca_locked_for_executor(self):
         restricted_executor = self._barca_is_restricted_executor()
         for line in self:
             line.barca_locked_for_executor = (
                 restricted_executor
-                and line.maintenance_request_id.barca_state != "in_progress"
+                and line.maintenance_request_id
+                and not line.maintenance_request_id._barca_is_stage_in_progress()
             )
 
     def _barca_check_executor_parent_state(self):
@@ -1121,12 +1221,15 @@ class BarcaMaintenanceWorkorderLine(models.Model):
             return
 
         blocked_lines = self.filtered(
-            lambda line: line.maintenance_request_id.barca_state != "in_progress"
+            lambda line: (
+                line.maintenance_request_id
+                and not line.maintenance_request_id._barca_is_stage_in_progress()
+            )
         )
         if blocked_lines:
             raise ValidationError(
                 "El ejecutor solo puede modificar actividades cuando la OT esta "
-                "en estado En ejecucion. Si la OT esta en revision o aprobada, "
+                "en etapa En progreso. Si la OT esta en revision o cerrada, "
                 "debe esperar la devolucion del programador."
             )
 
@@ -1152,11 +1255,11 @@ class BarcaMaintenanceWorkorderLine(models.Model):
 
         blocked_requests = self.env["maintenance.request"].browse(
             list(request_ids)
-        ).filtered(lambda request: request.barca_state != "in_progress")
+        ).filtered(lambda request: not request._barca_is_stage_in_progress())
         if blocked_requests:
             raise ValidationError(
                 "El ejecutor solo puede crear actividades cuando la OT esta "
-                "en estado En ejecucion."
+                "en etapa En progreso."
             )
 
     def _should_mark_after_return(self):
@@ -1174,7 +1277,7 @@ class BarcaMaintenanceWorkorderLine(models.Model):
         return (
             bool(request)
             and request.barca_return_count > 0
-            and request.barca_state == "in_progress"
+            and request._barca_is_stage_in_progress()
             and is_planner
         )
 
@@ -1424,15 +1527,15 @@ class BarcaMaintenanceWorkorderLineMaterial(models.Model):
             and not user.has_group("zmm_ajustes.group_barca_admin")
         )
 
-    @api.depends("workorder_line_id.maintenance_request_id.barca_state")
+    @api.depends("workorder_line_id.maintenance_request_id.stage_id")
     @api.depends_context("uid")
     def _compute_barca_locked_for_executor(self):
         restricted_executor = self._barca_is_restricted_executor()
         for material in self:
             material.barca_locked_for_executor = (
                 restricted_executor
-                and material.workorder_line_id.maintenance_request_id.barca_state
-                != "in_progress"
+                and material.workorder_line_id.maintenance_request_id
+                and not material.workorder_line_id.maintenance_request_id._barca_is_stage_in_progress()
             )
 
     def _barca_check_executor_parent_state(self):
@@ -1441,14 +1544,14 @@ class BarcaMaintenanceWorkorderLineMaterial(models.Model):
 
         blocked_materials = self.filtered(
             lambda material: (
-                material.workorder_line_id.maintenance_request_id.barca_state
-                != "in_progress"
+                material.workorder_line_id.maintenance_request_id
+                and not material.workorder_line_id.maintenance_request_id._barca_is_stage_in_progress()
             )
         )
         if blocked_materials:
             raise ValidationError(
                 "El ejecutor solo puede modificar materiales cuando la OT esta "
-                "en estado En ejecucion. Si la OT esta en revision o aprobada, "
+                "en etapa En progreso. Si la OT esta en revision o cerrada, "
                 "debe esperar la devolucion del programador."
             )
 
@@ -1475,12 +1578,15 @@ class BarcaMaintenanceWorkorderLineMaterial(models.Model):
         blocked_lines = self.env["barca.maintenance.workorder.line"].browse(
             list(line_ids)
         ).filtered(
-            lambda line: line.maintenance_request_id.barca_state != "in_progress"
+            lambda line: (
+                line.maintenance_request_id
+                and not line.maintenance_request_id._barca_is_stage_in_progress()
+            )
         )
         if blocked_lines:
             raise ValidationError(
                 "El ejecutor solo puede crear materiales cuando la OT esta "
-                "en estado En ejecucion."
+                "en etapa En progreso."
             )
 
     @api.model_create_multi
