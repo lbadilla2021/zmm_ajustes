@@ -178,7 +178,7 @@ Si el sistema se usará multiempresa real, se debería diseñar seguridad por co
 El rol `group_barca_ejecutor` tiene una restricción en Python, no solo en menús o vistas:
 
 - Puede editar la OT, sus actividades y sus materiales solo cuando `maintenance.request.stage_id` corresponde a **En progreso**.
-- Si la OT está en **Reparado**, **Desechar**, **Cierre Total** o **Cierre Parcial**, el ejecutor queda bloqueado aunque conozca la URL o intente escribir por RPC.
-- El botón **Enviar a revisión** es la única transición permitida para que el ejecutor cambie la OT desde **En progreso** a **Reparado**.
+- Si la OT está en **En revisión**, **Desechar**, **Cierre Total** o **Cierre Parcial**, el ejecutor queda bloqueado aunque conozca la URL o intente escribir por RPC.
+- El botón **Enviar a revisión** es la única transición permitida para que el ejecutor cambie la OT desde **En progreso** a **En revisión**.
 - Aunque la OT esté en `in_progress`, el ejecutor no puede modificar `name`, `request_date` ni `schedule_date`.
 - Programador y Administrador no quedan afectados por este bloqueo.

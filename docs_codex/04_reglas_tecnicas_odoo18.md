@@ -47,17 +47,21 @@ La OT (`maintenance.request`) usa una sola barra de estado: **`stage_id`**, el f
 Flujo funcional vigente:
 
 ```text
-Nueva solicitud → En progreso → Reparado → Desechar → Cierre Total / Cierre Parcial
+Nueva solicitud → En progreso → En revisión → Cierre Total / Cierre Parcial / Desechar
 ```
 
 Equivalencias Barca:
 
 - **En progreso** reemplaza al antiguo estado Barca `En ejecución`.
-- Al presionar **Enviar a revisión**, la OT pasa automáticamente a **Reparado**. Esa etapa representa la revisión del programador y mantiene el bloqueo de edición para el ejecutor.
-- Si el programador devuelve la OT, vuelve desde **Reparado** a **En progreso**.
+- Al presionar **Enviar a revisión**, la OT pasa automáticamente a **En revisión**. Esa etapa representa la revisión del programador y mantiene el bloqueo de edición para el ejecutor.
+- Si el programador devuelve la OT, vuelve desde **En revisión** a **En progreso**.
 - La antigua aprobación se reemplaza por **Cierre Total** o **Cierre Parcial**.
 
 No reintroducir una segunda barra `barca_state` en el formulario; cualquier nueva decisión de flujo debe integrarse con `stage_id`.
+
+Para OTs Barca, `maintenance.request.write()` bloquea cualquier cambio de `stage_id` hacia etapas ajenas al flujo Barca. Además, `data/maintenance_stage_data.xml` ejecuta `_barca_sync_maintenance_stages()` para renombrar/mergear la etapa estándar **Reparado** como **En revisión** y evitar duplicados de **Desechar** en la barra de estado.
+
+En formulario, el `statusbar` de `stage_id` queda `readonly="1"`: muestra el avance pero no permite cambiar etapa desde las flechas. En Kanban, el arrastre de tarjetas sigue permitido visualmente por Odoo, pero cada movimiento escribe `stage_id` y pasa por las mismas validaciones de `maintenance.request.write()` que los botones de acción.
 
 ## Readonly por rol en vistas de Odoo 18
 

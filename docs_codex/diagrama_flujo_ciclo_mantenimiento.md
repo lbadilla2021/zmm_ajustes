@@ -105,16 +105,13 @@ flowchart TD
     ACT5 -->|Faltan datos| ACTERR["Validacion: completar descripcion y resultado"]
     ACTERR --> ACT3
     ACT5 -->|Datos completos| ACT6["Actividad Notificada"]
-    ACT6 --> ACT7{"Cerrar linea?"}
-    ACT7 -->|Si| ACT8["Actividad Cerrada"]
-    ACT7 -->|No| ACTDONE["Actividad queda Notificada"]
-    ACT8 --> ACTDONE
+    ACT6 --> ACTDONE["Actividad queda Notificada"]
 
-    ACTDONE --> OTREV0{"Todas las actividades notificadas o cerradas?"}
+    ACTDONE --> OTREV0{"Todas las actividades notificadas?"}
     OTREV0 -->|No| ACT1
     OTREV0 -->|Si| OTREV1["Boton Enviar a revision"]
     OTREV1 --> OTREV2["Sistema asigna revisor"]
-    OTREV2 --> OTREV3["OT Etapa Reparado"]
+    OTREV2 --> OTREV3["OT Etapa En revisión"]
 
     OTREV3 --> OTDES{"Decision Programador/Admin"}
     OTDES -->|Devolver a ejecucion| OTD1["Requiere motivo de devolucion"]
@@ -173,7 +170,7 @@ flowchart TD
 | Checklist | Checklist | Nuevo | Aviso generado, Cerrado sin aviso o Cancelado |
 | Aviso | Avisos | Nuevo | Con OT creada, Rechazado o Cerrado |
 | OT | Orden de Trabajo | En progreso | Cierre Total o Cierre Parcial |
-| Actividad OT | Actividades de OT | Pendiente | Notificada o Cerrada |
+| Actividad OT | Actividades de OT | Pendiente | Notificada |
 | Materiales | Materiales de OT | Pendiente reserva | Reservado/parcial/sin stock, entregado y cerrado |
 | Flotilla | Vehiculo | Cambio documental o revision programada | Correo enviado o sin envio por falta de vencimientos/destinatarios |
 
@@ -182,7 +179,7 @@ flowchart TD
 - Un vehiculo no debe tener mas de un aviso PM abierto.
 - La OT solo se genera desde un aviso en **En evaluacion**.
 - La **Fecha programada** del aviso es obligatoria para generar OT.
-- Todas las actividades deben estar **Notificadas** o **Cerradas** antes de enviar la OT a revision.
+- Todas las actividades deben estar **Notificadas** antes de enviar la OT a revision.
 - La devolucion de OT a ejecucion requiere motivo.
 - El cierre de materiales requiere entrega previa y consumo menor o igual a cantidad retirada.
 - El aviso solo cierra cuando la OT asociada esta en una etapa estandar terminada.

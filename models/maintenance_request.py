@@ -7,12 +7,13 @@ from odoo.exceptions import ValidationError
 class MaintenanceRequest(models.Model):
     _inherit = "maintenance.request"
 
-    # La OT gestiona su propio ciclo de programación, ejecución, revisión y cierre.
-    # El aviso asociado permanece en "Con OT creada" hasta que el usuario lo cierre
-    # explícitamente, una vez que la OT esté en una etapa terminada.
+    # La OT gestiona su propio ciclo de programacion, ejecucion, revision y cierre.
+    # El aviso asociado se cierra automaticamente cuando la OT llega a una etapa
+    # final Barca: Cierre Total, Cierre Parcial o Desechar.
 
     _BARCA_PROGRESS_STAGE_NAMES = ("En progreso", "In Progress")
-    _BARCA_REPAIRED_STAGE_NAMES = ("Reparado", "Repaired")
+    _BARCA_REVIEW_STAGE_NAMES = ("En revisión", "En revision")
+    _BARCA_DISCARD_STAGE_NAMES = ("Desechar", "Scrap", "Discard")
 
     def _barca_find_stage(self, names=(), xmlids=()):
         Stage = self.env["maintenance.stage"]
@@ -26,11 +27,160 @@ class MaintenanceRequest(models.Model):
                 return stage
         return Stage.browse()
 
+    @api.model
+    def _barca_set_stage_xmlid(self, xmlid_name, stage):
+        data = self.env["ir.model.data"].sudo()
+        xmlid = data.search(
+            [
+                ("module", "=", "zmm_ajustes"),
+                ("name", "=", xmlid_name),
+                ("model", "=", "maintenance.stage"),
+            ],
+            limit=1,
+        )
+        vals = {
+            "module": "zmm_ajustes",
+            "name": xmlid_name,
+            "model": "maintenance.stage",
+            "res_id": stage.id,
+            "noupdate": False,
+        }
+        if xmlid:
+            xmlid.write({"res_id": stage.id, "noupdate": False})
+        else:
+            data.create(vals)
+
+    @api.model
+    def _barca_merge_stage(self, duplicate_stage, target_stage):
+        if not duplicate_stage or not target_stage or duplicate_stage == target_stage:
+            return
+        self.search([("stage_id", "=", duplicate_stage.id)]).with_context(
+            skip_barca_stage_transition=True
+        ).write(
+            {"stage_id": target_stage.id}
+        )
+        duplicate_stage.unlink()
+
+    @api.model
+    def _barca_sync_maintenance_stages(self):
+        """Normaliza etapas globales para que la barra no duplique estados Barca."""
+        Stage = self.env["maintenance.stage"].sudo()
+        review_stage = Stage.search(
+            [("name", "in", ["Reparado", "Repaired"])],
+            order="sequence, id",
+            limit=1,
+        )
+        if not review_stage:
+            review_stage = Stage.search(
+                [("name", "in", list(self._BARCA_REVIEW_STAGE_NAMES))],
+                order="sequence, id",
+                limit=1,
+            )
+        if not review_stage:
+            review_stage = Stage.create(
+                {
+                    "name": "En revisión",
+                    "sequence": 40,
+                    "fold": False,
+                    "done": False,
+                }
+            )
+        review_stage.write(
+            {
+                "name": "En revisión",
+                "sequence": 40,
+                "fold": False,
+                "done": False,
+            }
+        )
+        self._barca_set_stage_xmlid("stage_barca_maintenance_review", review_stage)
+        duplicate_reviews = Stage.search(
+            [
+                ("id", "!=", review_stage.id),
+                ("name", "in", ["Reparado", "Repaired", "En revisión", "En revision"]),
+            ]
+        )
+        for duplicate in duplicate_reviews:
+            self._barca_merge_stage(duplicate, review_stage)
+
+        discard_stage = Stage.search(
+            [("name", "in", list(self._BARCA_DISCARD_STAGE_NAMES))],
+            order="sequence, id",
+            limit=1,
+        )
+        if not discard_stage:
+            discard_stage = Stage.create(
+                {
+                    "name": "Desechar",
+                    "sequence": 70,
+                    "fold": True,
+                    "done": True,
+                }
+            )
+        discard_stage.write(
+            {
+                "name": "Desechar",
+                "sequence": 70,
+                "fold": True,
+                "done": True,
+            }
+        )
+        self._barca_set_stage_xmlid("stage_barca_maintenance_discard", discard_stage)
+        duplicate_discards = Stage.search(
+            [
+                ("id", "!=", discard_stage.id),
+                ("name", "in", list(self._BARCA_DISCARD_STAGE_NAMES)),
+            ]
+        )
+        for duplicate in duplicate_discards:
+            self._barca_merge_stage(duplicate, discard_stage)
+
+        self.env["barca.maintenance.workorder.line"].sudo().search(
+            [("state", "=", "closed")]
+        ).write({"state": "notified"})
+
     def _barca_get_progress_stage(self):
         return self._barca_find_stage(names=self._BARCA_PROGRESS_STAGE_NAMES)
 
+    def _barca_get_stage_in_progress(self):
+        return self._barca_get_progress_stage()
+
+    def _barca_get_review_stage(self):
+        review_stage = self._barca_find_stage(
+            xmlids=("zmm_ajustes.stage_barca_maintenance_review",),
+            names=self._BARCA_REVIEW_STAGE_NAMES,
+        )
+        if review_stage:
+            duplicate_reviews = self.env["maintenance.stage"].sudo().search(
+                [
+                    ("id", "!=", review_stage.id),
+                    ("name", "in", ["Reparado", "Repaired"]),
+                ]
+            )
+            for duplicate in duplicate_reviews:
+                self._barca_merge_stage(duplicate, review_stage)
+            return review_stage
+        repaired_stage = self._barca_find_stage(names=("Reparado", "Repaired"))
+        if repaired_stage:
+            repaired_stage.sudo().write(
+                {
+                    "name": "En revisión",
+                    "sequence": 40,
+                    "fold": False,
+                    "done": False,
+                }
+            )
+            self._barca_set_stage_xmlid(
+                "stage_barca_maintenance_review", repaired_stage
+            )
+            return repaired_stage
+        return review_stage
+
+    def _barca_get_stage_review(self):
+        return self._barca_get_review_stage()
+
     def _barca_get_repaired_stage(self):
-        return self._barca_find_stage(names=self._BARCA_REPAIRED_STAGE_NAMES)
+        return self._barca_get_review_stage()
 
     def _barca_get_close_total_stage(self):
         return self._barca_find_stage(
@@ -38,28 +188,80 @@ class MaintenanceRequest(models.Model):
             names=("Cierre Total",),
         )
 
+    def _barca_get_stage_close_total(self):
+        return self._barca_get_close_total_stage()
+
     def _barca_get_close_partial_stage(self):
         return self._barca_find_stage(
             xmlids=("zmm_ajustes.stage_barca_maintenance_close_partial",),
             names=("Cierre Parcial",),
         )
 
-    def _barca_is_stage_in_progress(self):
+    def _barca_get_stage_close_partial(self):
+        return self._barca_get_close_partial_stage()
+
+    def _barca_get_discard_stage(self):
+        discard_stage = self._barca_find_stage(
+            xmlids=("zmm_ajustes.stage_barca_maintenance_discard",),
+            names=self._BARCA_DISCARD_STAGE_NAMES,
+        )
+        if discard_stage:
+            duplicate_discards = self.env["maintenance.stage"].sudo().search(
+                [
+                    ("id", "!=", discard_stage.id),
+                    ("name", "in", list(self._BARCA_DISCARD_STAGE_NAMES)),
+                ]
+            )
+            for duplicate in duplicate_discards:
+                self._barca_merge_stage(duplicate, discard_stage)
+        return discard_stage
+
+    def _barca_get_stage_discard(self):
+        return self._barca_get_discard_stage()
+
+    def _barca_is_stage_in_progress(self, stage=None):
         self.ensure_one()
+        stage = stage or self.stage_id
         progress_stage = self._barca_get_progress_stage()
-        return bool(progress_stage and self.stage_id == progress_stage)
+        return bool(progress_stage and stage == progress_stage)
 
-    def _barca_is_stage_repaired(self):
+    def _barca_is_stage_review(self, stage=None):
         self.ensure_one()
-        repaired_stage = self._barca_get_repaired_stage()
-        return bool(repaired_stage and self.stage_id == repaired_stage)
+        stage = stage or self.stage_id
+        review_stage = self._barca_get_review_stage()
+        return bool(review_stage and stage == review_stage)
 
-    def _barca_is_stage_final_close(self):
+    def _barca_is_stage_repaired(self, stage=None):
+        return self._barca_is_stage_review(stage=stage)
+
+    def _barca_is_stage_total_close(self, stage=None):
         self.ensure_one()
+        stage = stage or self.stage_id
+        close_stage = self._barca_get_close_total_stage()
+        return bool(close_stage and stage == close_stage)
+
+    def _barca_is_stage_partial_close(self, stage=None):
+        self.ensure_one()
+        stage = stage or self.stage_id
+        close_stage = self._barca_get_close_partial_stage()
+        return bool(close_stage and stage == close_stage)
+
+    def _barca_is_stage_discard(self, stage=None):
+        self.ensure_one()
+        stage = stage or self.stage_id
+        discard_stage = self._barca_get_discard_stage()
+        return bool(discard_stage and stage == discard_stage)
+
+    def _barca_is_stage_final_close(self, stage=None):
+        self.ensure_one()
+        stage = stage or self.stage_id
         return bool(
-            self.stage_id
-            and self.stage_id.done
-            and not self._barca_is_stage_repaired()
+            stage
+            and (
+                self._barca_is_stage_total_close(stage)
+                or self._barca_is_stage_partial_close(stage)
+                or self._barca_is_stage_discard(stage)
+            )
         )
 
     # -------------------------------------------------------------------------
@@ -218,7 +420,7 @@ class MaintenanceRequest(models.Model):
             [
                 ("usage", "=", "internal"),
                 ("active", "=", True),
-                ("complete_name", "ilike", "WH/Serviteca"),
+                ("complete_name", "ilike", "WH/Stock/Barca Serviteca"),
                 ("company_id", "in", [company.id, False]),
             ],
             limit=1,        )
@@ -731,8 +933,12 @@ class MaintenanceRequest(models.Model):
         string="Etapa En progreso",
         compute="_compute_barca_stage_flags",
     )
+    barca_stage_is_review = fields.Boolean(
+        string="Etapa En revisión",
+        compute="_compute_barca_stage_flags",
+    )
     barca_stage_is_repaired = fields.Boolean(
-        string="Etapa Reparado",
+        string="Etapa En revisión",
         compute="_compute_barca_stage_flags",
     )
 
@@ -799,21 +1005,16 @@ class MaintenanceRequest(models.Model):
             total = len(request.barca_activity_line_ids)
             notified = len(
                 request.barca_activity_line_ids.filtered(
-                    lambda line: line.state in ("notified", "closed")
-                )
-            )
-            closed = len(
-                request.barca_activity_line_ids.filtered(
-                    lambda line: line.state == "closed"
+                    lambda line: line.state == "notified"
                 )
             )
 
             request.barca_activity_count = total
             request.barca_total_activity_count = total
             request.barca_notified_activity_count = notified
-            request.barca_closed_activity_count = closed
+            request.barca_closed_activity_count = 0
             request.barca_all_activities_notified = total > 0 and notified == total
-            request.barca_all_activities_closed = total > 0 and closed == total
+            request.barca_all_activities_closed = False
 
     def _barca_is_restricted_executor(self):
         user = self.env.user
@@ -826,13 +1027,16 @@ class MaintenanceRequest(models.Model):
     @api.depends("stage_id")
     def _compute_barca_stage_flags(self):
         progress_stage = self._barca_get_progress_stage()
-        repaired_stage = self._barca_get_repaired_stage()
+        review_stage = self._barca_get_review_stage()
         for request in self:
             request.barca_stage_is_in_progress = bool(
                 progress_stage and request.stage_id == progress_stage
             )
+            request.barca_stage_is_review = bool(
+                review_stage and request.stage_id == review_stage
+            )
             request.barca_stage_is_repaired = bool(
-                repaired_stage and request.stage_id == repaired_stage
+                review_stage and request.stage_id == review_stage
             )
 
     @api.depends("stage_id")
@@ -879,21 +1083,12 @@ class MaintenanceRequest(models.Model):
                 "esperar la devolucion del programador."
             )
 
-    def write(self, vals):
-        self._barca_check_executor_write_access(vals)
-        return super().write(vals)
-
-    def action_barca_send_to_review(self):
-        """Envía la OT a revisión del programador.
-
-        El revisor se resuelve automáticamente: es el usuario que tomó
-        el aviso para evaluación (barca_alert_id.approved_by_id).
-        Si la OT no tiene aviso asociado, se usa el create_uid de la OT.
-        La revisión usa la etapa estándar "Reparado" para mantener un único
-        flujo visible y consistente con el Kanban.
-        """
+    def _barca_is_barca_flow_request(self):
         self.ensure_one()
+        return bool(self.barca_alert_id or self.barca_activity_line_ids)
 
+    def _barca_check_can_send_to_review(self):
+        self.ensure_one()
         if not self._barca_is_stage_in_progress():
             raise ValidationError(
                 "Solo se puede enviar a revisión una OT en etapa En progreso."
@@ -903,7 +1098,7 @@ class MaintenanceRequest(models.Model):
                 "La OT debe tener al menos una actividad para enviarse a revisión."
             )
         pending_lines = self.barca_activity_line_ids.filtered(
-            lambda line: line.state not in ("notified", "closed")
+            lambda line: line.state != "notified"
         )
         if pending_lines:
             raise ValidationError(
@@ -912,13 +1107,165 @@ class MaintenanceRequest(models.Model):
                 % ", ".join(l.activity_id.name or str(l.id) for l in pending_lines)
             )
 
-        repaired_stage = self._barca_get_repaired_stage()
-        if not repaired_stage:
+    def _barca_has_pending_materials(self):
+        self.ensure_one()
+        material_lines = self._barca_get_material_lines()
+        if not material_lines:
+            return False
+        return bool(
+            not self.barca_material_closed
+            or self.barca_material_state in (
+                "pending_reservation",
+                "partial",
+                "missing",
+            )
+        )
+
+    def _barca_check_no_pending_materials_for_total_close(self):
+        self.ensure_one()
+        if self._barca_has_pending_materials():
             raise ValidationError(
-                "No se encontró la etapa Reparado para enviar la OT a revisión."
+                "No se puede realizar cierre total porque existen materiales "
+                "pendientes de entrega, consumo, devolución o cierre. Puede "
+                "realizar un cierre parcial o regularizar los materiales."
             )
 
-        # Resolver revisor automáticamente desde el aviso origen
+    def _barca_check_can_close_total(self):
+        self.ensure_one()
+        if not self._barca_is_stage_review():
+            raise ValidationError(
+                "Solo se puede realizar cierre total desde la etapa En revisión."
+            )
+        self._barca_check_no_pending_materials_for_total_close()
+
+    def _barca_check_can_close_partial(self):
+        self.ensure_one()
+        if not self._barca_is_stage_review():
+            raise ValidationError(
+                "Solo se puede realizar cierre parcial desde la etapa En revisión."
+            )
+
+    def _barca_check_can_return_to_progress(self):
+        self.ensure_one()
+        if not self._barca_is_stage_review():
+            raise ValidationError(
+                "Solo se puede devolver a progreso una OT que esté en etapa "
+                "En revisión."
+            )
+
+    def _barca_check_can_discard(self):
+        self.ensure_one()
+        if self._barca_is_restricted_executor():
+            raise ValidationError("El ejecutor no puede desechar una OT.")
+        if not self._barca_is_stage_review():
+            raise ValidationError(
+                "Solo se puede desechar una OT Barca desde la etapa En revisión."
+            )
+
+    def _barca_is_allowed_stage(self, stage):
+        self.ensure_one()
+        return bool(
+            stage
+            and (
+                self._barca_is_stage_in_progress(stage)
+                or self._barca_is_stage_review(stage)
+                or self._barca_is_stage_total_close(stage)
+                or self._barca_is_stage_partial_close(stage)
+                or self._barca_is_stage_discard(stage)
+            )
+        )
+
+    def _barca_get_allowed_stage_names(self):
+        stage_names = []
+        for stage in (
+            self._barca_get_progress_stage(),
+            self._barca_get_review_stage(),
+            self._barca_get_close_partial_stage(),
+            self._barca_get_close_total_stage(),
+            self._barca_get_discard_stage(),
+        ):
+            if stage and stage.name not in stage_names:
+                stage_names.append(stage.name)
+        return ", ".join(stage_names) or (
+            "En progreso, En revisión, Cierre Parcial, Cierre Total, Desechar"
+        )
+
+    def _barca_check_stage_transition(self, target_stage):
+        if not target_stage:
+            return
+        for request in self:
+            if not request._barca_is_barca_flow_request():
+                continue
+            if request.stage_id == target_stage:
+                continue
+            if not request._barca_is_allowed_stage(target_stage):
+                raise ValidationError(
+                    "La etapa '%s' no pertenece al flujo Barca de OT. "
+                    "Use una de estas etapas: %s."
+                    % (
+                        target_stage.name,
+                        request._barca_get_allowed_stage_names(),
+                    )
+                )
+            if request._barca_is_stage_in_progress(target_stage):
+                request._barca_check_can_return_to_progress()
+            elif request._barca_is_stage_review(target_stage):
+                request._barca_check_can_send_to_review()
+            elif request._barca_is_stage_total_close(target_stage):
+                request._barca_check_can_close_total()
+            elif request._barca_is_stage_partial_close(target_stage):
+                request._barca_check_can_close_partial()
+            elif request._barca_is_stage_discard(target_stage):
+                request._barca_check_can_discard()
+
+    def _barca_close_linked_alert_if_needed(self):
+        for request in self:
+            if (
+                request.barca_alert_id
+                and request.barca_alert_id.state != "closed"
+                and request._barca_is_stage_final_close()
+            ):
+                request.barca_alert_id.action_close()
+
+    def _barca_notification_action(self, title, message, notification_type="success"):
+        return {
+            "type": "ir.actions.client",
+            "tag": "display_notification",
+            "params": {
+                "title": title,
+                "message": message,
+                "type": notification_type,
+                "sticky": False,
+                "next": {
+                    "type": "ir.actions.client",
+                    "tag": "reload",
+                },
+            },
+        }
+
+    def write(self, vals):
+        self._barca_check_executor_write_access(vals)
+        target_stage = False
+        if "stage_id" in vals and vals["stage_id"]:
+            target_stage = self.env["maintenance.stage"].browse(vals["stage_id"])
+            if not self.env.context.get("skip_barca_stage_transition"):
+                self._barca_check_stage_transition(target_stage)
+        result = super().write(vals)
+        if target_stage and not self.env.context.get("skip_barca_stage_transition"):
+            self._barca_close_linked_alert_if_needed()
+        return result
+
+    def action_barca_send_to_review(self):
+        """Envía la OT a revisión del programador."""
+        self.ensure_one()
+        self._barca_check_can_send_to_review()
+
+        review_stage = self._barca_get_review_stage()
+        if not review_stage:
+            raise ValidationError(
+                "No se encontró la etapa En revisión para enviar la OT a revisión."
+            )
+
         reviewer = (
             self.barca_alert_id.approved_by_id
             if self.barca_alert_id and self.barca_alert_id.approved_by_id
@@ -926,7 +1273,7 @@ class MaintenanceRequest(models.Model):
         )
         self.with_context(allow_barca_executor_stage_write=True).write(
             {
-                "stage_id": repaired_stage.id,
+                "stage_id": review_stage.id,
                 "barca_reviewer_id": reviewer.id,
             }
         )
@@ -939,35 +1286,25 @@ class MaintenanceRequest(models.Model):
             ) % (self.env.user.name, reviewer.name),
             partner_ids=reviewer.partner_id.ids,
         )
-
-        return {
-            "type": "ir.actions.client",
-            "tag": "display_notification",
-            "params": {
-                "title": "OT enviada a revisión",
-                "message": "Se notificó a %s." % reviewer.name,
-                "type": "success",
-                "sticky": False,
-            },
-        }
+        return self._barca_notification_action(
+            "OT enviada a revisión",
+            "Se notificó a %s." % reviewer.name,
+        )
 
     def _barca_close_from_review(self, close_stage, close_label):
         self.ensure_one()
         if not self._barca_is_stage_repaired():
             raise ValidationError(
-                "Solo se puede cerrar una OT que esté en etapa Reparado."
+                "Solo se puede cerrar una OT que esté en etapa En revisión."
             )
         if not close_stage:
             raise ValidationError("No se encontró la etapa %s." % close_label)
 
         self.write({"stage_id": close_stage.id})
-
-        # Limpiar marcas visuales de actividades post-devolución
         self.barca_activity_line_ids.filtered(
             lambda l: l.barca_added_after_return
         ).write({"barca_added_after_return": False})
 
-        # Notificar al responsable de ejecución
         responsible = self.user_id
         partner_ids = responsible.partner_id.ids if responsible else []
         self.message_post(
@@ -977,27 +1314,20 @@ class MaintenanceRequest(models.Model):
             ) % (close_label, self.env.user.name),
             partner_ids=partner_ids,
         )
-
-        return {
-            "type": "ir.actions.client",
-            "tag": "display_notification",
-            "params": {
-                "title": close_label,
-                "message": "La OT quedó en %s." % close_label,
-                "type": "success",
-                "sticky": False,
-            },
-        }
+        return self._barca_notification_action(
+            close_label,
+            "La OT quedó en %s." % close_label,
+        )
 
     def action_barca_close_total(self):
-        """Cierra totalmente la OT desde la etapa Reparado."""
+        """Cierra totalmente la OT desde la etapa En revisión."""
         return self._barca_close_from_review(
             self._barca_get_close_total_stage(),
             "Cierre Total",
         )
 
     def action_barca_close_partial(self):
-        """Cierra parcialmente la OT desde la etapa Reparado."""
+        """Cierra parcialmente la OT desde la etapa En revisión."""
         return self._barca_close_from_review(
             self._barca_get_close_partial_stage(),
             "Cierre Parcial",
@@ -1008,16 +1338,12 @@ class MaintenanceRequest(models.Model):
         return self.action_barca_close_total()
 
     def action_barca_return_to_progress(self):
-        """Devuelve la OT a ejecución. Solo programador y admin.
-
-        Requiere motivo de devolución. Notifica al responsable de ejecución.
-        Incrementa barca_return_count para el marcado visual del módulo 4.
-        """
+        """Devuelve la OT a ejecución. Solo programador y admin."""
         self.ensure_one()
 
         if not self._barca_is_stage_repaired():
             raise ValidationError(
-                "Solo se puede devolver una OT que esté en etapa Reparado."
+                "Solo se puede devolver una OT que esté en etapa En revisión."
             )
         if not self.barca_return_reason or not self.barca_return_reason.strip():
             raise ValidationError(
@@ -1035,7 +1361,6 @@ class MaintenanceRequest(models.Model):
             "barca_return_count": self.barca_return_count + 1,
         })
 
-        # Notificar al responsable de ejecución
         responsible = self.user_id
         partner_ids = responsible.partner_id.ids if responsible else []
         self.message_post(
@@ -1046,17 +1371,11 @@ class MaintenanceRequest(models.Model):
             ) % (self.env.user.name, self.barca_return_reason),
             partner_ids=partner_ids,
         )
-
-        return {
-            "type": "ir.actions.client",
-            "tag": "display_notification",
-            "params": {
-                "title": "OT devuelta a ejecución",
-                "message": "Se notificó a %s." % (responsible.name if responsible else "nadie"),
-                "type": "warning",
-                "sticky": False,
-            },
-        }
+        return self._barca_notification_action(
+            "OT devuelta a ejecución",
+            "Se notificó a %s." % (responsible.name if responsible else "nadie"),
+            notification_type="warning",
+        )
 
 
 class BarcaMaintenanceWorkorderLine(models.Model):
@@ -1133,7 +1452,6 @@ class BarcaMaintenanceWorkorderLine(models.Model):
             ("pending", "Pendiente"),
             ("in_progress", "En ejecución"),
             ("notified", "Notificada"),
-            ("closed", "Cerrada"),
         ],
         string="Estado operativo",
         default="pending",
@@ -1283,6 +1601,9 @@ class BarcaMaintenanceWorkorderLine(models.Model):
 
     @api.model_create_multi
     def create(self, vals_list):
+        for vals in vals_list:
+            if vals.get("state") == "closed":
+                vals["state"] = "notified"
         self._barca_check_executor_create_parent_state(vals_list)
         records = super().create(vals_list)
         for record in records:
@@ -1291,6 +1612,8 @@ class BarcaMaintenanceWorkorderLine(models.Model):
         return records
 
     def write(self, vals):
+        if vals.get("state") == "closed":
+            vals = dict(vals, state="notified")
         self._barca_check_executor_parent_state()
         result = super().write(vals)
         if self._PLANNING_FIELDS & set(vals.keys()):
@@ -1425,13 +1748,10 @@ class BarcaMaintenanceWorkorderLine(models.Model):
         }
 
     def action_close_line(self):
-        for line in self:
-            if line.state != "notified":
-                raise ValidationError(
-                    "Solo se pueden cerrar actividades en estado Notificada."
-                )
-            line.state = "closed"
-        return True
+        raise ValidationError(
+            "El cierre individual de actividades ya no forma parte del flujo. "
+            "Notifique las actividades y cierre la OT parcial o totalmente."
+        )
 
     def action_reset_to_pending(self):
         if not (

@@ -387,7 +387,7 @@ Campos principales:
 - `activity_id`
 - `description`
 - `estimated_duration`
-- `state`: `pending`, `in_progress`, `notified`, `closed`.
+- `state`: `pending`, `in_progress`, `notified`. Los datos históricos `closed` se migran a `notified` porque Notificada es el cierre de la actividad.
 - `note`
 - `material_line_ids`: materiales/repuestos/kits ejecutables de la actividad de OT.
 - `material_count`: contador de materiales propios de la actividad de OT.
@@ -586,7 +586,7 @@ Extensión en `models/maintenance_request.py`.
 
 La Solicitud de Mantención estándar de Odoo se renombra funcionalmente como Orden de Trabajo. Su ciclo de programación, ejecución, revisión y cierre queda separado del ciclo del aviso `barca.maintenance.alert`.
 
-El aviso asociado queda en estado técnico `in_progress` / funcional `Con OT creada` hasta que el usuario lo cierre explícitamente. El cierre del aviso solo se permite si la OT asociada está en una etapa final distinta de **Reparado**: **Desechar**, **Cierre Total** o **Cierre Parcial**. **Reparado** representa revisión del programador y no cierre final. La descripción de la OT puede guardar un resumen textual de actividades, pero el detalle operativo estable se guarda en `barca_activity_line_ids` y en sus materiales.
+El aviso asociado queda en estado técnico `in_progress` / funcional `Con OT creada` hasta que la OT asociada llega a **Cierre Total**, **Cierre Parcial** o **Desechar**; en ese momento se cierra automáticamente. **En revisión** representa revisión del programador y no cierre final. La descripción de la OT puede guardar un resumen textual de actividades, pero el detalle operativo estable se guarda en `barca_activity_line_ids` y en sus materiales.
 
 ### Fase 4: ciclo operativo de actividades de OT
 
@@ -595,7 +595,7 @@ El aviso asociado queda en estado técnico `in_progress` / funcional `Con OT cre
 - `pending`: Pendiente.
 - `in_progress`: En ejecución.
 - `notified`: Notificada.
-- `closed`: Cerrada.
+
 
 Varias actividades de una misma OT pueden estar en `in_progress` al mismo tiempo; el modelo no aplica una restricción de actividad única en ejecución. La notificación de avance se registra en la misma actividad mediante:
 
@@ -607,9 +607,9 @@ Varias actividades de una misma OT pueden estar en `in_progress` al mismo tiempo
 `maintenance.request` calcula contadores de actividades Barca para apoyar revisión operativa:
 
 - `barca_total_activity_count`.
-- `barca_notified_activity_count`: considera actividades `notified` y `closed`.
-- `barca_closed_activity_count`.
+- `barca_notified_activity_count`: considera actividades `notified`.
+- `barca_closed_activity_count`: campo legado oculto; queda en 0.
 - `barca_all_activities_notified`.
-- `barca_all_activities_closed`.
+- `barca_all_activities_closed`: campo legado oculto; queda en False.
 
 En materiales de OT (`barca.maintenance.workorder.line.material`), Fase 4 mantiene visibles las cantidades operativas manuales `estimated_quantity`, `reserved_quantity`, `withdrawn_quantity`, `consumed_quantity` y `returned_quantity`, junto con producto, UdM y observación, y valida que no sean negativas. El consumo informado (`consumed_quantity`) es un dato manual de avance; no descuenta inventario ni exige haber retirado material desde bodega. Los campos de reserva, retiro, consumo y devolución quedan disponibles para Fase 5 y Fase 6, sin crear `stock.move`, `stock.picking`, reservas, retiros, devoluciones ni compras en esta fase.

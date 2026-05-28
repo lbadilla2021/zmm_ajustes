@@ -29,7 +29,7 @@ flowchart LR
 
     OT --> T5["5. OT<br/>Ejecucion y revision"]
     T5 --> ACT["6. Actividades OT"]
-    ACT --> A6{"Todas notificadas<br/>o cerradas?"}
+    ACT --> A6{"Todas notificadas?"}
     A6 -->|No| ACT
     A6 -->|Si| REV["OT en revision"]
     REV --> A7{"Decision<br/>Programador/Admin"}
@@ -174,10 +174,10 @@ flowchart TD
     C --> D{"Enviar a revision"}
     D --> E{"Tiene actividades?"}
     E -->|No| E1["Error: debe tener al menos una actividad"]
-    E -->|Si| F{"Todas notificadas o cerradas?"}
+    E -->|Si| F{"Todas notificadas?"}
     F -->|No| F1["Error: actividades pendientes"]
     F -->|Si| G["Resolver revisor automaticamente"]
-    G --> H["Etapa Reparado"]
+    G --> H["Etapa En revisión"]
     H --> I{"Decision Programador/Admin"}
     I -->|Cierre Total| J["Etapa Cierre Total"]
     I -->|Cierre Parcial| J2["Etapa Cierre Parcial"]
@@ -195,7 +195,7 @@ flowchart TD
 
 Documento: **Actividades de OT**  
 Estado inicial: **Pendiente**  
-Estado final esperado: **Notificada** o **Cerrada**
+Estado final esperado: **Notificada**
 
 ```mermaid
 flowchart TD
@@ -208,9 +208,8 @@ flowchart TD
     F -->|Sin resultado| F2["Error: seleccionar resultado"]
     F -->|OK| G["Registrar fecha y usuario"]
     G --> H["Estado Notificada"]
-    H --> I{"Cerrar linea?"}
+    H --> I{"Actividad notificada?"}
     I -->|No| J["Queda Notificada"]
-    I -->|Si| K["Estado Cerrada"]
     H --> L{"Reabrir a pendiente?"}
     L -->|No| J
     L -->|Si, Programador/Admin| M["Limpiar fecha y usuario de notificacion"]

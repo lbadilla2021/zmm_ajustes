@@ -363,7 +363,7 @@ Etapas principales de la OT:
 | Estado | Significado |
 |---|---|
 | En progreso | OT en trabajo operativo. |
-| Reparado | Ejecutor/Admin envio la OT para revision del programador. |
+| En revisión | Ejecutor/Admin envio la OT para revision del programador. |
 | Cierre Total | Programador/Admin cerro totalmente la OT. |
 | Cierre Parcial | Programador/Admin cerro parcialmente la OT. |
 
@@ -371,10 +371,10 @@ Botones principales:
 
 | Boton | Disponible cuando | Funcion |
 |---|---|---|
-| Enviar a revision | Etapa En progreso, Ejecutor/Admin | Valida actividades notificadas y cambia la OT a Reparado. |
-| Cierre Total | Etapa Reparado, Programador/Admin | Cierra totalmente la OT y notifica al responsable. |
-| Cierre Parcial | Etapa Reparado, Programador/Admin | Cierra parcialmente la OT y notifica al responsable. |
-| Devolver a progreso | Etapa Reparado, Programador/Admin | Requiere motivo; vuelve a En progreso y notifica al responsable. |
+| Enviar a revision | Etapa En progreso, Ejecutor/Admin | Valida actividades notificadas y cambia la OT a En revisión. |
+| Cierre Total | Etapa En revisión, Programador/Admin | Cierra totalmente la OT y notifica al responsable. |
+| Cierre Parcial | Etapa En revisión, Programador/Admin | Cierra parcialmente la OT y notifica al responsable. |
+| Devolver a progreso | Etapa En revisión, Programador/Admin | Requiere motivo; vuelve a En progreso y notifica al responsable. |
 | Reservar materiales | Sin reserva previa | Crea picking interno de reserva y asigna stock disponible. |
 | Entregar materiales | Materiales no entregados ni cerrados | Registra entrega al tecnico. |
 | Cerrar materiales | Materiales entregados y no cerrados | Calcula consumos, devoluciones y costos. |
@@ -404,7 +404,7 @@ Estados operativos:
 | Pendiente | Actividad aun no iniciada. |
 | En ejecucion | Actividad iniciada por el ejecutor. |
 | Notificada | Ejecutor informo lo realizado y resultado. |
-| Cerrada | Actividad cerrada despues de notificar. |
+
 
 Botones:
 
@@ -412,15 +412,15 @@ Botones:
 |---|---|---|
 | Iniciar | Pendiente | Cambia la actividad a En ejecucion. |
 | Notificar | En ejecucion | Abre/ejecuta notificacion. Requiere descripcion y resultado. |
-| Cerrar linea | Notificada | Cambia la actividad a Cerrada. |
-| Reabrir a pendiente | En ejecucion, Notificada o Cerrada; Programador/Admin | Limpia fecha/usuario de notificacion y vuelve a Pendiente. |
+| Cerrar linea | No vigente | El cierre individual de actividades fue reemplazado por el cierre parcial o total de la OT. |
+| Reabrir a pendiente | En ejecucion o Notificada; Programador/Admin | Limpia fecha/usuario de notificacion y vuelve a Pendiente. |
 
-Para enviar la OT a revision, todas las actividades deben estar **Notificadas** o **Cerradas**.
+Para enviar la OT a revision, todas las actividades deben estar **Notificadas**.
 
 ## 11. Revision de OT
 
 ```text
-En progreso -> Reparado -> Cierre Total / Cierre Parcial
+En progreso -> En revisión -> Cierre Total / Cierre Parcial
              \-> Devuelta a En progreso
 ```
 
@@ -428,13 +428,13 @@ En progreso -> Reparado -> Cierre Total / Cierre Parcial
 
 - Solo se permite en etapa **En progreso**.
 - Requiere al menos una actividad.
-- Todas las actividades deben estar notificadas o cerradas.
+- Todas las actividades deben estar notificadas.
 - El revisor se resuelve automaticamente: usuario que tomo el aviso para evaluacion; si no existe, el creador de la OT.
-- Cambia la OT a **Reparado**, publica mensaje en el chatter y notifica al revisor.
+- Cambia la OT a **En revisión**, publica mensaje en el chatter y notifica al revisor.
 
 **Cierre Total / Cierre Parcial**
 
-- Solo desde **Reparado**.
+- Solo desde **En revisión**.
 - Disponible para Programador/Admin.
 - Cambia a la etapa de cierre seleccionada.
 - Limpia marcas de actividades agregadas/modificadas tras devolucion.
@@ -442,7 +442,7 @@ En progreso -> Reparado -> Cierre Total / Cierre Parcial
 
 **Devolver a progreso**
 
-- Solo desde **Reparado**.
+- Solo desde **En revisión**.
 - Disponible para Programador/Admin.
 - Requiere completar **Motivo de devolucion**.
 - Cambia a **En progreso**.
@@ -646,7 +646,7 @@ La marca **Seguro** del vehiculo se calcula automaticamente si existe un contrat
 2. Iniciar actividades.
 3. Registrar descripcion de lo realizado y resultado.
 4. Notificar actividades.
-5. Cerrar lineas si corresponde.
+5. Notificar todas las actividades.
 6. Enviar OT a revision cuando todas las actividades esten notificadas.
 
 **Bodega**
@@ -690,15 +690,15 @@ En evaluacion -> Rechazado
 OT Barca:
 
 ```text
-En progreso -> Reparado -> Cierre Total
-En progreso -> Reparado -> Cierre Parcial
-Reparado -> En progreso
+En progreso -> En revisión -> Cierre Total
+En progreso -> En revisión -> Cierre Parcial
+En revisión -> En progreso
 ```
 
 Actividad de OT:
 
 ```text
-Pendiente -> En ejecucion -> Notificada -> Cerrada
+Pendiente -> En ejecucion -> Notificada
 ```
 
 Materiales de OT:

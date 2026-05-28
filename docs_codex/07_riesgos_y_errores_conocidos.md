@@ -66,7 +66,7 @@ El cron ordena por menor trigger.
 
 La OT gestiona programación, ejecución y revisión. El aviso no pasa automáticamente a `in_review` cuando cambia la OT.
 
-El aviso permanece en `Con OT creada` y debe cerrarse explícitamente. `action_close()` valida que exista una OT asociada y que la OT esté en una etapa final distinta de **Reparado**: **Desechar**, **Cierre Total** o **Cierre Parcial**. **Reparado** se usa como revisión del programador, no como cierre final.
+El aviso permanece en `Con OT creada` hasta que la OT asociada llega a **Cierre Total**, **Cierre Parcial** o **Desechar**. En ese momento la OT cierra automáticamente el aviso; `action_close()` sigue validando que exista una OT asociada y que esté en una etapa final Barca válida. **En revisión** se usa como revisión del programador, no como cierre final.
 
 ## 7. Equipo de mantenimiento requerido para crear OT
 
@@ -152,7 +152,9 @@ Dentro de un `<list>` de `One2many`, `state` se evalúa en el modelo hijo. Si el
 
 La OT debe mostrar una sola barra de estado basada en `stage_id`, porque ese campo controla también las columnas del Kanban. No reintroducir una segunda barra `barca_state`.
 
-El botón **Enviar a revisión** mueve la OT desde **En progreso** a **Reparado**. Mientras está en **Reparado**, el ejecutor queda bloqueado y el programador puede devolverla a **En progreso** o cerrarla como **Cierre Total** / **Cierre Parcial**.
+El botón **Enviar a revisión** mueve la OT desde **En progreso** a **En revisión**. Mientras está en **En revisión**, el ejecutor queda bloqueado y el programador puede devolverla a **En progreso** o cerrarla como **Cierre Total** / **Cierre Parcial**.
+
+La etapa estándar **Reparado** no debe quedar visible como flujo Barca. En actualización del módulo se normaliza a **En revisión** y se mergean etapas duplicadas de **En revisión** o **Desechar** para que la barra de estado no muestre opciones repetidas.
 
 ## 19. Fecha programada obligatoria para generar OT desde aviso
 

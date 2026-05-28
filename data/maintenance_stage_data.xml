@@ -13,4 +13,6 @@
         <field name="fold">1</field>
         <field name="done">1</field>
     </record>
+
+    <function model="maintenance.request" name="_barca_sync_maintenance_stages"/>
 </odoo>

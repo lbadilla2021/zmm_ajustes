@@ -401,7 +401,7 @@ Después de crear la OT:
 
 ## Copia de actividades y materiales a la OT
 
-La pestaña **Actividades** de la OT estándar muestra líneas `barca.maintenance.workorder.line`. Cada línea conserva los datos técnicos copiados desde la actividad del aviso: ubicación técnica, tipo de intervención, actividad, duración estimada, descripción/instrucciones, observaciones y estado operativo (`pending`, `in_progress`, `notified`, `closed`).
+La pestaña **Actividades** de la OT estándar muestra líneas `barca.maintenance.workorder.line`. Cada línea conserva los datos técnicos copiados desde la actividad del aviso: ubicación técnica, tipo de intervención, actividad, duración estimada, descripción/instrucciones, observaciones y estado operativo (`pending`, `in_progress`, `notified`).
 
 Cada actividad de OT contiene una subpestaña de **Materiales / Repuestos / Kits** con líneas `barca.maintenance.workorder.line.material`. Se copian producto `product.product`, unidad de medida, cantidad estimada, secuencia, nota y referencia al material del aviso (`alert_line_material_id`). Los kits siguen tratándose como productos íntegros y no se explotan en componentes. La grilla principal de actividades de la OT muestra **N° materiales** y **Materiales** para revisar rápidamente qué productos ejecutables tiene cada actividad.
 
@@ -409,7 +409,7 @@ Las cantidades operativas de materiales de OT deben ser mayores o iguales a cero
 
 ## Relación entre aviso y OT
 
-La OT gestiona su propio ciclo de programación, ejecución, revisión y cierre. Cambiar la etapa de la OT no mueve automáticamente el aviso a revisión. El aviso permanece en `Con OT creada` hasta que el usuario lo cierre explícitamente con `action_close()`.
+La OT gestiona su propio ciclo de programación, ejecución, revisión y cierre. Cambiar la OT a **En revisión** no cierra el aviso. El aviso permanece en `Con OT creada` hasta que la OT pasa a **Cierre Total**, **Cierre Parcial** o **Desechar**; entonces la OT invoca `action_close()` del aviso automáticamente.
 
 ## Cierre del aviso PM
 
@@ -429,19 +429,18 @@ Regla importante: nunca retrocede valores; solo actualiza si el valor del aviso 
 Cada actividad ejecutable de una OT (`barca.maintenance.workorder.line`) sigue el ciclo operativo básico:
 
 ```text
-Pendiente → En ejecución → Notificada → Cerrada
+Pendiente → En ejecución → Notificada
 ```
 
 Acciones disponibles:
 
 - **Iniciar**: cambia una actividad `pending` a `in_progress`. Se permite que varias actividades de la misma OT estén simultáneamente en ejecución; Fase 4 no impone una restricción de actividad única en curso.
 - **Notificar**: exige descripción de lo realizado, resultado y cantidades de materiales no negativas; cambia la actividad `in_progress` a `notified` y registra fecha/hora y usuario notificador.
-- **Cerrar línea**: cambia una actividad `notified` a `closed`.
 - **Reabrir a pendiente**: solo para administrador o programador Barca; vuelve la actividad a `pending` y limpia fecha/usuario de notificación, conservando descripción, resultado, materiales y cantidades informadas.
 
 La pestaña **Materiales / Repuestos / Kits** de la actividad de OT muestra el detalle estructurado de materiales, repuestos o kits. Mantiene visibles las cantidades `estimated_quantity`, `reserved_quantity`, `withdrawn_quantity`, `consumed_quantity` y `returned_quantity`, además de UdM y observación, como preparación para Fase 5 y Fase 6. En Fase 4 esas cantidades son datos manuales/estructurales y no ejecutan operaciones logísticas.
 
-La OT calcula total de actividades, actividades notificadas y actividades cerradas. El botón **Enviar a revisión** valida que exista al menos una actividad y que todas estén `notified` o `closed` (cerrada implica que ya fue notificada). Si la validación pasa, cambia la etapa estándar de la OT desde **En progreso** a **Reparado**, publica un mensaje en chatter cuando está disponible y muestra una notificación indicando que la OT queda lista para revisión. En **Reparado**, el ejecutor queda bloqueado y el programador puede devolver la OT a **En progreso** o cerrarla como **Cierre Total** / **Cierre Parcial**.
+La OT calcula total de actividades y actividades notificadas. El botón **Enviar a revisión** valida que exista al menos una actividad y que todas estén `notified`; los datos históricos `closed` se migran a `notified`; Notificada es el cierre funcional de la actividad. Si la validación pasa, cambia la etapa de la OT desde **En progreso** a **En revisión**, publica un mensaje en chatter cuando está disponible y muestra una notificación indicando que la OT queda lista para revisión. En **En revisión**, el ejecutor queda bloqueado y el programador puede devolver la OT a **En progreso** o cerrarla como **Cierre Total** / **Cierre Parcial**.
 
 La descripción de la OT puede conservar el resumen textual concatenado de actividades para lectura rápida y compatibilidad, pero la fuente operacional principal del trabajo vive en las líneas reales `barca_activity_line_ids` y en sus materiales `barca.maintenance.workorder.line.material`; no se debe volver a una lógica basada solo en texto.
 

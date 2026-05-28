@@ -13,6 +13,7 @@ def sync_existing_vehicle_equipment(cr, registry):
     module. The post-init hook is kept only for vehicle/equipment consistency.
     """
     env = api.Environment(cr, SUPERUSER_ID, {})
+    env["maintenance.request"]._barca_sync_maintenance_stages()
     vehicles = env["fleet.vehicle"].search([])
     created_count = 0
 

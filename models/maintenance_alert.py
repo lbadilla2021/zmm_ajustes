@@ -142,6 +142,12 @@ class BarcaMaintenanceAlert(models.Model):
     # Transiciones de estado
     # -------------------------------------------------------------------------
 
+    def _barca_reload_action(self):
+        return {
+            "type": "ir.actions.client",
+            "tag": "reload",
+        }
+
     def _validate_state_transition(self, new_state):
         for record in self:
             allowed_targets = self._allowed_state_transitions.get(record.state, set())
@@ -173,6 +179,7 @@ class BarcaMaintenanceAlert(models.Model):
                 "evaluation_date": fields.Datetime.now(),
             },
         )
+        return self._barca_reload_action()
 
     def action_approve(self):
         return self.action_take_for_evaluation()
@@ -186,6 +193,7 @@ class BarcaMaintenanceAlert(models.Model):
                 "evaluation_date": fields.Datetime.now(),
             },
         )
+        return self._barca_reload_action()
 
     def action_start(self):
         raise ValidationError(
@@ -219,6 +227,7 @@ class BarcaMaintenanceAlert(models.Model):
         # Actualizar medidores del vehículo con los valores del aviso
         for alert in self:
             alert._update_vehicle_last_service()
+        return self._barca_reload_action()
 
     def _is_maintenance_request_ready_to_close(self):
         self.ensure_one()
@@ -335,6 +344,7 @@ class BarcaMaintenanceAlert(models.Model):
                 "in_progress",
                 {"maintenance_request_id": request.id},
             )
+        return self._barca_reload_action()
 
     def _prepare_workorder_activity_commands(self):
         self.ensure_one()
