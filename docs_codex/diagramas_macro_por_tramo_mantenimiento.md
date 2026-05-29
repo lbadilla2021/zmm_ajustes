@@ -237,12 +237,9 @@ flowchart TD
     F1 --> G
     F2 --> G
     F3 --> G
-    G --> H{"Entregar materiales?"}
-    H -->|No| H1["Materiales quedan pendientes de entrega"]
-    H -->|Si| I["Registrar cantidad retirada"]
-    I --> J["Usa reservado si existe; si no, estimado"]
-    J --> K["Registrar consumo real"]
-    K --> L{"Cerrar materiales"}
+    G --> H["Bodega valida traslado interno en Inventario"]
+    H --> I["Registrar consumo real"]
+    I --> L{"Cerrar materiales"}
     L -->|Consumo > retirado| L1["Error: corregir consumo"]
     L -->|OK| M["Calcular devuelto"]
     M --> N["Calcular costo estimado y real"]

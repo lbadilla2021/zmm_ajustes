@@ -71,6 +71,7 @@
                     <group col="2">
                         <group>
                             <field name="name" readonly="1"/>
+                            <field name="barca_can_edit_alert_activities" invisible="1"/>
                         </group>
                     </group>
 
@@ -113,63 +114,133 @@
                     <!-- ================================================ -->
                     <notebook>
                         <page string="Actividades" name="activities">
-                            <field name="alert_line_ids">
+                            <field
+                                name="alert_line_ids"
+                                readonly="not barca_can_edit_alert_activities or state in ['in_progress', 'rejected', 'closed']"
+                            >
                                 <list editable="bottom" open_form_view="1">
                                     <field name="sequence" widget="handle"/>
-                                    <field name="technical_location_id" readonly="1"/>
-                                    <field name="intervention_type_id" readonly="1"/>
-                                    <field name="activity_id" readonly="1"/>
-                                    <field name="estimated_duration" string="Duración (hrs)" readonly="1"/>
+                                    <field name="alert_state" column_invisible="1"/>
+                                    <field name="barca_can_edit_alert_activities" column_invisible="1"/>
+                                    <field
+                                        name="technical_location_id"
+                                        readonly="not barca_can_edit_alert_activities or alert_state in ['in_progress', 'rejected', 'closed']"
+                                    />
+                                    <field
+                                        name="intervention_type_id"
+                                        readonly="not barca_can_edit_alert_activities or alert_state in ['in_progress', 'rejected', 'closed']"
+                                    />
+                                    <field
+                                        name="activity_id"
+                                        readonly="not barca_can_edit_alert_activities or alert_state in ['in_progress', 'rejected', 'closed']"
+                                    />
+                                    <field
+                                        name="estimated_duration"
+                                        string="Duración (hrs)"
+                                        readonly="not barca_can_edit_alert_activities or alert_state in ['in_progress', 'rejected', 'closed']"
+                                    />
                                     <field name="material_count" readonly="1"/>
                                     <field name="material_summary" readonly="1" optional="show"/>
-                                    <field name="done" readonly="parent.state in ['in_progress', 'rejected', 'closed']"/>
-                                    <field name="note" optional="show" readonly="parent.state in ['in_progress', 'rejected', 'closed']"/>
+                                    <field
+                                        name="done"
+                                        readonly="not barca_can_edit_alert_activities or alert_state in ['in_progress', 'rejected', 'closed']"
+                                    />
+                                    <field
+                                        name="note"
+                                        optional="show"
+                                        readonly="not barca_can_edit_alert_activities or alert_state in ['in_progress', 'rejected', 'closed']"
+                                    />
                                 </list>
                                 <form string="Actividad del aviso">
                                     <sheet>
                                         <group col="2">
                                             <group>
-                                                <field name="technical_location_id" readonly="1"/>
-                                                <field name="intervention_type_id" readonly="1"/>
-                                                <field name="activity_id" readonly="1"/>
+                                                <field name="alert_state" invisible="1"/>
+                                                <field name="barca_can_edit_alert_activities" invisible="1"/>
+                                                <field
+                                                    name="technical_location_id"
+                                                    readonly="not barca_can_edit_alert_activities or alert_state in ['in_progress', 'rejected', 'closed']"
+                                                />
+                                                <field
+                                                    name="intervention_type_id"
+                                                    readonly="not barca_can_edit_alert_activities or alert_state in ['in_progress', 'rejected', 'closed']"
+                                                />
+                                                <field
+                                                    name="activity_id"
+                                                    readonly="not barca_can_edit_alert_activities or alert_state in ['in_progress', 'rejected', 'closed']"
+                                                />
                                             </group>
                                             <group>
-                                                <field name="estimated_duration" string="Duración (hrs)" readonly="1"/>
-                                                <field name="done" readonly="parent.state in ['in_progress', 'rejected', 'closed']"/>
-                                                <field name="note" readonly="parent.state in ['in_progress', 'rejected', 'closed']"/>
+                                                <field
+                                                    name="estimated_duration"
+                                                    string="Duración (hrs)"
+                                                    readonly="not barca_can_edit_alert_activities or alert_state in ['in_progress', 'rejected', 'closed']"
+                                                />
+                                                <field
+                                                    name="done"
+                                                    readonly="not barca_can_edit_alert_activities or alert_state in ['in_progress', 'rejected', 'closed']"
+                                                />
+                                                <field
+                                                    name="note"
+                                                    readonly="not barca_can_edit_alert_activities or alert_state in ['in_progress', 'rejected', 'closed']"
+                                                />
                                             </group>
                                         </group>
                                         <notebook>
                                             <page string="Materiales / Repuestos / Kits" name="materials">
-                                                <field name="material_line_ids">
-                                                    <list editable="bottom" open_form_view="1"
-                                                          create="0"
-                                                          delete="0">
+                                                <field
+                                                    name="material_line_ids"
+                                                    readonly="not barca_can_edit_alert_activities or alert_state in ['in_progress', 'rejected', 'closed']"
+                                                >
+                                                    <list editable="bottom" open_form_view="1">
                                                         <field name="sequence" widget="handle"/>
-                                                        <field name="product_id" readonly="1"/>
-                                                        <field name="estimated_quantity" readonly="1"/>
+                                                        <field name="alert_state" column_invisible="1"/>
+                                                        <field name="barca_can_edit_alert_activities" column_invisible="1"/>
+                                                        <field
+                                                            name="product_id"
+                                                            readonly="not barca_can_edit_alert_activities or alert_state in ['in_progress', 'rejected', 'closed']"
+                                                        />
+                                                        <field
+                                                            name="estimated_quantity"
+                                                            readonly="not barca_can_edit_alert_activities or alert_state in ['in_progress', 'rejected', 'closed']"
+                                                        />
                                                         <field
                                                             name="product_uom_id"
                                                             domain="[('category_id', '=', product_uom_category_id)]"
-                                                            readonly="1"
+                                                            readonly="not barca_can_edit_alert_activities or alert_state in ['in_progress', 'rejected', 'closed']"
                                                         />
                                                         <field name="available_quantity" readonly="1"/>
                                                         <field name="product_uom_category_id" column_invisible="1"/>
-                                                        <field name="note" readonly="1"/>
+                                                        <field
+                                                            name="note"
+                                                            readonly="not barca_can_edit_alert_activities or alert_state in ['in_progress', 'rejected', 'closed']"
+                                                        />
                                                     </list>
 
                                                     <form string="Material / Repuesto / Kit del aviso">
                                                         <sheet>
                                                             <group>
-                                                                <field name="product_id"/>
+                                                                <field name="alert_state" invisible="1"/>
+                                                                <field name="barca_can_edit_alert_activities" invisible="1"/>
+                                                                <field
+                                                                    name="product_id"
+                                                                    readonly="not barca_can_edit_alert_activities or alert_state in ['in_progress', 'rejected', 'closed']"
+                                                                />
                                                                 <field
                                                                     name="product_uom_id"
                                                                     domain="[('category_id', '=', product_uom_category_id)]"
+                                                                    readonly="not barca_can_edit_alert_activities or alert_state in ['in_progress', 'rejected', 'closed']"
                                                                 />
                                                                 <field name="product_uom_category_id" invisible="1"/>
-                                                                <field name="estimated_quantity"/>
+                                                                <field
+                                                                    name="estimated_quantity"
+                                                                    readonly="not barca_can_edit_alert_activities or alert_state in ['in_progress', 'rejected', 'closed']"
+                                                                />
                                                                 <field name="available_quantity" readonly="1"/>
-                                                                <field name="note"/>
+                                                                <field
+                                                                    name="note"
+                                                                    readonly="not barca_can_edit_alert_activities or alert_state in ['in_progress', 'rejected', 'closed']"
+                                                                />
                                                             </group>
                                                         </sheet>
                                                     </form>

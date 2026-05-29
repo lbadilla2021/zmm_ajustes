@@ -95,6 +95,7 @@
                             >
                                 <list editable="bottom" open_form_view="1">
                                     <field name="sequence" widget="handle"/>
+                                    <field name="sequence" string="Secuencia"/>
                                     <field
                                         name="technical_location_id"
                                         domain="[('category_id', '=?', parent.category_id)]"

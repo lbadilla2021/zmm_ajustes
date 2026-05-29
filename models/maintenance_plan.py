@@ -280,7 +280,9 @@ class BarcaMaintenancePlan(models.Model):
 
     def _build_alert_line_vals(self, alert_id):
         self.ensure_one()
-        AlertLine = self.env["barca.maintenance.alert.line"]
+        AlertLine = self.env["barca.maintenance.alert.line"].with_context(
+            skip_barca_alert_activity_security=True
+        )
         return [
             {
                 "alert_id": alert_id,
@@ -345,7 +347,9 @@ class BarcaMaintenancePlan(models.Model):
 
     def _evaluate_and_generate_alerts(self):
         Alert = self.env["barca.maintenance.alert"]
-        AlertLine = self.env["barca.maintenance.alert.line"]
+        AlertLine = self.env["barca.maintenance.alert.line"].with_context(
+            skip_barca_alert_activity_security=True
+        )
         Equipment = self.env["maintenance.equipment"]
         counters = {"created": 0, "duplicated": 0, "skipped": 0}
 
@@ -399,7 +403,9 @@ class BarcaMaintenancePlan(models.Model):
         _logger.info("Cron PM: %s planes activos.", len(plans))
 
         Alert = self.env["barca.maintenance.alert"]
-        AlertLine = self.env["barca.maintenance.alert.line"]
+        AlertLine = self.env["barca.maintenance.alert.line"].with_context(
+            skip_barca_alert_activity_security=True
+        )
         Equipment = self.env["maintenance.equipment"]
         counters = {"created": 0, "duplicated": 0, "skipped": 0}
 

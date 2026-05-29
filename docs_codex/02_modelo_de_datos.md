@@ -406,11 +406,13 @@ Campos principales:
 - `product_id`
 - `product_uom_id`
 - `product_uom_category_id`
-- `estimated_quantity`
-- `reserved_quantity`
-- `withdrawn_quantity`
-- `consumed_quantity`
-- `returned_quantity`
+- `estimated_quantity`: necesidad total prevista.
+- `requested_quantity`: cantidad a solicitar a bodega.
+- `available_quantity`: cantidad disponible en Serviteca para la actividad.
+- `reserved_quantity`: cantidad efectivamente reservada por Odoo, de solo lectura funcional.
+- `withdrawn_quantity`: campo legado/t?cnico de retiro, mantenido por compatibilidad.
+- `consumed_quantity`: cantidad consumida al notificar/cerrar.
+- `returned_quantity`: sobrante calculado.
 - `note`
 
 Reglas:

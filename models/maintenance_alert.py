@@ -130,6 +130,11 @@ class BarcaMaintenanceAlert(models.Model):
         readonly=True,
     )
 
+    barca_can_edit_alert_activities = fields.Boolean(
+        string="Puede editar actividades del aviso",
+        compute="_compute_barca_can_edit_alert_activities",
+    )
+
     _allowed_state_transitions = {
         "pending_evaluation": {"approved", "rejected"},
         "approved": {"in_progress", "rejected"},
@@ -147,6 +152,14 @@ class BarcaMaintenanceAlert(models.Model):
             "type": "ir.actions.client",
             "tag": "reload",
         }
+
+    @api.depends_context("uid")
+    def _compute_barca_can_edit_alert_activities(self):
+        can_edit = self.env.user.has_group(
+            "zmm_ajustes.group_barca_programador"
+        ) or self.env.user.has_group("zmm_ajustes.group_barca_admin")
+        for alert in self:
+            alert.barca_can_edit_alert_activities = can_edit
 
     def _validate_state_transition(self, new_state):
         for record in self:
@@ -505,6 +518,31 @@ class BarcaMaintenanceAlertLine(models.Model):
         compute="_compute_material_summary",
     )
 
+    alert_state = fields.Selection(
+        related="alert_id.state",
+        string="Estado del aviso",
+    )
+
+    barca_can_edit_alert_activities = fields.Boolean(
+        related="alert_id.barca_can_edit_alert_activities",
+        string="Puede editar actividades del aviso",
+    )
+
+    def _barca_user_can_edit_alert_activities(self):
+        user = self.env.user
+        return user.has_group(
+            "zmm_ajustes.group_barca_programador"
+        ) or user.has_group("zmm_ajustes.group_barca_admin")
+
+    def _barca_check_can_edit_alert_activities(self):
+        if self.env.su or self.env.context.get("skip_barca_alert_activity_security"):
+            return
+        if not self._barca_user_can_edit_alert_activities():
+            raise ValidationError(
+                "Solo el Programador o Administrador Barca puede agregar, "
+                "modificar o eliminar actividades del aviso."
+            )
+
     @api.depends(
         "sequence",
         "alert_id.name",
@@ -609,6 +647,19 @@ class BarcaMaintenanceAlertLine(models.Model):
     def _prepare_workorder_material_commands(self):
         return self._prepare_material_commands_from_alert_line()
 
+    @api.model_create_multi
+    def create(self, vals_list):
+        self._barca_check_can_edit_alert_activities()
+        return super().create(vals_list)
+
+    def write(self, vals):
+        self._barca_check_can_edit_alert_activities()
+        return super().write(vals)
+
+    def unlink(self):
+        self._barca_check_can_edit_alert_activities()
+        return super().unlink()
+
 
 class BarcaMaintenanceAlertLineMaterial(models.Model):
     _name = "barca.maintenance.alert.line.material"
@@ -672,6 +723,21 @@ class BarcaMaintenanceAlertLineMaterial(models.Model):
 
     note = fields.Text(string="Observación")
 
+    alert_state = fields.Selection(
+        related="alert_id.state",
+        string="Estado del aviso",
+    )
+
+    barca_can_edit_alert_activities = fields.Boolean(
+        related="alert_id.barca_can_edit_alert_activities",
+        string="Puede editar actividades del aviso",
+    )
+
+    def _barca_check_can_edit_alert_activities(self):
+        self.env[
+            "barca.maintenance.alert.line"
+        ]._barca_check_can_edit_alert_activities()
+
     @api.depends(
         "sequence",
         "alert_line_id.display_name",
@@ -723,3 +789,16 @@ class BarcaMaintenanceAlertLineMaterial(models.Model):
                     "La unidad de medida debe pertenecer a la misma categoría "
                     "que la unidad del producto."
                 )
+
+    @api.model_create_multi
+    def create(self, vals_list):
+        self._barca_check_can_edit_alert_activities()
+        return super().create(vals_list)
+
+    def write(self, vals):
+        self._barca_check_can_edit_alert_activities()
+        return super().write(vals)
+
+    def unlink(self):
+        self._barca_check_can_edit_alert_activities()
+        return super().unlink()

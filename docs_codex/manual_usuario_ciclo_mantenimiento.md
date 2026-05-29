@@ -375,9 +375,8 @@ Botones principales:
 | Cierre Total | Etapa En revisión, Programador/Admin | Cierra totalmente la OT y notifica al responsable. |
 | Cierre Parcial | Etapa En revisión, Programador/Admin | Cierra parcialmente la OT y notifica al responsable. |
 | Devolver a progreso | Etapa En revisión, Programador/Admin | Requiere motivo; vuelve a En progreso y notifica al responsable. |
-| Reservar materiales | Sin reserva previa | Crea picking interno de reserva y asigna stock disponible. |
-| Entregar materiales | Materiales no entregados ni cerrados | Registra entrega al tecnico. |
-| Cerrar materiales | Materiales entregados y no cerrados | Calcula consumos, devoluciones y costos. |
+| Reservar materiales | Lineas con cantidad a solicitar a bodega | Crea picking interno solo por las cantidades solicitadas y asigna stock disponible. |
+| Cerrar materiales | Materiales disponibles/consumidos regularizados | Sincroniza disponible desde Inventario si corresponde y calcula consumos, devoluciones y costos. |
 | Smart button Reserva | Existe reserva | Abre el picking de reserva. |
 
 ## 10. Actividades de OT
@@ -460,8 +459,9 @@ Los materiales se gestionan por actividad de OT.
 | Repuesto / Kit / Material | Producto de Odoo. |
 | UdM | Unidad de medida compatible con el producto. |
 | Cantidad estimada | Cantidad planificada. |
-| Cantidad reservada | Cantidad asignada desde reserva. |
-| Cantidad retirada | Cantidad entregada al tecnico. |
+| Cantidad a solicitar a bodega | Parte de la necesidad que debe pedir materiales a bodega. |
+| Cantidad reservada | Cantidad efectivamente asignada desde Odoo. |
+| Cantidad disponible Serviteca | Cantidad disponible para consumir en la actividad. |
 | Cantidad consumida | Cantidad realmente usada. |
 | Cantidad devuelta | Sobrante calculado al cerrar materiales. |
 | Observacion | Nota libre. |
@@ -472,7 +472,7 @@ Las cantidades no pueden ser negativas y la unidad debe pertenecer a la misma ca
 
 Boton: **Reservar materiales**.
 
-1. Lee todos los materiales de actividades con producto y cantidad estimada mayor que cero.
+1. Lee todos los materiales de actividades con producto y cantidad a solicitar a bodega mayor que cero.
 2. Agrupa por producto y unidad de medida.
 3. Crea un `stock.picking` interno.
 4. Crea movimientos de stock por producto/unidad.
@@ -495,33 +495,29 @@ Restricciones:
 
 - No se permite crear una segunda reserva si ya existe un picking activo.
 - Si la reserva previa fue cancelada o eliminada, el sistema limpia el vinculo y permite reservar de nuevo.
-- Requiere almacen, ubicacion de stock, tipo de operacion interna y ubicacion destino valida.
+- Requiere almacen, ubicacion de stock, tipo de operacion interna y ubicacion destino configurada en ese tipo de operacion. La OT no busca bodegas por nombre.
 
-### 12.2 Entregar materiales
+### 12.2 Entrega desde Inventario
 
-Boton: **Entregar materiales**.
+No existe boton **Entregar materiales** en la OT. La entrega fisica la realiza bodega desde Inventario, validando el traslado interno generado por **Reservar materiales**.
 
-- Si una linea tiene cantidad reservada, usa esa cantidad como retirada.
-- Si no tiene reserva, usa la cantidad estimada como retirada.
-- Marca la OT con materiales entregados.
-- Registra fecha y usuario de entrega.
-- Publica resumen en chatter.
-- No crea picking adicional.
+Cuando el picking queda validado, la OT traspasa la cantidad reservada a **Cantidad disponible Serviteca**. Los materiales que ya estaban en Serviteca no requieren picking si tienen cantidad disponible suficiente.
 
 ### 12.3 Registrar consumo real
 
-El consumo real se ingresa manualmente en **Cantidad consumida** de cada material. Ese dato representa lo efectivamente usado por el tecnico.
+El consumo real se ingresa manualmente en **Cantidad consumida** de cada material. Si queda en cero, al notificar la actividad el sistema consume automaticamente la **Cantidad disponible Serviteca** de esa linea.
 
 ### 12.4 Cerrar materiales
 
 Boton: **Cerrar materiales**.
 
-1. Valida que los materiales hayan sido entregados.
-2. Valida que la cantidad consumida no supere la retirada.
-3. Calcula cantidad devuelta = retirada - consumida.
-4. Registra fecha y usuario de cierre.
-5. Calcula costo estimado y costo real con `standard_price`.
-6. Publica resumen en chatter.
+1. Si hay cantidades solicitadas a bodega, valida que exista picking vinculado y que este validado en Inventario.
+2. Sincroniza cantidad disponible Serviteca desde las cantidades hechas del picking.
+3. Valida que la cantidad consumida no supere la disponible.
+4. Calcula cantidad devuelta = disponible - consumida.
+5. Registra fecha y usuario de cierre.
+6. Calcula costo estimado y costo real con `standard_price`.
+7. Publica resumen en chatter.
 
 No crea picking de devolucion.
 
@@ -618,7 +614,7 @@ La marca **Seguro** del vehiculo se calcula automaticamente si existe un contrat
 | Todas las actividades deben estar notificadas | La OT tiene actividades pendientes/en ejecucion. | Notificar o cerrar actividades antes de enviar a revision. |
 | Debe ingresar motivo de devolucion | Programador intenta devolver OT sin comentario. | Completar Motivo de devolucion. |
 | Esta OT ya tiene una reserva vinculada | Ya existe picking de reserva. | Usar smart button Reserva o cancelar la reserva previa si corresponde. |
-| Consumo real mayor que cantidad entregada | La cantidad consumida supera la retirada. | Corregir Cantidad consumida. |
+| Consumo real mayor que disponible | La cantidad consumida supera la disponible en Serviteca. | Corregir Cantidad consumida o regularizar disponibilidad. |
 | No hay destinatarios configurados | Regla de flotilla sin correos. | Completar regla Modificaciones o Vencimientos. |
 
 ## 18. Recomendacion operativa por rol

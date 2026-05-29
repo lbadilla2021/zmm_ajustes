@@ -223,16 +223,16 @@ En Fase 5 solo se llaman `action_confirm()` y `action_assign()`. Nunca `button_v
 Los materiales de varias actividades de la OT con el mismo producto y UdM se agrupan en un solo `stock.move`. Esto respeta la práctica estándar de Odoo de no crear movimientos duplicados por producto.
 
 
-## Fase 6: campos de entrega y cierre
+## Fase 6: inventario, entrega y cierre
 
 ### Campos readonly en maintenance.request
 
-Los campos `barca_material_withdrawn`, `barca_material_closed` y fechas asociadas son `readonly=True` en el modelo Python. No se editan manualmente; solo se modifican mediante los métodos `action_barca_deliver_materials` y `action_barca_close_materials` usando `write()` interno.
+Los campos `barca_material_withdrawn`, `barca_material_closed` y fechas asociadas son `readonly=True` en el modelo Python. No se editan manualmente. La entrega de materiales se registra validando el traslado interno desde Inventario; `action_barca_close_materials` sincroniza `withdrawn_quantity` desde ese picking validado y cierra el ciclo usando `write()` interno.
 
 ### Costos computados almacenados (`store=True`)
 
 `barca_estimated_material_cost` y `barca_real_material_cost` son `Monetary` (no Float) con `currency_field="barca_currency_id"` y `store=True`. Los depends incluyen `product_id.standard_price` para que se recalculen si cambia el precio del producto.
 
-### No usar `button_validate` en Fase 6
+### Entrega desde Inventario
 
-La Fase 6 no valida ningún picking. El picking de reserva de Fase 5 queda en estado asignado/confirmado hasta que una futura fase lo gestione si corresponde.
+La Fase 6 no valida ningun picking desde la OT. El picking de reserva de Fase 5 debe validarse desde Inventario por bodega. Si el picking no esta en estado `done`, el cierre de materiales se bloquea.

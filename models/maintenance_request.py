@@ -229,6 +229,7 @@ class MaintenanceRequest(models.Model):
         self.ensure_one()
         stage = stage or self.stage_id
         review_stage = self._barca_get_review_stage()
+        partial_close_stage = self._barca_get_close_partial_stage()
         return bool(review_stage and stage == review_stage)
 
     def _barca_is_stage_repaired(self, stage=None):
@@ -318,6 +319,14 @@ class MaintenanceRequest(models.Model):
     # Fase 5: Método principal de reserva
     # -------------------------------------------------------------------------
 
+    def _barca_material_qty_to_reserve(self, material):
+        return max(
+            (material.requested_quantity or 0.0)
+            - (material.reserved_quantity or 0.0)
+            - (material.available_quantity or 0.0),
+            0.0,
+        )
+
     def action_barca_reserve_materials(self):
         """Crea una reserva de materiales (stock.picking) vinculada a la OT.
 
@@ -328,31 +337,26 @@ class MaintenanceRequest(models.Model):
         """
         self.ensure_one()
 
-        # --- Validación: reserva duplicada o picking en estado inválido ---
+        # --- Limpiar vinculo si la ultima reserva fue cancelada o eliminada ---
         if self.barca_material_picking_id:
             picking = self.barca_material_picking_id
-            if picking.exists() and picking.state not in ("cancel",):
-                raise ValidationError(
-                    "Esta OT ya tiene una reserva de materiales vinculada (ref: %s). "
-                    "No se puede crear una segunda reserva." % picking.name
+            if not picking.exists() or picking.state == "cancel":
+                self.write({
+                    "barca_material_picking_id": False,
+                    "barca_material_state": "pending_reservation",
+                })
+                self.message_post(
+                    body=(
+                        "La reserva anterior (<b>%s</b>) estaba cancelada o fue eliminada. "
+                        "Se ha limpiado el vinculo para permitir una nueva reserva."
+                    ) % (picking.name if picking.exists() else "eliminada")
                 )
-            # El picking fue cancelado o borrado: limpiar el vínculo y continuar
-            self.write({
-                "barca_material_picking_id": False,
-                "barca_material_state": "pending_reservation",
-            })
-            self.message_post(
-                body=(
-                    "La reserva anterior (<b>%s</b>) estaba cancelada o fue eliminada. "
-                    "Se ha limpiado el vínculo para permitir una nueva reserva."
-                ) % (picking.name if picking.exists() else "eliminada")
-            )
 
         # --- Recolectar materiales válidos ---
         all_material_lines = self.env["barca.maintenance.workorder.line.material"]
         for activity in self.barca_activity_line_ids:
             for mat in activity.material_line_ids:
-                if mat.product_id and mat.estimated_quantity > 0:
+                if mat.product_id and self._barca_material_qty_to_reserve(mat) > 0:
                     if not mat.product_uom_id:
                         raise ValidationError(
                             "El material '%s' no tiene unidad de medida definida."
@@ -361,17 +365,16 @@ class MaintenanceRequest(models.Model):
                     all_material_lines |= mat
 
         if not all_material_lines:
-            self.write({"barca_material_state": "no_materials"})
             if callable(getattr(self, "message_post", None)):
                 self.message_post(
-                    body="No se encontraron materiales válidos para reservar en esta OT."
+                    body="No hay diferencias pendientes por reservar en esta OT."
                 )
             return {
                 "type": "ir.actions.client",
                 "tag": "display_notification",
                 "params": {
                     "title": "Sin materiales",
-                    "message": "No hay materiales con cantidad estimada mayor a cero.",
+                    "message": "No hay diferencias pendientes por reservar.",
                     "type": "warning",
                     "sticky": False,
                 },
@@ -415,23 +418,14 @@ class MaintenanceRequest(models.Model):
                 % warehouse.name
             )
 
-        # Ubicación destino: buscar una ubicación interna destinada a mantenimiento
-        location_dest = self.env["stock.location"].search(
-            [
-                ("usage", "=", "internal"),
-                ("active", "=", True),
-                ("complete_name", "ilike", "WH/Stock/Barca Serviteca"),
-                ("company_id", "in", [company.id, False]),
-            ],
-            limit=1,        )
-        if not location_dest:
-            # Usar la ubicación destino por defecto del tipo de operación
-            location_dest = picking_type.default_location_dest_id
+        # La bodega define el destino mediante el tipo de operación interna.
+        location_dest = picking_type.default_location_dest_id
         if not location_dest or location_dest.id == location_src.id:
             raise ValidationError(
                 "No se pudo determinar una ubicación destino para la reserva de mantenimiento. "
-                "Cree una ubicación interna llamada 'Mantenimiento' o configure la ubicación "
-                "destino por defecto del tipo de operación '%s'." % picking_type.name
+                "Configure una ubicación destino por defecto distinta de la ubicación de origen "
+                "en el tipo de operación interna '%s' del almacén '%s'."
+                % (picking_type.name, warehouse.name)
             )
 
         # --- Agrupar materiales por (product_id, product_uom_id) ---
@@ -439,7 +433,7 @@ class MaintenanceRequest(models.Model):
         grouped_qty = defaultdict(float)
         for mat in all_material_lines:
             key = (mat.product_id.id, mat.product_uom_id.id)
-            grouped_qty[key] += mat.estimated_quantity
+            grouped_qty[key] += self._barca_material_qty_to_reserve(mat)
 
         # --- Crear stock.picking ---
         picking_vals = {
@@ -517,16 +511,17 @@ class MaintenanceRequest(models.Model):
         lines_by_key = defaultdict(list)
         for activity in self.barca_activity_line_ids:
             for mat in activity.material_line_ids:
-                if mat.product_id and mat.estimated_quantity > 0 and mat.product_uom_id:
+                if mat.product_id and self._barca_material_qty_to_reserve(mat) > 0 and mat.product_uom_id:
                     key = (mat.product_id.id, mat.product_uom_id.id)
                     lines_by_key[key].append(mat)
 
         for key, lines in lines_by_key.items():
             available = reserved_by_key.get(key, 0.0)
             for mat in lines:
-                assignable = min(mat.estimated_quantity, available)
+                pending_qty = self._barca_material_qty_to_reserve(mat)
+                assignable = min(pending_qty, available)
                 assignable = max(assignable, 0.0)
-                mat.write({"reserved_quantity": assignable})
+                mat.write({"reserved_quantity": (mat.reserved_quantity or 0.0) + assignable})
                 available -= assignable
                 if available <= 0:
                     available = 0.0
@@ -684,10 +679,10 @@ class MaintenanceRequest(models.Model):
     # -------------------------------------------------------------------------
 
     def _barca_get_material_lines(self):
-        """Retorna todas las líneas de material de la OT que tienen product_id.
+        """Retorna todas las lineas de material de la OT que tienen product_id.
 
         Nota: no lleva ensure_one() porque es llamado desde _compute_barca_material_costs
-        dentro de un for rec in self. La garantía de singleton la dan los callers.
+        dentro de un for rec in self. La garantia de singleton la dan los callers.
         """
         lines = self.env["barca.maintenance.workorder.line.material"]
         for activity in self.barca_activity_line_ids:
@@ -696,92 +691,125 @@ class MaintenanceRequest(models.Model):
                     lines |= mat
         return lines
 
-    def action_barca_deliver_materials(self):
-        """Registra la entrega de materiales al técnico.
+    def _barca_get_move_done_quantity(self, move):
+        """Retorna la cantidad hecha de un movimiento validado."""
+        done_qty = 0.0
+        for move_line in move.move_line_ids:
+            if hasattr(move_line, "quantity"):
+                done_qty += move_line.quantity or 0.0
+            elif hasattr(move_line, "qty_done"):
+                done_qty += move_line.qty_done or 0.0
+        if done_qty:
+            return done_qty
 
-        - Si existe reserved_quantity > 0, usa ese valor como withdrawn_quantity.
-        - Si no hay reserva previa, usa estimated_quantity.
-        - Marca barca_material_withdrawn = True y registra fecha/usuario.
-        """
+        for field_name in ("quantity_done", "quantity"):
+            if hasattr(move, field_name):
+                return getattr(move, field_name) or 0.0
+        return 0.0
+
+    def _barca_get_material_pickings(self):
         self.ensure_one()
+        pickings = self.env["stock.picking"]
+        if self.barca_material_picking_id:
+            pickings |= self.barca_material_picking_id
+        if self.name:
+            pickings |= self.env["stock.picking"].search(
+                [("origin", "=", "OT %s" % self.name)]
+            )
+        return pickings
 
-        material_lines = self._barca_get_material_lines()
-        if not material_lines:
+    def _barca_sync_available_quantities_from_picking(self, material_lines=None):
+        """Sincroniza disponible Serviteca desde el traslado validado en Inventario."""
+        self.ensure_one()
+        pickings = self._barca_get_material_pickings()
+        if not pickings:
             raise ValidationError(
-                "No hay materiales asociados a las actividades de esta OT."
+                "Debe crear una reserva de materiales y validar el traslado interno "
+                "en Inventario antes de cerrar el ciclo de materiales."
+            )
+        pending_pickings = pickings.filtered(
+            lambda picking: picking.state not in ("done", "cancel")
+        )
+        if pending_pickings:
+            state_label = dict(pending_pickings[0]._fields["state"].selection).get(
+                pending_pickings[0].state, pending_pickings[0].state
+            )
+            raise ValidationError(
+                "La entrega de materiales debe realizarse desde Inventario validando "
+                "el traslado interno '%s'. Estado actual: %s."
+                % (pending_pickings[0].name, state_label)
             )
 
-        if self.barca_material_withdrawn:
-            raise ValidationError(
-                "Los materiales de esta OT ya fueron entregados."
+        material_lines = material_lines or self._barca_get_material_lines()
+        done_by_key = defaultdict(float)
+        for picking in pickings.filtered(lambda item: item.state == "done"):
+            picking_moves = (
+                picking.move_ids
+                if "move_ids" in picking._fields
+                else picking.move_ids_without_package
             )
+            for move in picking_moves.filtered(lambda m: m.state != "cancel"):
+                if move.product_id and move.product_uom:
+                    key = (move.product_id.id, move.product_uom.id)
+                    done_by_key[key] += self._barca_get_move_done_quantity(move)
 
-        used_reservation = False
-        total_estimated = 0.0
-        total_reserved = 0.0
-        total_delivered = 0.0
-
+        total_withdrawn = 0.0
+        lines_by_key = defaultdict(list)
         for mat in material_lines:
-            if mat.reserved_quantity > 0:
-                withdrawn = mat.reserved_quantity
-                used_reservation = True
-            else:
-                withdrawn = mat.estimated_quantity or 0.0
+            if mat.product_id and mat.product_uom_id:
+                key = (mat.product_id.id, mat.product_uom_id.id)
+                lines_by_key[key].append(mat)
 
-            if withdrawn < 0:
-                raise ValidationError(
-                    "La cantidad a entregar del producto '%s' no puede ser negativa."
-                    % (mat.product_id.display_name or "desconocido")
-                )
+        for key, lines in lines_by_key.items():
+            available = done_by_key.get(key, 0.0)
+            for mat in lines:
+                transferred = min(mat.requested_quantity or 0.0, available)
+                transferred = max(transferred, 0.0)
+                already_synced = mat.withdrawn_quantity or 0.0
+                delta = max(transferred - already_synced, 0.0)
+                if delta:
+                    mat.write(
+                        {
+                            "available_quantity": (mat.available_quantity or 0.0)
+                            + delta,
+                            "reserved_quantity": max(
+                                (mat.reserved_quantity or 0.0) - delta, 0.0
+                            ),
+                            "withdrawn_quantity": transferred,
+                        }
+                    )
+                total_withdrawn += transferred
+                available -= transferred
+                if available <= 0:
+                    available = 0.0
 
-            mat.write({"withdrawn_quantity": withdrawn})
-            total_estimated += mat.estimated_quantity or 0.0
-            total_reserved += mat.reserved_quantity or 0.0
-            total_delivered += withdrawn
+        if total_withdrawn <= 0:
+            raise ValidationError(
+                "El traslado interno '%s' esta validado, pero no registra cantidades "
+                "entregadas para los materiales de esta OT." % picking.name
+            )
 
         self.write(
             {
                 "barca_material_withdrawn": True,
-                "barca_material_delivery_date": fields.Datetime.now(),
-                "barca_material_delivered_by_id": self.env.user.id,
+                "barca_material_delivery_date": picking.date_done or fields.Datetime.now(),
+                "barca_material_delivered_by_id": picking.write_uid.id or self.env.user.id,
             }
         )
+        return total_withdrawn
 
-        if used_reservation:
-            base_msg = "Se usó la <b>cantidad reservada</b> como base de entrega."
-        else:
-            base_msg = (
-                "No había reserva previa. "
-                "Se usó la <b>cantidad estimada</b> como base de entrega."
-            )
+    def _barca_sync_withdrawn_quantities_from_picking(self, material_lines=None):
+        """Compatibilidad: usar disponible Serviteca como cantidad retirada."""
+        return self._barca_sync_available_quantities_from_picking(material_lines)
 
-        body = (
-            "<b>Materiales entregados</b><br/>"
-            "Líneas de materiales: <b>%s</b><br/>"
-            "Cantidad total estimada: <b>%.2f</b><br/>"
-            "Cantidad total reservada: <b>%.2f</b><br/>"
-            "Cantidad total entregada: <b>%.2f</b><br/>"
-            "%s"
-        ) % (
-            len(material_lines),
-            total_estimated,
-            total_reserved,
-            total_delivered,
-            base_msg,
+    def action_barca_deliver_materials(self):
+        """Compatibilidad: la entrega se registra validando el picking en Inventario."""
+        raise ValidationError(
+            "La entrega de materiales debe realizarse desde Inventario, validando "
+            "el traslado interno de la reserva. La OT solo solicita/reserva "
+            "materiales y luego sincroniza las cantidades retiradas al cerrar "
+            "el ciclo de materiales."
         )
-        self.message_post(body=body)
-
-        return {
-            "type": "ir.actions.client",
-            "tag": "display_notification",
-            "params": {
-                "title": "Materiales entregados",
-                "message": "Se registró la entrega de %s líneas de materiales."
-                % len(material_lines),
-                "type": "success",
-                "sticky": False,
-            },
-        }
 
     def action_barca_close_materials(self):
         """Cierra el ciclo de materiales: calcula sobrantes y registra cierre.
@@ -800,14 +828,20 @@ class MaintenanceRequest(models.Model):
                 "No hay materiales asociados a las actividades de esta OT."
             )
 
-        if not self.barca_material_withdrawn:
-            raise ValidationError(
-                "Primero debe registrar la entrega de materiales antes de cerrar el ciclo."
-            )
-
         if self.barca_material_closed:
             raise ValidationError(
                 "El ciclo de materiales de esta OT ya está cerrado."
+            )
+
+        if any(line.requested_quantity > 0 for line in material_lines):
+            self._barca_sync_available_quantities_from_picking(material_lines)
+        elif not self.barca_material_withdrawn:
+            self.write(
+                {
+                    "barca_material_withdrawn": True,
+                    "barca_material_delivery_date": fields.Datetime.now(),
+                    "barca_material_delivered_by_id": self.env.user.id,
+                }
             )
 
         # Validaciones de cantidades y cálculo de sobrante
@@ -815,6 +849,8 @@ class MaintenanceRequest(models.Model):
             product_name = mat.product_id.display_name or "desconocido"
             for field_name, label in (
                 ("estimated_quantity", "estimada"),
+                ("requested_quantity", "a solicitar"),
+                ("available_quantity", "disponible Serviteca"),
                 ("reserved_quantity", "reservada"),
                 ("withdrawn_quantity", "entregada"),
                 ("consumed_quantity", "consumida"),
@@ -827,12 +863,12 @@ class MaintenanceRequest(models.Model):
                     )
 
             consumed = mat.consumed_quantity or 0.0
-            withdrawn = mat.withdrawn_quantity or 0.0
-            if consumed > withdrawn:
+            available = mat.available_quantity or 0.0
+            if consumed > available:
                 raise ValidationError(
                     "El consumo real del producto '%s' (%.2f) no puede ser mayor "
-                    "que la cantidad entregada (%.2f)."
-                    % (product_name, consumed, withdrawn)
+                    "que la cantidad disponible en Serviteca (%.2f)."
+                    % (product_name, consumed, available)
                 )
 
         # Calcular sobrante, escribir y acumular costos en el mismo loop
@@ -844,11 +880,11 @@ class MaintenanceRequest(models.Model):
 
         for mat in material_lines:
             consumed = mat.consumed_quantity or 0.0
-            withdrawn = mat.withdrawn_quantity or 0.0
-            returned = withdrawn - consumed
+            available = mat.available_quantity or 0.0
+            returned = available - consumed
             returned = max(returned, 0.0)
             mat.write({"returned_quantity": returned})
-            total_withdrawn += withdrawn
+            total_withdrawn += available
             total_consumed += consumed
             total_returned += returned
             price = mat.product_id.standard_price or 0.0
@@ -935,6 +971,10 @@ class MaintenanceRequest(models.Model):
     )
     barca_stage_is_review = fields.Boolean(
         string="Etapa En revisión",
+        compute="_compute_barca_stage_flags",
+    )
+    barca_stage_is_partial_close = fields.Boolean(
+        string="Etapa Cierre Parcial",
         compute="_compute_barca_stage_flags",
     )
     barca_stage_is_repaired = fields.Boolean(
@@ -1028,6 +1068,7 @@ class MaintenanceRequest(models.Model):
     def _compute_barca_stage_flags(self):
         progress_stage = self._barca_get_progress_stage()
         review_stage = self._barca_get_review_stage()
+        partial_close_stage = self._barca_get_close_partial_stage()
         for request in self:
             request.barca_stage_is_in_progress = bool(
                 progress_stage and request.stage_id == progress_stage
@@ -1037,6 +1078,9 @@ class MaintenanceRequest(models.Model):
             )
             request.barca_stage_is_repaired = bool(
                 review_stage and request.stage_id == review_stage
+            )
+            request.barca_stage_is_partial_close = bool(
+                partial_close_stage and request.stage_id == partial_close_stage
             )
 
     @api.depends("stage_id")
@@ -1112,14 +1156,26 @@ class MaintenanceRequest(models.Model):
         material_lines = self._barca_get_material_lines()
         if not material_lines:
             return False
-        return bool(
-            not self.barca_material_closed
-            or self.barca_material_state in (
-                "pending_reservation",
-                "partial",
-                "missing",
-            )
-        )
+        if self.barca_material_closed:
+            return False
+
+        for line in material_lines:
+            requested = line.requested_quantity or 0.0
+            reserved = line.reserved_quantity or 0.0
+            available = line.available_quantity or 0.0
+            consumed = line.consumed_quantity or 0.0
+
+            pending_request = max(requested - reserved - available, 0.0)
+            if pending_request > 0:
+                return True
+            if reserved > 0:
+                return True
+            if consumed > available:
+                return True
+            if available and consumed < available and not line.returned_quantity:
+                return True
+
+        return False
 
     def _barca_check_no_pending_materials_for_total_close(self):
         self.ensure_one()
@@ -1149,8 +1205,8 @@ class MaintenanceRequest(models.Model):
         self.ensure_one()
         if not self._barca_is_stage_review():
             raise ValidationError(
-                "Solo se puede devolver a progreso una OT que esté en etapa "
-                "En revisión."
+                "Solo se puede devolver a progreso una OT que este en etapa "
+                "En revision."
             )
 
     def _barca_check_can_discard(self):
@@ -1360,6 +1416,14 @@ class MaintenanceRequest(models.Model):
             "stage_id": progress_stage.id,
             "barca_return_count": self.barca_return_count + 1,
         })
+        if self.barca_alert_id and self.barca_alert_id.state == "closed":
+            self.barca_alert_id.write(
+                {
+                    "state": "in_progress",
+                    "closed_by_id": False,
+                    "close_date": False,
+                }
+            )
 
         responsible = self.user_id
         partner_ids = responsible.partner_id.ids if responsible else []
@@ -1376,6 +1440,76 @@ class MaintenanceRequest(models.Model):
             "Se notificó a %s." % (responsible.name if responsible else "nadie"),
             notification_type="warning",
         )
+
+
+    def action_barca_reopen_partial_to_review(self):
+        """Reabre una OT con cierre parcial y la devuelve a revision."""
+        self.ensure_one()
+        if not self._barca_is_stage_partial_close():
+            raise ValidationError(
+                "Solo se puede reabrir a revision una OT en Cierre Parcial."
+            )
+
+        review_stage = self._barca_get_review_stage()
+        if not review_stage:
+            raise ValidationError("No se encontro la etapa En revision.")
+
+        self.with_context(skip_barca_stage_transition=True).write(
+            {"stage_id": review_stage.id}
+        )
+        if self.barca_alert_id and self.barca_alert_id.state == "closed":
+            self.barca_alert_id.write(
+                {
+                    "state": "in_progress",
+                    "closed_by_id": False,
+                    "close_date": False,
+                }
+            )
+        self.message_post(
+            body=(
+                "<b>OT reabierta a revision</b><br/>"
+                "Reabierta por: <b>%s</b>"
+            ) % self.env.user.name
+        )
+        return self._barca_notification_action(
+            "OT reabierta",
+            "La OT volvio a En revision.",
+            notification_type="warning",
+        )
+
+class StockPicking(models.Model):
+    _inherit = "stock.picking"
+
+    def _barca_sync_linked_maintenance_requests(self):
+        done_pickings = self.filtered(lambda picking: picking.state == "done")
+        if not done_pickings:
+            return
+        requests = self.env["maintenance.request"].search(
+            [("barca_material_picking_id", "in", done_pickings.ids)]
+        )
+        origins = done_pickings.mapped("origin")
+        request_names = [
+            origin[3:]
+            for origin in origins
+            if isinstance(origin, str) and origin.startswith("OT ")
+        ]
+        if request_names:
+            requests |= self.env["maintenance.request"].search(
+                [("name", "in", request_names)]
+            )
+        for request in requests:
+            request._barca_sync_available_quantities_from_picking()
+
+    def button_validate(self):
+        result = super().button_validate()
+        self._barca_sync_linked_maintenance_requests()
+        return result
+
+    def write(self, vals):
+        result = super().write(vals)
+        if vals.get("state") == "done":
+            self._barca_sync_linked_maintenance_requests()
+        return result
 
 
 class BarcaMaintenanceWorkorderLine(models.Model):
@@ -1599,11 +1733,45 @@ class BarcaMaintenanceWorkorderLine(models.Model):
             and is_planner
         )
 
+    @api.model
+    def _barca_get_required_start_labels(self, vals=None):
+        vals = vals or {}
+        checks = (
+            ("technical_location_id", "Ubicacion tecnica"),
+            ("intervention_type_id", "Tipo de intervencion"),
+            ("activity_id", "Actividad"),
+        )
+        missing = []
+        for field_name, label in checks:
+            current = self[field_name].id if self else False
+            value = vals.get(field_name, current)
+            if isinstance(value, (list, tuple)):
+                value = value[0] if value else False
+            if not value:
+                missing.append(label)
+        return missing
+
+    def _barca_check_can_start(self, vals=None):
+        for line in self:
+            missing = line._barca_get_required_start_labels(vals)
+            if missing:
+                raise ValidationError(
+                    "No se puede iniciar la actividad. Complete primero: %s."
+                    % ", ".join(missing)
+                )
+
     @api.model_create_multi
     def create(self, vals_list):
         for vals in vals_list:
             if vals.get("state") == "closed":
                 vals["state"] = "notified"
+            if vals.get("state") == "in_progress":
+                missing = self._barca_get_required_start_labels(vals)
+                if missing:
+                    raise ValidationError(
+                        "No se puede iniciar la actividad. Complete primero: %s."
+                        % ", ".join(missing)
+                    )
         self._barca_check_executor_create_parent_state(vals_list)
         records = super().create(vals_list)
         for record in records:
@@ -1615,6 +1783,8 @@ class BarcaMaintenanceWorkorderLine(models.Model):
         if vals.get("state") == "closed":
             vals = dict(vals, state="notified")
         self._barca_check_executor_parent_state()
+        if vals.get("state") == "in_progress":
+            self._barca_check_can_start(vals)
         result = super().write(vals)
         if self._PLANNING_FIELDS & set(vals.keys()):
             for record in self:
@@ -1692,8 +1862,15 @@ class BarcaMaintenanceWorkorderLine(models.Model):
                 raise ValidationError(
                     "Solo se pueden iniciar actividades en estado Pendiente."
                 )
+            line._barca_check_can_start()
             line.state = "in_progress"
         return True
+
+    def action_barca_reserve_materials(self):
+        self.ensure_one()
+        if not self.maintenance_request_id:
+            raise ValidationError("La actividad no tiene una OT asociada.")
+        return self.maintenance_request_id.action_barca_reserve_materials()
 
     def action_notify_line(self):
         for line in self:
@@ -1711,6 +1888,7 @@ class BarcaMaintenanceWorkorderLine(models.Model):
                 )
 
             line.material_line_ids._check_quantities_non_negative()
+            line.material_line_ids._barca_consume_available_for_notification()
             line.write(
                 {
                     "state": "notified",
@@ -1827,6 +2005,14 @@ class BarcaMaintenanceWorkorderLineMaterial(models.Model):
         default=1.0,
     )
 
+    requested_quantity = fields.Float(
+        string="Cantidad a solicitar a bodega",
+        default=0.0,
+    )
+    available_quantity = fields.Float(
+        string="Cantidad disponible Serviteca",
+        default=0.0,
+    )
     reserved_quantity = fields.Float(string="Cantidad reservada", default=0.0)
     withdrawn_quantity = fields.Float(string="Cantidad retirada", default=0.0)
     consumed_quantity = fields.Float(string="Cantidad consumida", default=0.0)
@@ -1909,8 +2095,32 @@ class BarcaMaintenanceWorkorderLineMaterial(models.Model):
                 "en etapa En progreso."
             )
 
+    def _barca_consume_available_for_notification(self):
+        for material in self:
+            if not material.product_id:
+                continue
+            available = material.available_quantity or 0.0
+            consumed = material.consumed_quantity or 0.0
+            if consumed <= 0 and available > 0:
+                material.consumed_quantity = available
+                consumed = available
+            if consumed > available:
+                raise ValidationError(
+                    "No se puede notificar la actividad porque el consumo del "
+                    "material '%s' (%.2f) supera la cantidad disponible en "
+                    "Serviteca (%.2f)."
+                    % (material.product_id.display_name, consumed, available)
+                )
+
     @api.model_create_multi
     def create(self, vals_list):
+        for vals in vals_list:
+            if (
+                vals.get("estimated_quantity")
+                and "requested_quantity" not in vals
+                and "available_quantity" not in vals
+            ):
+                vals["requested_quantity"] = vals["estimated_quantity"]
         self._barca_check_executor_create_parent_state(vals_list)
         return super().create(vals_list)
 
@@ -1937,6 +2147,12 @@ class BarcaMaintenanceWorkorderLineMaterial(models.Model):
 
             rec.display_name = label
 
+    @api.onchange("estimated_quantity")
+    def _onchange_estimated_quantity(self):
+        for rec in self:
+            if not rec.requested_quantity and not rec.available_quantity:
+                rec.requested_quantity = rec.estimated_quantity or 0.0
+
     @api.onchange("product_id")
     def _onchange_product_id(self):
         for rec in self:
@@ -1944,6 +2160,8 @@ class BarcaMaintenanceWorkorderLineMaterial(models.Model):
 
     @api.constrains(
         "estimated_quantity",
+        "requested_quantity",
+        "available_quantity",
         "reserved_quantity",
         "withdrawn_quantity",
         "consumed_quantity",
@@ -1952,6 +2170,8 @@ class BarcaMaintenanceWorkorderLineMaterial(models.Model):
     def _check_quantities_non_negative(self):
         quantity_fields = (
             "estimated_quantity",
+            "requested_quantity",
+            "available_quantity",
             "reserved_quantity",
             "withdrawn_quantity",
             "consumed_quantity",

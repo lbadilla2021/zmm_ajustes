@@ -91,11 +91,8 @@ flowchart TD
     MATS2 --> MAT5
     MATS3 --> MAT5
 
-    MAT5 --> MAT6{"Entregar materiales?"}
-    MAT6 -->|No| ACT0
-    MAT6 -->|Si| MAT7["Registrar cantidad retirada"]
-    MAT7 --> MAT8["Si hay reserva usa reservado; si no usa estimado"]
-    MAT8 --> ACT0
+    MAT5 --> MAT6["Bodega valida traslado interno en Inventario"]
+    MAT6 --> ACT0
 
     ACT0 --> ACT1["Actividad Pendiente"]
     ACT1 -->|Boton Iniciar| ACT2["Actividad En ejecucion"]
@@ -123,8 +120,8 @@ flowchart TD
     OTA1 --> OTA2["Notifica responsable"]
     OTA1B --> OTA2
 
-    OTA2 --> MATC0{"Materiales entregados?"}
-    MATC0 -->|No| OTCLOSESTD["Cerrar/terminar etapa estandar de OT si corresponde"]
+    OTA2 --> MATC0{"Picking validado en Inventario?"}
+    MATC0 -->|No| OTCLOSESTD["Regularizar traslado interno"]
     MATC0 -->|Si| MATC1["Registrar cantidad consumida por material"]
     MATC1 --> MATC2{"Cerrar materiales"}
     MATC2 -->|Consumo mayor que retirado| MATCERR["Validacion: corregir consumo"]

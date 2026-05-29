@@ -461,10 +461,10 @@ Desde la OT estándar `maintenance.request` se puede crear una reserva de materi
 
 ### Qué hace la reserva
 
-1. Recopila todos los materiales (`barca.maintenance.workorder.line.material`) de todas las actividades de la OT, considerando solo líneas con `product_id` y `estimated_quantity > 0`.
+1. Recopila todos los materiales (`barca.maintenance.workorder.line.material`) de todas las actividades de la OT, considerando solo lineas con `product_id` y `requested_quantity > 0`.
 2. Agrupa las líneas por producto (`product_id`) y unidad de medida (`product_uom_id`).
 3. Crea un `stock.picking` de tipo operación interna vinculado a la OT (`origin = "OT <nombre>"`).
-4. Crea un `stock.move` por cada grupo producto/UdM con la cantidad total estimada.
+4. Crea un `stock.move` por cada grupo producto/UdM con la cantidad total a solicitar a bodega.
 5. Confirma el picking con `action_confirm()` y asigna stock con `action_assign()`.
 6. **No valida el picking**: el stock físico no se descuenta en Fase 5.
 7. Actualiza `reserved_quantity` en las líneas de material de OT con distribución secuencial.
@@ -482,7 +482,7 @@ Desde la OT estándar `maintenance.request` se puede crear una reserva de materi
 
 - **Origen**: `warehouse.lot_stock_id` (stock principal del almacén).
 - **Tipo de picking**: `warehouse.int_type_id`; si no existe, se busca cualquier tipo `internal` activo para la compañía.
-- **Destino**: se busca primero una ubicación interna cuyo nombre contenga "mantenimiento"; si no existe, se usa `picking_type.default_location_dest_id`. Si destino == origen, se lanza `ValidationError`.
+- **Destino**: se usa exclusivamente `picking_type.default_location_dest_id`. La ubicación destino la define la configuración logística del tipo de operación interna, no una búsqueda por nombre en el código. Si no existe destino configurado o destino == origen, se lanza `ValidationError`.
 
 No se crean ubicaciones automáticamente.
 
@@ -507,39 +507,38 @@ Como los movimientos se agrupan, la cantidad reservada se distribuye secuencialm
 | `barca_material_picking_count` | Integer calculado para smart button |
 
 
-## Fase 6: entrega, consumo y cierre de materiales (versión simplificada Barca)
+## Fase 6: inventario, consumo y cierre de materiales
 
-Barca opera con una bodega simple. No se implementa flujo complejo de inventario. La entrega de materiales es un registro operativo sin generación de picking adicional.
+La OT no registra la entrega fisica de materiales. La entrega se realiza en Inventario validando el traslado interno generado por la reserva.
 
 ### Flujo de materiales en Fase 6
 
 ```
-[Fase 5: reservado] → Entregar materiales → Registrar consumo real → Cerrar materiales
+[Fase 5: reservado] -> Bodega valida traslado interno en Inventario -> Registrar consumo real -> Cerrar materiales
 ```
 
-La Fase 6 funciona aunque no se haya ejecutado la Fase 5 (sin reserva previa).
+La Fase 6 puede operar con materiales disponibles en Serviteca sin pedir a bodega. Si una linea tiene `requested_quantity > 0`, el picking de reserva debe estar validado (`done`) en Inventario antes de cerrar el ciclo de materiales.
 
-### Botón "Entregar materiales" (`action_barca_deliver_materials`)
+### Entrega desde Inventario
 
-- Si `reserved_quantity > 0` → usa `reserved_quantity` como `withdrawn_quantity`.
-- Si `reserved_quantity == 0` → usa `estimated_quantity` como `withdrawn_quantity`.
-- Marca `barca_material_withdrawn = True`, registra fecha y usuario.
-- Publica resumen en chatter indicando base usada (reserva o estimado).
-- No se crea picking adicional.
-- No se puede ejecutar dos veces.
+- No existe boton **Entregar materiales** en la OT.
+- Bodega entrega los materiales validando el traslado interno estandar de Odoo.
+- La OT traspasa cantidades desde `reserved_quantity` hacia `available_quantity` cuando el picking queda validado en Inventario.
+- Si hay cantidades solicitadas a bodega y el picking no esta validado, el cierre de materiales muestra un error indicando que la entrega debe realizarse desde Inventario.
 
 ### Registro de consumo real
 
-El campo `consumed_quantity` en cada línea de material (`barca.maintenance.workorder.line.material`) es editable. Representa la cantidad realmente utilizada por el técnico. No bloquea la notificación de actividades.
+El campo `consumed_quantity` en cada linea de material (`barca.maintenance.workorder.line.material`) es editable. Representa la cantidad realmente utilizada por el tecnico. Si esta en cero, al notificar una actividad el sistema consume automaticamente la cantidad disponible en Serviteca para esa linea.
 
-### Botón "Cerrar materiales" (`action_barca_close_materials`)
+### Boton "Cerrar materiales" (`action_barca_close_materials`)
 
-- Requiere que `barca_material_withdrawn == True`.
-- Valida que `consumed_quantity <= withdrawn_quantity` por línea.
-- Calcula `returned_quantity = withdrawn_quantity - consumed_quantity`.
+- Si existen cantidades solicitadas a bodega, requiere picking vinculado y validado en Inventario.
+- Sincroniza `available_quantity` desde el picking validado.
+- Valida que `consumed_quantity <= available_quantity` por linea.
+- Calcula `returned_quantity = available_quantity - consumed_quantity`.
 - Marca `barca_material_closed = True`, registra fecha y usuario.
 - Publica en chatter: totales entregado, consumido, devuelto, costo estimado, costo real, diferencia.
-- No crea picking de devolución.
+- No crea picking de devolucion.
 
 ### Costos
 
