@@ -1,0 +1,597 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- Registro de página en el Website para que aparezca en el listado -->
+    <record id="website_page_checklist" model="website.page">
+        <field name="name">Checklists de Mantención</field>
+        <field name="url">/checklist</field>
+        <field name="is_published">True</field>
+        <field name="website_indexed">False</field>
+        <field name="view_id" ref="zmm_ajustes.website_checklist_list"/>
+    </record>
+
+    <!-- ================================================================
+         LISTA DE CHECKLISTS
+         URL: /checklist
+    ================================================================ -->
+    <template id="website_checklist_list" name="Checklists - Lista">
+        <t t-call="website.layout">
+            <div class="container py-4">
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <h2>Checklists de Mantención</h2>
+                    <a href="/checklist/nuevo" class="btn btn-primary">
+                        <i class="fa fa-plus me-1"/> Nuevo Checklist
+                    </a>
+                </div>
+
+                <t t-if="not checklists">
+                    <div class="alert alert-info">No hay checklists registrados aún.</div>
+                </t>
+                <t t-else="">
+                    <div class="table-responsive">
+                        <table class="table table-hover table-bordered align-middle">
+                            <thead class="table-dark">
+                                <tr>
+                                    <th>Fecha</th>
+                                    <th>N° Checklist</th>
+                                    <th>Solicitante</th>
+                                    <th>Equipo</th>
+                                    <th>Tipo</th>
+                                    <th>Estado Vehículo</th>
+                                    <th>Estado</th>
+                                    <th>Aviso</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <t t-foreach="checklists" t-as="cl">
+                                    <tr>
+                                        <td>
+                                            <t t-out="cl.checklist_date"/>
+                                        </td>
+                                        <td>
+                                            <a t-attf-href="/checklist/#{cl.id}">
+                                                <t t-out="cl.name"/>
+                                            </a>
+                                        </td>
+                                        <td><t t-out="cl.requested_by_id.name"/></td>
+                                        <td><t t-out="cl.vehicle_id.name"/></td>
+                                        <td>
+                                            <t t-out="checklist_type_labels.get(cl.checklist_type, cl.checklist_type)"/>
+                                        </td>
+                                        <td>
+                                            <span t-attf-class="badge #{cl.vehicle_status == 'operativo' and 'bg-success' or 'bg-danger'}">
+                                                <t t-out="vehicle_status_labels.get(cl.vehicle_status, cl.vehicle_status)"/>
+                                            </span>
+                                        </td>
+                                        <td>
+                                            <span t-attf-class="badge #{cl.state == 'new' and 'bg-primary' or cl.state == 'notice_created' and 'bg-warning text-dark' or cl.state == 'closed_no_notice' and 'bg-secondary' or 'bg-dark'}">
+                                                <t t-out="state_labels.get(cl.state, cl.state)"/>
+                                            </span>
+                                        </td>
+                                        <td>
+                                            <t t-if="cl.alert_id">
+                                                <span class="badge bg-warning text-dark">
+                                                    <t t-out="cl.alert_id.name"/>
+                                                </span>
+                                            </t>
+                                            <t t-else="">
+                                                <span class="text-muted">—</span>
+                                            </t>
+                                        </td>
+                                    </tr>
+                                </t>
+                            </tbody>
+                        </table>
+                    </div>
+                </t>
+            </div>
+        </t>
+    </template>
+
+
+    <!-- ================================================================
+         FORMULARIO NUEVO CHECKLIST
+         URL: /checklist/nuevo
+    ================================================================ -->
+    <template id="website_checklist_form" name="Checklists - Nuevo">
+        <t t-call="website.layout">
+            <div class="container py-4">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h2>Nuevo Checklist</h2>
+                    <a href="/checklist" class="btn btn-outline-secondary">
+                        <i class="fa fa-arrow-left me-1"/> Volver
+                    </a>
+                </div>
+
+                <t t-if="error">
+                    <div class="alert alert-danger" role="alert">
+                        <i class="fa fa-exclamation-triangle me-1"/>
+                        <t t-out="error"/>
+                    </div>
+                </t>
+
+                <form method="post" action="/checklist/nuevo" id="checklist_form"
+                      data-offline-form="true"
+                      data-form-code="checklist_nuevo"
+                      data-sync-endpoint="/checklist/sync">
+                    <input type="hidden" name="csrf_token" t-att-value="request.csrf_token()"/>
+
+                    <!-- Datos generales -->
+                    <div class="card mb-3">
+                        <div class="card-header fw-bold">Datos generales</div>
+                        <div class="card-body">
+                            <div class="row g-3">
+                                <div class="col-md-6">
+                                    <label class="form-label fw-semibold">Equipo <span class="text-danger">*</span></label>
+                                    <select name="vehicle_id" class="form-select" required="required" id="vehicle_id">
+                                        <option value="">-- Seleccione un equipo --</option>
+                                        <t t-foreach="vehicles" t-as="v">
+                                            <option t-att-value="v.id"
+                                                    t-att-selected="post and str(v.id) == str(post.get('vehicle_id', ''))">
+                                                <t t-out="v.name"/>
+                                            </option>
+                                        </t>
+                                    </select>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label fw-semibold">Tipo de vehículo <span class="text-danger">*</span></label>
+                                    <select name="checklist_type" class="form-select" required="required" id="checklist_type_select">
+                                        <option value="">-- Seleccione tipo --</option>
+                                        <t t-foreach="checklist_types" t-as="ct">
+                                            <option t-att-value="ct[0]"
+                                                    t-att-selected="post and ct[0] == post.get('checklist_type', '')">
+                                                <t t-out="ct[1]"/>
+                                            </option>
+                                        </t>
+                                    </select>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label fw-semibold">Estado del vehículo <span class="text-danger">*</span></label>
+                                    <select name="vehicle_status" class="form-select" required="required">
+                                        <t t-foreach="vehicle_status_options" t-as="vs">
+                                            <option t-att-value="vs[0]"
+                                                    t-att-selected="not post and vs[0] == 'operativo' or post and vs[0] == post.get('vehicle_status', 'operativo')">
+                                                <t t-out="vs[1]"/>
+                                            </option>
+                                        </t>
+                                    </select>
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label fw-semibold">Hora carga combustible</label>
+                                    <input type="number" step="0.01" min="0" name="fuel_load_time"
+                                           class="form-control"
+                                           t-att-value="post and post.get('fuel_load_time', '') or ''"/>
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label fw-semibold">Odómetro</label>
+                                    <input type="number" step="0.01" min="0" name="odometer"
+                                           class="form-control"
+                                           t-att-value="post and post.get('odometer', '') or ''"/>
+                                </div>
+                                <div class="col-12">
+                                    <label class="form-label fw-semibold">Planta y lugar detallado</label>
+                                    <textarea name="detailed_location" class="form-control" rows="2"><t t-out="post and post.get('detailed_location', '') or ''"/></textarea>
+                                </div>
+                                <div class="col-12">
+                                    <label class="form-label fw-semibold">Observaciones</label>
+                                    <textarea name="observations" class="form-control" rows="3"><t t-out="post and post.get('observations', '') or ''"/></textarea>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Puntos de control (se cargan vía AJAX al seleccionar tipo) -->
+                    <div class="card mb-3" id="control_points_card" style="display:none">
+                        <div class="card-header fw-bold">Puntos de control</div>
+                        <div class="card-body p-0">
+                            <div class="table-responsive">
+                                <table class="table table-bordered table-sm mb-0" id="control_points_table">
+                                    <thead class="table-secondary">
+                                        <tr>
+                                            <th style="width:35%">Tipo de Control</th>
+                                            <th>Ítem de Control</th>
+                                            <th class="text-center" style="width:70px">Sí</th>
+                                            <th class="text-center" style="width:70px">No</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="control_points_body">
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="d-flex gap-2">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fa fa-save me-1"/> Guardar Checklist
+                        </button>
+                        <a href="/checklist" class="btn btn-outline-secondary">Cancelar</a>
+                    </div>
+                </form>
+            </div>
+
+            <script>
+                (function () {
+                    var typeSelect = document.getElementById('checklist_type_select');
+                    var card = document.getElementById('control_points_card');
+                    var tbody = document.getElementById('control_points_body');
+
+                    function loadItems(type) {
+                        if (!type) {
+                            card.style.display = 'none';
+                            tbody.innerHTML = '';
+                            return;
+                        }
+                        fetch('/checklist/items/' + encodeURIComponent(type), {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/json',
+                                'X-Requested-With': 'XMLHttpRequest'
+                            },
+                            body: JSON.stringify({jsonrpc: '2.0', method: 'call', params: {}})
+                        })
+                        .then(function(r){ return r.json(); })
+                        .then(function(data){
+                            var items = data.result || [];
+                            tbody.innerHTML = '';
+                            if (!items.length) {
+                                card.style.display = 'none';
+                                return;
+                            }
+                            var lastType = '';
+                            items.forEach(function(item){
+                                var tr = document.createElement('tr');
+                                var typeCell = '';
+                                if (item.control_type !== lastType) {
+                                    typeCell = '<td class="fw-semibold bg-light">' + escHtml(item.control_type) + '</td>';
+                                    lastType = item.control_type;
+                                } else {
+                                    typeCell = '<td></td>';
+                                }
+                                tr.innerHTML = typeCell +
+                                    '<td>' + escHtml(item.control_item) + '</td>' +
+                                    '<td class="text-center"><input type="checkbox" name="yes_' + item.id + '" value="1" class="form-check-input yes-check" data-item="' + item.id + '"/></td>' +
+                                    '<td class="text-center"><input type="checkbox" name="no_' + item.id + '" value="1" class="form-check-input no-check" data-item="' + item.id + '"/></td>';
+                                tbody.appendChild(tr);
+                            });
+                            card.style.display = '';
+                            attachMutualExclusion();
+                        })
+                        .catch(function(){ card.style.display = 'none'; });
+                    }
+
+                    function attachMutualExclusion() {
+                        tbody.querySelectorAll('.yes-check').forEach(function(chk){
+                            chk.addEventListener('change', function(){
+                                if (this.checked) {
+                                    var noChk = tbody.querySelector('.no-check[data-item="' + this.dataset.item + '"]');
+                                    if (noChk) noChk.checked = false;
+                                }
+                            });
+                        });
+                        tbody.querySelectorAll('.no-check').forEach(function(chk){
+                            chk.addEventListener('change', function(){
+                                if (this.checked) {
+                                    var yesChk = tbody.querySelector('.yes-check[data-item="' + this.dataset.item + '"]');
+                                    if (yesChk) yesChk.checked = false;
+                                }
+                            });
+                        });
+                    }
+
+                    function escHtml(str) {
+                        return String(str)
+                            .replace(/&amp;/g, '&amp;amp;')
+                            .replace(/"/g, '&amp;quot;')
+                            .replace(/'/g, '&#039;')
+                            .replace(/&lt;/g, '&amp;lt;')
+                            .replace(/&gt;/g, '&amp;gt;');
+                    }
+
+                    if (typeSelect) {
+                        typeSelect.addEventListener('change', function(){ loadItems(this.value); });
+                        if (typeSelect.value) { loadItems(typeSelect.value); }
+                    }
+                })();
+            </script>
+
+            <!-- Redirección automática cuando el sync offline completa exitosamente -->
+            <script>
+                window.addEventListener('z-offline-synced', function (e) {
+                    var record = e.detail;
+                    if (record &amp;&amp; record.server_response &amp;&amp; record.server_response.redirect) {
+                        window.location.href = record.server_response.redirect;
+                    }
+                });
+            </script>
+        </t>
+    </template>
+
+
+    <!-- ================================================================
+         DETALLE / EDICIÓN DE PUNTOS DE CONTROL
+         URL: /checklist/<id>
+    ================================================================ -->
+    <template id="website_checklist_detail" name="Checklists - Detalle">
+        <t t-call="website.layout">
+            <div class="container py-4">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h2>
+                        Checklist
+                        <span class="text-muted fs-5 ms-2">
+                            <t t-out="checklist.name"/>
+                        </span>
+                    </h2>
+                    <a href="/checklist" class="btn btn-outline-secondary">
+                        <i class="fa fa-arrow-left me-1"/> Volver
+                    </a>
+                </div>
+
+                <!-- Estado -->
+                <div class="mb-3">
+                    <span t-attf-class="badge fs-6 #{checklist.state == 'new' and 'bg-primary' or checklist.state == 'notice_created' and 'bg-warning text-dark' or checklist.state == 'closed_no_notice' and 'bg-secondary' or 'bg-dark'}">
+                        <t t-out="state_labels.get(checklist.state, checklist.state)"/>
+                    </span>
+                    <t t-if="checklist.alert_id">
+                        <span class="badge bg-warning text-dark fs-6 ms-2">
+                            Aviso: <t t-out="checklist.alert_id.name"/>
+                        </span>
+                    </t>
+                </div>
+
+                <!-- Mensajes de resultado -->
+                <t t-if="error">
+                    <div class="alert alert-danger" role="alert">
+                        <i class="fa fa-exclamation-triangle me-1"/>
+                        <t t-out="error"/>
+                    </div>
+                </t>
+                <t t-if="success">
+                    <div class="alert alert-success" role="alert">
+                        <i class="fa fa-check-circle me-1"/>
+                        <t t-out="success"/>
+                    </div>
+                </t>
+
+                <!-- Datos generales (solo lectura siempre) -->
+                <div class="card mb-3">
+                    <div class="card-header fw-bold">Datos generales</div>
+                    <div class="card-body">
+                        <div class="row g-3">
+                            <div class="col-md-4">
+                                <div class="text-muted small">N° Checklist</div>
+                                <div class="fw-semibold"><t t-out="checklist.name"/></div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="text-muted small">Fecha</div>
+                                <div class="fw-semibold"><t t-out="checklist.checklist_date"/></div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="text-muted small">Solicitante</div>
+                                <div class="fw-semibold"><t t-out="checklist.requested_by_id.name"/></div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="text-muted small">Equipo</div>
+                                <div class="fw-semibold"><t t-out="checklist.vehicle_id.name"/></div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="text-muted small">Tipo de vehículo</div>
+                                <div class="fw-semibold">
+                                    <t t-out="checklist_type_labels.get(checklist.checklist_type, checklist.checklist_type)"/>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="text-muted small">Estado del vehículo</div>
+                                <div>
+                                    <span t-attf-class="badge #{checklist.vehicle_status == 'operativo' and 'bg-success' or 'bg-danger'}">
+                                        <t t-out="vehicle_status_labels.get(checklist.vehicle_status, checklist.vehicle_status)"/>
+                                    </span>
+                                </div>
+                            </div>
+                            <t t-if="checklist.fuel_load_time">
+                                <div class="col-md-4">
+                                    <div class="text-muted small">Hora carga combustible</div>
+                                    <div class="fw-semibold"><t t-out="'%.2f' % checklist.fuel_load_time"/></div>
+                                </div>
+                            </t>
+                            <t t-if="checklist.odometer">
+                                <div class="col-md-4">
+                                    <div class="text-muted small">Odómetro</div>
+                                    <div class="fw-semibold"><t t-out="'%.2f' % checklist.odometer"/></div>
+                                </div>
+                            </t>
+                            <t t-if="checklist.detailed_location">
+                                <div class="col-12">
+                                    <div class="text-muted small">Planta y lugar detallado</div>
+                                    <div class="fw-semibold" style="white-space:pre-line"><t t-out="checklist.detailed_location"/></div>
+                                </div>
+                            </t>
+                            <t t-if="checklist.observations">
+                                <div class="col-12">
+                                    <div class="text-muted small">Observaciones</div>
+                                    <div class="fw-semibold" style="white-space:pre-line"><t t-out="checklist.observations"/></div>
+                                </div>
+                            </t>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Puntos de control -->
+                <t t-if="checklist.line_ids">
+                    <t t-if="checklist.state == 'new'">
+                        <!-- EDITABLE: formulario POST para guardar Sí/No -->
+                        <form t-attf-action="/checklist/#{checklist.id}" method="post">
+                            <input type="hidden" name="csrf_token" t-att-value="request.csrf_token()"/>
+                            <div class="card mb-3">
+                                <div class="card-header fw-bold d-flex justify-content-between align-items-center">
+                                    <span>Puntos de control</span>
+                                    <button type="submit" class="btn btn-primary btn-sm">
+                                        <i class="fa fa-save me-1"/> Guardar
+                                    </button>
+                                </div>
+                                <div class="card-body p-0">
+                                    <div class="table-responsive">
+                                        <table class="table table-bordered table-sm mb-0">
+                                            <thead class="table-secondary">
+                                                <tr>
+                                                    <th style="width:35%">Tipo de Control</th>
+                                                    <th>Ítem de Control</th>
+                                                    <th class="text-center" style="width:80px">
+                                                        <div>Sí</div>
+                                                        <input type="checkbox" id="select_all_yes"
+                                                               class="form-check-input mt-1"
+                                                               title="Marcar / desmarcar todos"/>
+                                                    </th>
+                                                    <th class="text-center" style="width:80px">No</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody id="lines_body">
+                                                <t t-set="last_type" t-value="''"/>
+                                                <t t-foreach="checklist.line_ids" t-as="line">
+                                                    <tr t-attf-class="#{line.no and 'table-danger' or line.yes and 'table-success' or ''}">
+                                                        <td class="fw-semibold bg-light align-middle">
+                                                            <t t-if="line.control_type != last_type">
+                                                                <t t-set="last_type" t-value="line.control_type"/>
+                                                                <t t-out="line.control_type"/>
+                                                            </t>
+                                                        </td>
+                                                        <td class="align-middle"><t t-out="line.control_item"/></td>
+                                                        <td class="text-center align-middle">
+                                                            <input type="checkbox"
+                                                                   t-attf-name="yes_#{line.id}"
+                                                                   value="1"
+                                                                   class="form-check-input yes-check"
+                                                                   t-attf-data-line="#{line.id}"
+                                                                   t-att-checked="line.yes and 'checked' or None"/>
+                                                        </td>
+                                                        <td class="text-center align-middle">
+                                                            <input type="checkbox"
+                                                                   t-attf-name="no_#{line.id}"
+                                                                   value="1"
+                                                                   class="form-check-input no-check"
+                                                                   t-attf-data-line="#{line.id}"
+                                                                   t-att-checked="line.no and 'checked' or None"/>
+                                                        </td>
+                                                    </tr>
+                                                </t>
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                                <div class="card-footer text-end">
+                                    <button type="submit" class="btn btn-primary">
+                                        <i class="fa fa-save me-1"/> Guardar puntos de control
+                                    </button>
+                                </div>
+                            </div>
+                        </form>
+
+                        <script>
+                        (function () {
+                            var tbody    = document.getElementById('lines_body');
+                            var selectAll = document.getElementById('select_all_yes');
+                            if (!tbody) return;
+
+                            function updateRowColor(lineId) {
+                                var row    = tbody.querySelector('[data-line="' + lineId + '"]').closest('tr');
+                                var yesChk = tbody.querySelector('.yes-check[data-line="' + lineId + '"]');
+                                var noChk  = tbody.querySelector('.no-check[data-line="' + lineId + '"]');
+                                row.classList.remove('table-success', 'table-danger');
+                                if (yesChk &amp;&amp; yesChk.checked) row.classList.add('table-success');
+                                if (noChk  &amp;&amp; noChk.checked)  row.classList.add('table-danger');
+                            }
+
+                            // Casilla "seleccionar / deseleccionar todos" en Sí
+                            if (selectAll) {
+                                selectAll.addEventListener('change', function () {
+                                    var checked = this.checked;
+                                    tbody.querySelectorAll('.yes-check').forEach(function (chk) {
+                                        chk.checked = checked;
+                                        if (checked) {
+                                            var noChk = tbody.querySelector('.no-check[data-line="' + chk.dataset.line + '"]');
+                                            if (noChk) noChk.checked = false;
+                                        }
+                                        updateRowColor(chk.dataset.line);
+                                    });
+                                });
+                            }
+
+                            // Exclusión mutua por fila + sincronizar estado de "seleccionar todos"
+                            tbody.addEventListener('change', function (e) {
+                                var chk = e.target;
+                                if (!chk.matches('.yes-check, .no-check')) return;
+                                var lineId = chk.dataset.line;
+                                var isYes  = chk.classList.contains('yes-check');
+                                if (chk.checked) {
+                                    var opposite = tbody.querySelector(
+                                        (isYes ? '.no-check' : '.yes-check') + '[data-line="' + lineId + '"]'
+                                    );
+                                    if (opposite) opposite.checked = false;
+                                }
+                                updateRowColor(lineId);
+
+                                // Actualizar estado de "seleccionar todos": marcado solo si todos los Sí están marcados
+                                if (selectAll &amp;&amp; isYes) {
+                                    var allYes = tbody.querySelectorAll('.yes-check');
+                                    selectAll.checked = Array.from(allYes).every(function (c) { return c.checked; });
+                                }
+                            });
+                        })();
+                        </script>
+                    </t>
+                    <t t-else="">
+                        <!-- SOLO LECTURA: estado distinto de 'new' -->
+                        <div class="card mb-3">
+                            <div class="card-header fw-bold">Puntos de control</div>
+                            <div class="card-body p-0">
+                                <div class="table-responsive">
+                                    <table class="table table-bordered table-sm mb-0">
+                                        <thead class="table-secondary">
+                                            <tr>
+                                                <th style="width:35%">Tipo de Control</th>
+                                                <th>Ítem de Control</th>
+                                                <th class="text-center" style="width:80px">Sí</th>
+                                                <th class="text-center" style="width:80px">No</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            <t t-set="last_type" t-value="''"/>
+                                            <t t-foreach="checklist.line_ids" t-as="line">
+                                                <tr t-attf-class="#{line.no and 'table-danger' or line.yes and 'table-success' or ''}">
+                                                    <td class="fw-semibold bg-light align-middle">
+                                                        <t t-if="line.control_type != last_type">
+                                                            <t t-set="last_type" t-value="line.control_type"/>
+                                                            <t t-out="line.control_type"/>
+                                                        </t>
+                                                    </td>
+                                                    <td class="align-middle"><t t-out="line.control_item"/></td>
+                                                    <td class="text-center align-middle">
+                                                        <t t-if="line.yes">
+                                                            <i class="fa fa-check text-success fs-5"/>
+                                                        </t>
+                                                    </td>
+                                                    <td class="text-center align-middle">
+                                                        <t t-if="line.no">
+                                                            <i class="fa fa-times text-danger fs-5"/>
+                                                        </t>
+                                                    </td>
+                                                </tr>
+                                            </t>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </t>
+                </t>
+
+                <div class="mt-3">
+                    <a href="/checklist" class="btn btn-outline-secondary">
+                        <i class="fa fa-arrow-left me-1"/> Volver a la lista
+                    </a>
+                </div>
+            </div>
+        </t>
+    </template>
+
+</odoo>

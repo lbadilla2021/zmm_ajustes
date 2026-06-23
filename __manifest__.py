@@ -10,6 +10,9 @@
         'maintenance',
         'stock',
         'mail',
+        'web',
+        'website',
+        'zweb_offline_forms',
     ],
     'data': [
         'security/res_groups.xml',
@@ -36,7 +39,13 @@
         'views/fleet_vehicle_log_contract_views.xml',
         'data/cron.xml',
         'data/cron_pm_alerts.xml',
+        'templates/checklist_website.xml',
     ],
+    'assets': {
+        'web.assets_backend': [
+            'zmm_ajustes/static/src/js/workorder_activity_start_button.js',
+        ],
+    },
     'installable': True,
     'application': True,
     'post_init_hook': 'sync_existing_vehicle_equipment',

@@ -131,6 +131,13 @@ class BarcaMaintenanceChecklist(models.Model):
         required=True,
         tracking=True,
     )
+    offline_local_uuid = fields.Char(
+        string="UUID offline",
+        copy=False,
+        index=True,
+        help="UUID generado por el cliente cuando el checklist fue creado sin conexión. "
+             "Permite idempotencia al re-sincronizar el mismo formulario.",
+    )
 
     @api.constrains("vehicle_id", "equipment_id")
     def _check_vehicle_equipment_consistency(self):

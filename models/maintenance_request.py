@@ -946,6 +946,7 @@ class MaintenanceRequest(models.Model):
         "name",
         "request_date",
         "schedule_date",
+        "barca_start_datetime",
     }
 
     barca_state = fields.Selection(
@@ -975,6 +976,14 @@ class MaintenanceRequest(models.Model):
     )
     barca_stage_is_partial_close = fields.Boolean(
         string="Etapa Cierre Parcial",
+        compute="_compute_barca_stage_flags",
+    )
+    barca_stage_is_total_close = fields.Boolean(
+        string="Etapa Cierre Total",
+        compute="_compute_barca_stage_flags",
+    )
+    barca_stage_is_discard = fields.Boolean(
+        string="Etapa Desechar",
         compute="_compute_barca_stage_flags",
     )
     barca_stage_is_repaired = fields.Boolean(
@@ -1008,6 +1017,14 @@ class MaintenanceRequest(models.Model):
         "barca.maintenance.alert",
         string="Aviso Barca",
         index=True,
+    )
+    barca_start_datetime = fields.Datetime(
+        string="Fecha y hora de inicio",
+        copy=False,
+        readonly=True,
+        tracking=True,
+        help="Primer inicio real de la OT. Se registra al iniciar la primera "
+             "actividad y no se modifica durante el ciclo de vida.",
     )
     barca_activity_line_ids = fields.One2many(
         "barca.maintenance.workorder.line",
@@ -1069,6 +1086,8 @@ class MaintenanceRequest(models.Model):
         progress_stage = self._barca_get_progress_stage()
         review_stage = self._barca_get_review_stage()
         partial_close_stage = self._barca_get_close_partial_stage()
+        total_close_stage = self._barca_get_close_total_stage()
+        discard_stage = self._barca_get_discard_stage()
         for request in self:
             request.barca_stage_is_in_progress = bool(
                 progress_stage and request.stage_id == progress_stage
@@ -1081,6 +1100,12 @@ class MaintenanceRequest(models.Model):
             )
             request.barca_stage_is_partial_close = bool(
                 partial_close_stage and request.stage_id == partial_close_stage
+            )
+            request.barca_stage_is_total_close = bool(
+                total_close_stage and request.stage_id == total_close_stage
+            )
+            request.barca_stage_is_discard = bool(
+                discard_stage and request.stage_id == discard_stage
             )
 
     @api.depends("stage_id")
@@ -1300,6 +1325,19 @@ class MaintenanceRequest(models.Model):
         }
 
     def write(self, vals):
+        if "barca_start_datetime" in vals:
+            if not self.env.context.get("allow_barca_workorder_start_write"):
+                raise ValidationError(
+                    "La fecha y hora de inicio de la OT no se puede modificar "
+                    "manualmente."
+                )
+            for request in self:
+                if request.barca_start_datetime:
+                    raise ValidationError(
+                        "La fecha y hora de inicio de la OT ya fue registrada "
+                        "y no puede modificarse."
+                    )
+
         self._barca_check_executor_write_access(vals)
         target_stage = False
         if "stage_id" in vals and vals["stage_id"]:
@@ -1389,6 +1427,28 @@ class MaintenanceRequest(models.Model):
             "Cierre Parcial",
         )
 
+    def action_barca_discard(self):
+        """Desecha una OT Barca desde la etapa En revision."""
+        self.ensure_one()
+        self._barca_check_can_discard()
+
+        discard_stage = self._barca_get_discard_stage()
+        if not discard_stage:
+            raise ValidationError("No se encontro la etapa Desechar.")
+
+        self.write({"stage_id": discard_stage.id})
+        self.message_post(
+            body=(
+                "<b>OT desechada</b><br/>"
+                "Desechada por: <b>%s</b>"
+            ) % self.env.user.name,
+        )
+        return self._barca_notification_action(
+            "OT desechada",
+            "La OT quedo en etapa Desechar.",
+            notification_type="warning",
+        )
+
     def action_barca_approve(self):
         """Compatibilidad: la antigua aprobación equivale a Cierre Total."""
         return self.action_barca_close_total()
@@ -1443,11 +1503,16 @@ class MaintenanceRequest(models.Model):
 
 
     def action_barca_reopen_partial_to_review(self):
-        """Reabre una OT con cierre parcial y la devuelve a revision."""
+        """Reabre una OT con cierre parcial o total y la devuelve a revision."""
         self.ensure_one()
-        if not self._barca_is_stage_partial_close():
+        if not (
+            self._barca_is_stage_partial_close()
+            or self._barca_is_stage_total_close()
+            or self._barca_is_stage_discard()
+        ):
             raise ValidationError(
-                "Solo se puede reabrir a revision una OT en Cierre Parcial."
+                "Solo se puede reabrir a revision una OT en Cierre Parcial "
+                "Cierre Total o Desechar."
             )
 
         review_stage = self._barca_get_review_stage()
@@ -1458,7 +1523,7 @@ class MaintenanceRequest(models.Model):
             {"stage_id": review_stage.id}
         )
         if self.barca_alert_id and self.barca_alert_id.state == "closed":
-            self.barca_alert_id.write(
+            self.barca_alert_id.with_context(allow_alert_state_write=True).write(
                 {
                     "state": "in_progress",
                     "closed_by_id": False,
@@ -1476,6 +1541,28 @@ class MaintenanceRequest(models.Model):
             "La OT volvio a En revision.",
             notification_type="warning",
         )
+
+    def reset_equipment_request(self):
+        """Reabre una OT archivada sin sacarla del flujo Barca."""
+        barca_requests = self.filtered(lambda request: request._barca_is_barca_flow_request())
+        other_requests = self - barca_requests
+
+        result = True
+        if other_requests:
+            result = super(MaintenanceRequest, other_requests).reset_equipment_request()
+
+        if barca_requests:
+            barca_requests.write({"archive": False})
+            for request in barca_requests:
+                request.message_post(
+                    body=(
+                        "<b>OT reabierta</b><br/>"
+                        "Reabierta por: <b>%s</b><br/>"
+                        "Etapa conservada: <b>%s</b>"
+                    )
+                    % (self.env.user.name, request.stage_id.name or "")
+                )
+        return result
 
 class StockPicking(models.Model):
     _inherit = "stock.picking"
@@ -1610,6 +1697,12 @@ class BarcaMaintenanceWorkorderLine(models.Model):
     notification_date = fields.Datetime(
         string="Fecha/hora notificación",
         readonly=True,
+    )
+
+    start_datetime = fields.Datetime(
+        string="Fecha/hora inicio",
+        readonly=True,
+        copy=False,
     )
 
     notified_by_id = fields.Many2one(
@@ -1780,6 +1873,13 @@ class BarcaMaintenanceWorkorderLine(models.Model):
         return records
 
     def write(self, vals):
+        if "start_datetime" in vals and not self.env.context.get(
+            "allow_barca_activity_start_write"
+        ):
+            raise ValidationError(
+                "La fecha y hora de inicio de la actividad no se puede "
+                "modificar manualmente."
+            )
         if vals.get("state") == "closed":
             vals = dict(vals, state="notified")
         self._barca_check_executor_parent_state()
@@ -1857,13 +1957,24 @@ class BarcaMaintenanceWorkorderLine(models.Model):
             rec.material_summary = summary
 
     def action_start_line(self):
+        start_datetime = fields.Datetime.now()
         for line in self:
             if line.state != "pending":
                 raise ValidationError(
                     "Solo se pueden iniciar actividades en estado Pendiente."
                 )
             line._barca_check_can_start()
-            line.state = "in_progress"
+            line.with_context(allow_barca_activity_start_write=True).write(
+                {
+                    "state": "in_progress",
+                    "start_datetime": start_datetime,
+                }
+            )
+            request = line.maintenance_request_id
+            if request and not request.barca_start_datetime:
+                request.with_context(
+                    allow_barca_workorder_start_write=True
+                ).write({"barca_start_datetime": start_datetime})
         return True
 
     def action_barca_reserve_materials(self):
@@ -1942,9 +2053,10 @@ class BarcaMaintenanceWorkorderLine(models.Model):
             )
 
         for line in self:
-            line.write(
+            line.with_context(allow_barca_activity_start_write=True).write(
                 {
                     "state": "pending",
+                    "start_datetime": False,
                     "notification_date": False,
                     "notified_by_id": False,
                 }

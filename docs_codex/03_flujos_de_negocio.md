@@ -411,6 +411,8 @@ Las cantidades operativas de materiales de OT deben ser mayores o iguales a cero
 
 La OT gestiona su propio ciclo de programación, ejecución, revisión y cierre. Cambiar la OT a **En revisión** no cierra el aviso. El aviso permanece en `Con OT creada` hasta que la OT pasa a **Cierre Total**, **Cierre Parcial** o **Desechar**; entonces la OT invoca `action_close()` del aviso automáticamente.
 
+Una OT en **Cierre Parcial**, **Cierre Total** o **Desechar** puede reabrirse a **En revisión** mediante la acción **Reabrir a revisión** para Programador/Admin. Si el aviso asociado estaba cerrado, se devuelve internamente a `Con OT creada` usando el contexto de transición permitido. **Desechar** solo está disponible desde **En revisión**.
+
 ## Cierre del aviso PM
 
 Al cerrar (`action_close()`):
@@ -434,9 +436,9 @@ Pendiente → En ejecución → Notificada
 
 Acciones disponibles:
 
-- **Iniciar**: cambia una actividad `pending` a `in_progress`. Se permite que varias actividades de la misma OT estén simultáneamente en ejecución; Fase 4 no impone una restricción de actividad única en curso.
+- **Iniciar**: cambia una actividad `pending` a `in_progress` y registra `start_datetime` con la fecha/hora real de inicio de esa actividad. Si es la primera actividad iniciada de la OT, registra también `barca_start_datetime` en la OT. Se permite que varias actividades de la misma OT estén simultáneamente en ejecución; Fase 4 no impone una restricción de actividad única en curso.
 - **Notificar**: exige descripción de lo realizado, resultado y cantidades de materiales no negativas; cambia la actividad `in_progress` a `notified` y registra fecha/hora y usuario notificador.
-- **Reabrir a pendiente**: solo para administrador o programador Barca; vuelve la actividad a `pending` y limpia fecha/usuario de notificación, conservando descripción, resultado, materiales y cantidades informadas.
+- **Reabrir a pendiente**: solo para administrador o programador Barca; vuelve la actividad a `pending` y limpia fecha/hora de inicio de la actividad y fecha/usuario de notificación, conservando descripción, resultado, materiales y cantidades informadas. El inicio de la OT (`barca_start_datetime`) no se limpia ni se recalcula.
 
 La pestaña **Materiales / Repuestos / Kits** de la actividad de OT muestra el detalle estructurado de materiales, repuestos o kits. Mantiene visibles las cantidades `estimated_quantity`, `reserved_quantity`, `withdrawn_quantity`, `consumed_quantity` y `returned_quantity`, además de UdM y observación, como preparación para Fase 5 y Fase 6. En Fase 4 esas cantidades son datos manuales/estructurales y no ejecutan operaciones logísticas.
 

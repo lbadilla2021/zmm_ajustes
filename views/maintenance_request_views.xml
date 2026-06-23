@@ -7,18 +7,19 @@
         <field name="arch" type="xml">
             <list editable="bottom" open_form_view="1"
                   decoration-warning="barca_added_after_return == True">
-                <field name="sequence" widget="handle"/>
+                <field name="sequence" widget="handle" force_save="1"/>
                 <field name="barca_added_after_return" column_invisible="1"/>
                 <field name="barca_locked_for_executor" column_invisible="1"/>
-                <field name="technical_location_id" required="1" readonly="barca_locked_for_executor"/>
-                <field name="intervention_type_id" required="1" readonly="barca_locked_for_executor"/>
-                <field name="activity_id" required="1" readonly="barca_locked_for_executor"/>
-                <field name="estimated_duration" readonly="barca_locked_for_executor"/>
+                <field name="technical_location_id" required="1" readonly="barca_locked_for_executor" force_save="1"/>
+                <field name="intervention_type_id" required="1" readonly="barca_locked_for_executor" force_save="1"/>
+                <field name="activity_id" required="1" readonly="barca_locked_for_executor" force_save="1"/>
+                <field name="estimated_duration" readonly="barca_locked_for_executor" force_save="1"/>
                 <field name="state" readonly="1"/>
                 <button name="action_start_line" string="Iniciar" type="object" class="btn-primary" display="always" invisible="state != 'pending' or barca_locked_for_executor"/>
                 <button name="action_notify_line_open_form" string="Notificar" type="object" class="btn-primary" invisible="state != 'in_progress' or barca_locked_for_executor"/>
-                <field name="material_count" readonly="1"/>
-                <field name="material_summary" readonly="1"/>
+                <field name="material_count" string="Número materiales" readonly="1" optional="hide"/>
+                <field name="material_summary" readonly="1" optional="hide"/>
+                <field name="start_datetime" string="Fecha/Hora Inicio" readonly="1" optional="hide"/>
                 <field name="alert_line_id" readonly="1" optional="hide"/>
                 <field name="alert_id" readonly="1" optional="hide"/>
                 <field name="plan_line_id" readonly="1" optional="hide"/>
@@ -118,6 +119,7 @@
                                     <field name="activity_id" required="1" readonly="barca_locked_for_executor"/>
                                     <field name="estimated_duration" readonly="barca_locked_for_executor"/>
                                     <field name="state" readonly="1"/>
+                                    <field name="start_datetime" readonly="1"/>
                                     <field name="material_count" readonly="1"/>
                                     <field name="material_summary" readonly="1"/>
                                 </group>
@@ -190,6 +192,14 @@
                 <attribute name="readonly">1</attribute>
             </xpath>
 
+            <xpath expr="//button[@name='archive_equipment_request']" position="attributes">
+                <attribute name="invisible">1</attribute>
+            </xpath>
+
+            <xpath expr="//field[@name='maintenance_type']" position="after">
+                <field name="barca_start_datetime" readonly="1"/>
+            </xpath>
+
             <xpath expr="//form/header" position="inside">
                 <!-- Flujo de revisión Barca -->
                 <button
@@ -226,6 +236,22 @@
                 />
                 <!-- Fase 6: botón cerrar materiales -->
                 <button
+                    name="action_barca_reopen_partial_to_review"
+                    string="Reabrir a revision"
+                    type="object"
+                    class="btn-secondary"
+                    groups="zmm_ajustes.group_barca_programador,zmm_ajustes.group_barca_admin"
+                    invisible="not barca_stage_is_partial_close and not barca_stage_is_total_close and not barca_stage_is_discard"
+                />
+                <button
+                    name="action_barca_discard"
+                    string="Desechar"
+                    type="object"
+                    class="btn-secondary"
+                    groups="zmm_ajustes.group_barca_programador,zmm_ajustes.group_barca_admin"
+                    invisible="not barca_stage_is_review"
+                />
+                <button
                     name="action_barca_close_materials"
                     string="Cerrar materiales"
                     type="object"
@@ -245,6 +271,8 @@
                 <field name="barca_stage_is_in_progress" readonly="1" invisible="1"/>
                 <field name="barca_stage_is_review" readonly="1" invisible="1"/>
                 <field name="barca_stage_is_partial_close" readonly="1" invisible="1"/>
+                <field name="barca_stage_is_total_close" readonly="1" invisible="1"/>
+                <field name="barca_stage_is_discard" readonly="1" invisible="1"/>
                 <field name="barca_stage_is_repaired" readonly="1" invisible="1"/>
                 <field name="barca_locked_for_executor" readonly="1" invisible="1"/>
                 <field name="barca_return_count" readonly="1" invisible="1"/>
@@ -274,14 +302,6 @@
                                readonly="not barca_stage_is_review"
                                invisible="barca_stage_is_in_progress and barca_return_count == 0"
                                groups="zmm_ajustes.group_barca_programador,zmm_ajustes.group_barca_admin"/>
-                        <button
-                            name="action_barca_reopen_partial_to_review"
-                            string="Reabrir a revision"
-                            type="object"
-                            class="btn-secondary"
-                            groups="zmm_ajustes.group_barca_programador,zmm_ajustes.group_barca_admin"
-                            invisible="not barca_stage_is_partial_close"
-                        />
                     </group>
                 </group>
 
@@ -318,17 +338,18 @@
                     <field name="barca_activity_line_ids" readonly="barca_locked_for_executor" context="{'default_maintenance_request_id': id, 'form_view_ref': 'zmm_ajustes.view_barca_maintenance_workorder_line_form'}">
                         <list editable="bottom" open_form_view="1"
                               decoration-warning="barca_added_after_return == True">
-                            <field name="sequence" widget="handle" readonly="parent.barca_locked_for_executor"/>
+                            <field name="sequence" widget="handle" readonly="parent.barca_locked_for_executor" force_save="1"/>
                             <field name="barca_added_after_return" column_invisible="1"/>
-                            <field name="technical_location_id" required="1" readonly="parent.barca_locked_for_executor"/>
-                            <field name="intervention_type_id" required="1" readonly="parent.barca_locked_for_executor"/>
-                            <field name="activity_id" required="1" readonly="parent.barca_locked_for_executor"/>
-                            <field name="estimated_duration" readonly="parent.barca_locked_for_executor"/>
+                            <field name="technical_location_id" required="1" readonly="parent.barca_locked_for_executor" force_save="1"/>
+                            <field name="intervention_type_id" required="1" readonly="parent.barca_locked_for_executor" force_save="1"/>
+                            <field name="activity_id" required="1" readonly="parent.barca_locked_for_executor" force_save="1"/>
+                            <field name="estimated_duration" readonly="parent.barca_locked_for_executor" force_save="1"/>
                             <field name="state" readonly="1"/>
                             <button name="action_start_line" string="Iniciar" type="object" class="btn-primary" display="always" invisible="state != 'pending' or parent.barca_locked_for_executor"/>
                             <button name="action_notify_line_open_form" string="Notificar" type="object" class="btn-primary" invisible="state != 'in_progress' or parent.barca_locked_for_executor"/>
-                            <field name="material_count" readonly="1"/>
-                            <field name="material_summary" readonly="1"/>
+                            <field name="material_count" string="Número materiales" readonly="1" optional="hide"/>
+                            <field name="material_summary" readonly="1" optional="hide"/>
+                            <field name="start_datetime" string="Fecha/Hora Inicio" readonly="1" optional="hide"/>
                             <field name="alert_line_id" readonly="1" optional="hide"/>
                             <field name="alert_id" readonly="1" optional="hide"/>
                             <field name="plan_line_id" readonly="1" optional="hide"/>
@@ -351,6 +372,7 @@
                                                 <field name="activity_id" required="1" readonly="barca_locked_for_executor"/>
                                                 <field name="estimated_duration" readonly="barca_locked_for_executor"/>
                                                 <field name="state" readonly="1"/>
+                                                <field name="start_datetime" readonly="1"/>
                                                 <field name="material_count" readonly="1"/>
                                                 <field name="material_summary" readonly="1"/>
                                             </group>

@@ -601,10 +601,13 @@ El aviso asociado queda en estado técnico `in_progress` / funcional `Con OT cre
 
 Varias actividades de una misma OT pueden estar en `in_progress` al mismo tiempo; el modelo no aplica una restricción de actividad única en ejecución. La notificación de avance se registra en la misma actividad mediante:
 
+- `start_datetime`: fecha/hora asignada automáticamente al iniciar la actividad. Se limpia solo cuando administrador o programador reabre la actividad a `pending`.
 - `notification_note`: descripción manual de lo realizado.
 - `result`: resultado informado (`resolved`, `partial`, `not_resolved`).
 - `notification_date`: fecha/hora asignada automáticamente al notificar.
 - `notified_by_id`: usuario que notificó la actividad.
+
+`maintenance.request` registra `barca_start_datetime` con la fecha/hora del primer inicio de actividad de la OT. Este valor es de solo lectura, se escribe una sola vez y no se modifica al reabrir actividades ni durante el resto del ciclo de vida de la OT.
 
 `maintenance.request` calcula contadores de actividades Barca para apoyar revisión operativa:
 
