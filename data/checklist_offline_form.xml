@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<odoo>
+    <record id="offline_form_checklist_nuevo" model="zweb.offline.form">
+        <field name="name">Checklist de Mantencion</field>
+        <field name="code">checklist_nuevo</field>
+        <field name="active">True</field>
+        <field name="target_model">barca.maintenance.checklist</field>
+        <field name="require_login">False</field>
+        <field name="version">1</field>
+        <field name="description">Formulario web externo para crear checklists de mantencion.</field>
+    </record>
+</odoo>

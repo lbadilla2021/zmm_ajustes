@@ -1,3 +1,5 @@
+from urllib.parse import quote
+
 from odoo import http
 from odoo.http import request
 from odoo.exceptions import ValidationError
@@ -24,6 +26,7 @@ STATE_LABELS = {
 
 # Base de datos que sirve las páginas del checklist público.
 # Se puede sobrescribir en la URL con ?db=nombre mientras se desarrolla.
+CHECKLIST_FORM_CODE = "checklist_nuevo"
 _CHECKLIST_DB = "barca-productivo"
 
 
@@ -46,8 +49,77 @@ def _get_env(db=None):
 
 class ChecklistWebsite(http.Controller):
 
+    def _get_bearer_token(self):
+        auth_header = request.httprequest.headers.get("Authorization", "")
+        if auth_header.lower().startswith("bearer "):
+            return auth_header[7:].strip()
+        return None
+
+    def _get_external_access_token(self, **values):
+        return (
+            values.get("external_access_token")
+            or values.get("access_token")
+            or self._get_bearer_token()
+            or request.httprequest.cookies.get("zweb_offline_auth_%s" % CHECKLIST_FORM_CODE)
+        )
+
+    def _check_external_access(self, form_code=CHECKLIST_FORM_CODE, access_token=None, mark_used=False):
+        return request.env["zweb.offline.form.token.user"].sudo().get_access_token_auth_result(
+            access_token,
+            form_code=form_code,
+            mark_used=mark_used,
+        )
+
+    def _json_access_denied(self, result):
+        return {
+            "ok": False,
+            "error_code": result.get("error_code"),
+            "error": result.get("message") or "Acceso denegado.",
+        }
+
+    def _render_checklist_access_denied(self, result):
+        next_url = request.httprequest.full_path or "/checklist/nuevo"
+        if next_url.endswith("?"):
+            next_url = next_url[:-1]
+        return request.render(
+            "zmm_ajustes.website_checklist_access_denied",
+            {
+                "error": result.get("message") or "Debe autenticarse para acceder al checklist.",
+                "login_url": "/checklist/login?next=%s" % quote(next_url, safe=""),
+            },
+        )
+
+    def _safe_next_url(self, next_url):
+        if not next_url or not next_url.startswith("/checklist"):
+            return "/checklist/nuevo"
+        if next_url.startswith("/checklist/login"):
+            return "/checklist/nuevo"
+        return next_url
+
+    @http.route("/checklist/login", auth="public", website=True, sitemap=False, methods=["GET"])
+    def checklist_login(self, next=None, **kwargs):
+        next_url = self._safe_next_url(next)
+        access_result = self._check_external_access(
+            access_token=self._get_external_access_token(**kwargs),
+        )
+        if access_result["ok"]:
+            return request.redirect(next_url)
+        return request.render(
+            "zmm_ajustes.website_checklist_login",
+            {
+                "form_code": CHECKLIST_FORM_CODE,
+                "next_url": next_url,
+            },
+        )
+
     @http.route("/checklist", auth="public", website=True, sitemap=False)
     def checklist_list(self, db=None, **kwargs):
+        access_result = self._check_external_access(
+            access_token=self._get_external_access_token(**kwargs),
+        )
+        if not access_result["ok"]:
+            return self._render_checklist_access_denied(access_result)
+
         env = request.env(su=True)
         checklists = env["barca.maintenance.checklist"].search(
             [], order="checklist_date desc, id desc", limit=50
@@ -64,6 +136,12 @@ class ChecklistWebsite(http.Controller):
 
     @http.route("/checklist/nuevo", auth="public", website=True, sitemap=False, methods=["GET"])
     def checklist_new(self, db=None, **kwargs):
+        access_result = self._check_external_access(
+            access_token=self._get_external_access_token(**kwargs),
+        )
+        if not access_result["ok"]:
+            return self._render_checklist_access_denied(access_result)
+
         env = request.env(su=True)
         vehicles = env["fleet.vehicle"].search([], order="name")
         return request.render(
@@ -81,6 +159,13 @@ class ChecklistWebsite(http.Controller):
 
     @http.route("/checklist/nuevo", auth="public", website=True, sitemap=False, methods=["POST"], csrf=True)
     def checklist_create(self, db=None, **post):
+        access_result = self._check_external_access(
+            access_token=self._get_external_access_token(**post),
+            mark_used=True,
+        )
+        if not access_result["ok"]:
+            return self._render_checklist_access_denied(access_result)
+
         env = request.env(su=True)
         vehicles = env["fleet.vehicle"].search([], order="name")
         error = None
@@ -125,6 +210,9 @@ class ChecklistWebsite(http.Controller):
                 "detailed_location": post.get("detailed_location", "").strip() or False,
                 "observations": post.get("observations", "").strip() or False,
                 "requested_by_id": requested_by,
+                "external_token_user_id": access_result["token_user"].id,
+                "external_login_snapshot": access_result["token_user"].login,
+                "offline_auth_method": "external_token",
                 "line_ids": line_commands,
             }
             fuel_raw = post.get("fuel_load_time", "").strip()
@@ -164,6 +252,12 @@ class ChecklistWebsite(http.Controller):
 
     @http.route("/checklist/<int:checklist_id>", auth="public", website=True, sitemap=False, methods=["GET"])
     def checklist_detail(self, checklist_id, db=None, **kwargs):
+        access_result = self._check_external_access(
+            access_token=self._get_external_access_token(**kwargs),
+        )
+        if not access_result["ok"]:
+            return self._render_checklist_access_denied(access_result)
+
         env = request.env(su=True)
         checklist = env["barca.maintenance.checklist"].browse(checklist_id)
         if not checklist.exists():
@@ -182,6 +276,13 @@ class ChecklistWebsite(http.Controller):
 
     @http.route("/checklist/<int:checklist_id>", auth="public", website=True, sitemap=False, methods=["POST"], csrf=True)
     def checklist_detail_save(self, checklist_id, db=None, **post):
+        access_result = self._check_external_access(
+            access_token=self._get_external_access_token(**post),
+            mark_used=True,
+        )
+        if not access_result["ok"]:
+            return self._render_checklist_access_denied(access_result)
+
         env = request.env(su=True)
         checklist = env["barca.maintenance.checklist"].browse(checklist_id)
         if not checklist.exists():
@@ -221,6 +322,13 @@ class ChecklistWebsite(http.Controller):
 
     @http.route("/checklist/items/<string:checklist_type>", auth="public", type="json", methods=["POST"])
     def checklist_items_json(self, checklist_type, db=None, **kwargs):
+        access_result = self._check_external_access(
+            access_token=self._get_external_access_token(**kwargs),
+            mark_used=True,
+        )
+        if not access_result["ok"]:
+            return self._json_access_denied(access_result)
+
         env = request.env(su=True)
         items = env["barca.maintenance.checklist.item"].search(
             [("checklist_type", "=", checklist_type), ("active", "=", True)],
@@ -254,10 +362,16 @@ class ChecklistWebsite(http.Controller):
         """
         local_uuid = local_uuid or kwargs.get("local_uuid")
         payload = payload or kwargs.get("payload") or {}
+        access_result = self._check_external_access(
+            access_token=self._get_external_access_token(**kwargs),
+            mark_used=True,
+        )
+        if not access_result["ok"]:
+            return self._json_access_denied(access_result)
 
         if not local_uuid:
             return {"ok": False, "error": "Falta local_uuid"}
-        if form_code and form_code != "checklist_nuevo":
+        if form_code and form_code != CHECKLIST_FORM_CODE:
             return {"ok": False, "error": "form_code no reconocido"}
         if not isinstance(payload, dict):
             return {"ok": False, "error": "payload debe ser un objeto"}
@@ -312,6 +426,9 @@ class ChecklistWebsite(http.Controller):
                 "detailed_location": str(payload.get("detailed_location") or "").strip() or False,
                 "observations": str(payload.get("observations") or "").strip() or False,
                 "requested_by_id": env.ref("base.user_admin").id,
+                "external_token_user_id": access_result["token_user"].id,
+                "external_login_snapshot": access_result["token_user"].login,
+                "offline_auth_method": "external_token",
                 "line_ids": line_commands,
             }
 

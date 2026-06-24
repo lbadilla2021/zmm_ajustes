@@ -113,6 +113,7 @@
                 <form method="post" action="/checklist/nuevo" id="checklist_form"
                       data-offline-form="true"
                       data-form-code="checklist_nuevo"
+                      data-auth-mode="external_token"
                       data-sync-endpoint="/checklist/sync">
                     <input type="hidden" name="csrf_token" t-att-value="request.csrf_token()"/>
 
@@ -222,16 +223,26 @@
                             tbody.innerHTML = '';
                             return;
                         }
+                        var authData = window.ZOfflineAuth &amp;&amp; window.ZOfflineAuth.getAuthData('checklist_nuevo');
+                        var headers = {
+                            'Content-Type': 'application/json',
+                            'X-Requested-With': 'XMLHttpRequest'
+                        };
+                        if (authData &amp;&amp; authData.access_token) {
+                            headers.Authorization = 'Bearer ' + authData.access_token;
+                        }
                         fetch('/checklist/items/' + encodeURIComponent(type), {
                             method: 'POST',
-                            headers: {
-                                'Content-Type': 'application/json',
-                                'X-Requested-With': 'XMLHttpRequest'
-                            },
+                            headers: headers,
                             body: JSON.stringify({jsonrpc: '2.0', method: 'call', params: {}})
                         })
                         .then(function(r){ return r.json(); })
                         .then(function(data){
+                            if (data.result &amp;&amp; data.result.ok === false) {
+                                alert(data.result.error || 'No autorizado.');
+                                card.style.display = 'none';
+                                return;
+                            }
                             var items = data.result || [];
                             tbody.innerHTML = '';
                             if (!items.length) {
@@ -590,6 +601,78 @@
                         <i class="fa fa-arrow-left me-1"/> Volver a la lista
                     </a>
                 </div>
+            </div>
+        </t>
+    </template>
+
+    <template id="website_checklist_login" name="Checklists - Login externo">
+        <t t-call="website.layout">
+            <div class="container py-4" style="max-width: 520px;">
+                <h2 class="mb-3">Acceso a Checklists</h2>
+                <div id="checklist_login_error" class="alert alert-danger d-none"/>
+                <form id="checklist_external_login_form" t-att-data-form-code="form_code" t-att-data-next-url="next_url">
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold" for="checklist_login">Usuario</label>
+                        <input id="checklist_login" name="login" class="form-control" autocomplete="username" required="required"/>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold" for="checklist_password">Contraseña</label>
+                        <input id="checklist_password" name="password" type="password" class="form-control" autocomplete="current-password" required="required"/>
+                    </div>
+                    <button type="submit" class="btn btn-primary w-100">
+                        <i class="fa fa-sign-in me-1"/> Ingresar
+                    </button>
+                </form>
+            </div>
+
+            <script>
+                (function () {
+                    var form = document.getElementById('checklist_external_login_form');
+                    var errorBox = document.getElementById('checklist_login_error');
+                    if (!form) return;
+
+                    function showError(message) {
+                        errorBox.textContent = message || 'No se pudo autenticar.';
+                        errorBox.classList.remove('d-none');
+                    }
+
+                    form.addEventListener('submit', function (event) {
+                        event.preventDefault();
+                        errorBox.classList.add('d-none');
+                        if (!window.ZOfflineAuth) {
+                            showError('Autenticación offline no disponible.');
+                            return;
+                        }
+                        if (!navigator.onLine) {
+                            showError('Debe tener conexión para iniciar sesión.');
+                            return;
+                        }
+                        var login = form.querySelector('[name="login"]').value;
+                        var password = form.querySelector('[name="password"]').value;
+                        var formCode = form.dataset.formCode || 'checklist_nuevo';
+                        window.ZOfflineAuth.login(formCode, login, password)
+                            .then(function () {
+                                window.location.href = form.dataset.nextUrl || '/checklist';
+                            })
+                            .catch(function (err) {
+                                showError(err.message);
+                            });
+                    });
+                })();
+            </script>
+        </t>
+    </template>
+
+    <template id="website_checklist_access_denied" name="Checklists - Acceso denegado">
+        <t t-call="website.layout">
+            <div class="container py-4">
+                <div class="alert alert-danger">
+                    <i class="fa fa-lock me-1"/>
+                    <t t-out="error"/>
+                </div>
+                <a t-att-href="login_url" class="btn btn-primary">
+                    <i class="fa fa-sign-in me-1"/> Ingresar
+                </a>
             </div>
         </t>
     </template>

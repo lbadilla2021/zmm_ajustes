@@ -81,6 +81,7 @@
                 <field name="checklist_date"/>
                 <field name="name"/>
                 <field name="requested_by_id"/>
+                <field name="external_login_snapshot"/>
                 <field name="vehicle_id"/>
                 <field name="checklist_type"/>
                 <field name="vehicle_status"/>
@@ -116,6 +117,9 @@
                         <group>
                             <field name="name" readonly="1"/>
                             <field name="requested_by_id" readonly="state != 'new'"/>
+                            <field name="external_token_user_id" readonly="1"/>
+                            <field name="external_login_snapshot" readonly="1"/>
+                            <field name="offline_auth_method" readonly="1"/>
                             <field name="checklist_date" readonly="1"/>
                             <field name="checklist_type" readonly="state != 'new'"/>
                             <field name="vehicle_status" readonly="state != 'new'"/>

@@ -139,6 +139,32 @@ class BarcaMaintenanceChecklist(models.Model):
              "Permite idempotencia al re-sincronizar el mismo formulario.",
     )
 
+    external_token_user_id = fields.Many2one(
+        "zweb.offline.form.token.user",
+        string="Usuario externo",
+        copy=False,
+        readonly=True,
+        index=True,
+        tracking=True,
+    )
+    external_login_snapshot = fields.Char(
+        string="Login externo",
+        copy=False,
+        readonly=True,
+        tracking=True,
+    )
+    offline_auth_method = fields.Selection(
+        [
+            ("odoo_user", "Usuario Odoo"),
+            ("external_token", "Token externo"),
+        ],
+        string="Metodo de autenticacion",
+        copy=False,
+        readonly=True,
+        default="odoo_user",
+        tracking=True,
+    )
+
     @api.constrains("vehicle_id", "equipment_id")
     def _check_vehicle_equipment_consistency(self):
         for record in self:
@@ -329,6 +355,8 @@ class BarcaMaintenanceChecklist(models.Model):
         origin_lines = [
             "Checklist %s creado por %s." % (self.name, self.requested_by_id.name)
         ]
+        if self.external_login_snapshot:
+            origin_lines.append("Usuario externo: %s" % self.external_login_snapshot)
         if self.detailed_location:
             origin_lines.append("Planta y lugar detallado: %s" % self.detailed_location)
         if self.vehicle_status:
