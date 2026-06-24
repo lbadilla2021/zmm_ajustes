@@ -5,14 +5,13 @@ from odoo import SUPERUSER_ID, api
 _logger = logging.getLogger(__name__)
 
 
-def sync_existing_vehicle_equipment(cr, registry):
+def sync_existing_vehicle_equipment(env):
     """Create missing maintenance.equipment records for existing vehicles.
 
     Technical locations are no longer imported from a bundled CSV during module
     installation. They must be created or imported manually after installing the
     module. The post-init hook is kept only for vehicle/equipment consistency.
     """
-    env = api.Environment(cr, SUPERUSER_ID, {})
     env["maintenance.request"]._barca_sync_maintenance_stages()
     vehicles = env["fleet.vehicle"].search([])
     created_count = 0

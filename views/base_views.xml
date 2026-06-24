@@ -162,7 +162,7 @@
         parent="menu_barca_maintenance"
         action="action_barca_maintenance_report"
         sequence="30"
-        groups="zmm_ajustes.group_barca_programador,zmm_ajustes.group_barca_admin"
+        groups="zmm_ajustes.group_barca_programador,zmm_ajustes.group_barca_admin,zmm_ajustes.group_barca_ejecutor"
     />
 
     <menuitem

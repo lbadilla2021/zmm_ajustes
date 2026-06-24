@@ -1,15 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
 
-    <!-- Registro de página en el Website para que aparezca en el listado -->
-    <record id="website_page_checklist" model="website.page">
-        <field name="name">Checklists de Mantención</field>
-        <field name="url">/checklist</field>
-        <field name="is_published">True</field>
-        <field name="website_indexed">False</field>
-        <field name="view_id" ref="zmm_ajustes.website_checklist_list"/>
-    </record>
-
     <!-- ================================================================
          LISTA DE CHECKLISTS
          URL: /checklist
@@ -88,6 +79,14 @@
         </t>
     </template>
 
+    <!-- Registro de página en el Website para que aparezca en el listado -->
+    <record id="website_page_checklist" model="website.page">
+        <field name="name">Checklists de Mantención</field>
+        <field name="url">/checklist</field>
+        <field name="is_published">True</field>
+        <field name="website_indexed">False</field>
+        <field name="view_id" ref="zmm_ajustes.website_checklist_list"/>
+    </record>
 
     <!-- ================================================================
          FORMULARIO NUEVO CHECKLIST
