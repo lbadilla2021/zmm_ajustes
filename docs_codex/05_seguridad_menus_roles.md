@@ -18,7 +18,10 @@ Grupos:
 | `group_barca_bodega` | Barca / Bodega |
 | `group_barca_admin` | Barca / Administrador |
 
-Todos implican `base.group_user`.
+Todos implican `base.group_user`. AdemÃ¡s, `group_barca_programador`
+implica `fleet.fleet_group_user` para que los selectores basados en
+`fleet.vehicle`, como el campo **VehÃ­culo** en **Solicitud de MantenciÃ³n**,
+puedan listar vehÃ­culos usando la seguridad estÃ¡ndar de Flotilla.
 
 ## Filosofía de permisos
 
