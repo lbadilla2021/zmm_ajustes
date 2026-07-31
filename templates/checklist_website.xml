@@ -112,7 +112,7 @@
                 <form method="post" action="/checklist/nuevo" id="checklist_form"
                       data-offline-form="true"
                       data-form-code="checklist_nuevo"
-                      data-auth-mode="external_token"
+                      t-att-data-auth-mode="request.env.user._is_public() and 'external_token' or None"
                       data-sync-endpoint="/checklist/sync">
                     <input type="hidden" name="csrf_token" t-att-value="request.csrf_token()"/>
 

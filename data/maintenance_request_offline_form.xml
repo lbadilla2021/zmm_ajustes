@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<odoo>
+    <record id="offline_form_solicitud_mantencion" model="zweb.offline.form">
+        <field name="name">Solicitud de Mantencion</field>
+        <field name="code">solicitud_mantencion</field>
+        <field name="active">True</field>
+        <field name="target_model">barca.maintenance.request</field>
+        <field name="require_login">False</field>
+        <field name="version">1</field>
+        <field name="description">Formulario web externo para crear solicitudes de mantencion.</field>
+    </record>
+</odoo>

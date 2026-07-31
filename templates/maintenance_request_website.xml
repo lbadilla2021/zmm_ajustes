@@ -1,0 +1,337 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <template id="website_maintenance_request_list" name="Solicitudes de Mantencion - Lista">
+        <t t-call="website.layout">
+            <div class="container py-4">
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <h2>Mis Solicitudes de Mantencion</h2>
+                    <a href="/solicitud-mantencion/nueva" class="btn btn-primary">
+                        <i class="fa fa-plus me-1"/> Nueva Solicitud
+                    </a>
+                </div>
+
+                <t t-if="not maintenance_requests">
+                    <div class="alert alert-info">No tienes solicitudes registradas aun.</div>
+                </t>
+                <t t-else="">
+                    <div class="table-responsive">
+                        <table class="table table-hover table-bordered align-middle">
+                            <thead class="table-dark">
+                                <tr>
+                                    <th>Fecha</th>
+                                    <th>N° Solicitud</th>
+                                    <th>Equipo</th>
+                                    <th>Prioridad</th>
+                                    <th>Estado vehiculo</th>
+                                    <th>Estado solicitud</th>
+                                    <th>Aviso</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <t t-foreach="maintenance_requests" t-as="mr">
+                                    <tr>
+                                        <td><t t-out="mr.request_date"/></td>
+                                        <td>
+                                            <a t-attf-href="/solicitud-mantencion/#{mr.id}">
+                                                <t t-out="mr.name"/>
+                                            </a>
+                                        </td>
+                                        <td><t t-out="mr.equipment_id.display_name"/></td>
+                                        <td>
+                                            <t t-out="priority_labels.get(mr.priority, mr.priority)"/>
+                                        </td>
+                                        <td>
+                                            <span t-attf-class="badge #{mr.vehicle_status == 'operativo' and 'bg-success' or 'bg-danger'}">
+                                                <t t-out="vehicle_status_labels.get(mr.vehicle_status, mr.vehicle_status)"/>
+                                            </span>
+                                        </td>
+                                        <td>
+                                            <span t-attf-class="badge #{mr.state == 'draft' and 'bg-primary' or mr.state == 'alert_created' and 'bg-warning text-dark' or 'bg-dark'}">
+                                                <t t-out="state_labels.get(mr.state, mr.state)"/>
+                                            </span>
+                                        </td>
+                                        <td>
+                                            <t t-if="mr.alert_id">
+                                                <span class="badge bg-warning text-dark">
+                                                    <t t-out="mr.alert_id.name"/>
+                                                </span>
+                                            </t>
+                                            <t t-else="">
+                                                <span class="text-muted">-</span>
+                                            </t>
+                                        </td>
+                                    </tr>
+                                </t>
+                            </tbody>
+                        </table>
+                    </div>
+                </t>
+            </div>
+        </t>
+    </template>
+
+    <record id="website_page_maintenance_request" model="website.page">
+        <field name="name">Mis Solicitudes de Mantencion</field>
+        <field name="url">/solicitud-mantencion</field>
+        <field name="is_published">True</field>
+        <field name="website_indexed">False</field>
+        <field name="view_id" ref="zmm_ajustes.website_maintenance_request_list"/>
+    </record>
+
+    <template id="website_maintenance_request_form" name="Solicitudes de Mantencion - Nueva">
+        <t t-call="website.layout">
+            <div class="container py-4">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h2>Nueva Solicitud de Mantencion</h2>
+                    <a href="/solicitud-mantencion" class="btn btn-outline-secondary">
+                        <i class="fa fa-arrow-left me-1"/> Volver
+                    </a>
+                </div>
+
+                <t t-if="error">
+                    <div class="alert alert-danger" role="alert">
+                        <i class="fa fa-exclamation-triangle me-1"/>
+                        <t t-out="error"/>
+                    </div>
+                </t>
+
+                <form method="post" action="/solicitud-mantencion/nueva" id="maintenance_request_form"
+                      data-offline-form="true"
+                      t-att-data-form-code="form_code"
+                      t-att-data-offline-db="request.env.cr.dbname"
+                      t-att-data-auth-mode="request.env.user._is_public() and 'external_token' or None"
+                      data-sync-endpoint="/solicitud-mantencion/sync">
+                    <input type="hidden" name="csrf_token" t-att-value="request.csrf_token()"/>
+
+                    <div class="card mb-3">
+                        <div class="card-header fw-bold">Datos generales</div>
+                        <div class="card-body">
+                            <div class="row g-3">
+                                <div class="col-md-6">
+                                    <label class="form-label fw-semibold">Equipo de mantenimiento <span class="text-danger">*</span></label>
+                                    <select name="equipment_id" class="form-select" required="required">
+                                        <option value="">-- Seleccione un equipo --</option>
+                                        <t t-foreach="equipments" t-as="eq">
+                                            <option t-att-value="eq.id"
+                                                    t-att-selected="post and str(eq.id) == str(post.get('equipment_id', ''))">
+                                                <t t-out="eq.display_name"/>
+                                            </option>
+                                        </t>
+                                    </select>
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label fw-semibold">Prioridad sugerida <span class="text-danger">*</span></label>
+                                    <select name="priority" class="form-select" required="required">
+                                        <t t-foreach="priority_options" t-as="priority">
+                                            <option t-att-value="priority[0]"
+                                                    t-att-selected="not post and priority[0] == 'medium' or post and priority[0] == post.get('priority', 'medium')">
+                                                <t t-out="priority[1]"/>
+                                            </option>
+                                        </t>
+                                    </select>
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label fw-semibold">Estado del vehiculo <span class="text-danger">*</span></label>
+                                    <select name="vehicle_status" class="form-select" required="required">
+                                        <t t-foreach="vehicle_status_options" t-as="status">
+                                            <option t-att-value="status[0]"
+                                                    t-att-selected="not post and status[0] == 'operativo' or post and status[0] == post.get('vehicle_status', 'operativo')">
+                                                <t t-out="status[1]"/>
+                                            </option>
+                                        </t>
+                                    </select>
+                                </div>
+                                <div class="col-12">
+                                    <label class="form-label fw-semibold">Planta y lugar detallado</label>
+                                    <textarea name="detailed_location" class="form-control" rows="2"><t t-out="post and post.get('detailed_location', '') or ''"/></textarea>
+                                </div>
+                                <div class="col-12">
+                                    <label class="form-label fw-semibold">Descripcion de la necesidad <span class="text-danger">*</span></label>
+                                    <textarea name="description" class="form-control" rows="4" required="required"><t t-out="post and post.get('description', '') or ''"/></textarea>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="d-flex gap-2 flex-wrap">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="fa fa-save me-1"/> Enviar solicitud
+                        </button>
+                        <button type="button" class="btn btn-outline-primary" data-offline-draft="true">
+                            <i class="fa fa-floppy-o me-1"/> Guardar borrador local
+                        </button>
+                        <a href="/solicitud-mantencion" class="btn btn-outline-secondary" data-offline-cancel="true">Cancelar</a>
+                    </div>
+                </form>
+            </div>
+
+            <script>
+                window.addEventListener('z-offline-synced', function (e) {
+                    var record = e.detail;
+                    if (record &amp;&amp; record.form_code === '<t t-out="form_code"/>' &amp;&amp; record.server_response &amp;&amp; record.server_response.redirect) {
+                        window.location.href = record.server_response.redirect;
+                    }
+                });
+            </script>
+        </t>
+    </template>
+
+    <template id="website_maintenance_request_detail" name="Solicitudes de Mantencion - Detalle">
+        <t t-call="website.layout">
+            <div class="container py-4">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h2>
+                        Solicitud
+                        <span class="text-muted fs-5 ms-2">
+                            <t t-out="maintenance_request.name"/>
+                        </span>
+                    </h2>
+                    <a href="/solicitud-mantencion" class="btn btn-outline-secondary">
+                        <i class="fa fa-arrow-left me-1"/> Volver
+                    </a>
+                </div>
+
+                <div class="mb-3">
+                    <span t-attf-class="badge fs-6 #{maintenance_request.state == 'draft' and 'bg-primary' or maintenance_request.state == 'alert_created' and 'bg-warning text-dark' or 'bg-dark'}">
+                        <t t-out="state_labels.get(maintenance_request.state, maintenance_request.state)"/>
+                    </span>
+                </div>
+
+                <div class="card mb-3">
+                    <div class="card-header fw-bold">Datos generales</div>
+                    <div class="card-body">
+                        <div class="row g-3">
+                            <div class="col-md-4">
+                                <div class="text-muted small">N° Solicitud</div>
+                                <div class="fw-semibold"><t t-out="maintenance_request.name"/></div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="text-muted small">Fecha</div>
+                                <div class="fw-semibold"><t t-out="maintenance_request.request_date"/></div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="text-muted small">Solicitante</div>
+                                <div class="fw-semibold">
+                                    <t t-if="maintenance_request.external_login_snapshot">
+                                        <t t-out="maintenance_request.external_login_snapshot"/>
+                                    </t>
+                                    <t t-else="">
+                                        <t t-out="maintenance_request.requested_by_id.name"/>
+                                    </t>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="text-muted small">Equipo de mantenimiento</div>
+                                <div class="fw-semibold"><t t-out="maintenance_request.equipment_id.display_name"/></div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="text-muted small">Vehiculo</div>
+                                <div class="fw-semibold"><t t-out="maintenance_request.vehicle_id.name"/></div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="text-muted small">Prioridad sugerida</div>
+                                <div class="fw-semibold"><t t-out="priority_labels.get(maintenance_request.priority, maintenance_request.priority)"/></div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="text-muted small">Estado del vehiculo</div>
+                                <span t-attf-class="badge #{maintenance_request.vehicle_status == 'operativo' and 'bg-success' or 'bg-danger'}">
+                                    <t t-out="vehicle_status_labels.get(maintenance_request.vehicle_status, maintenance_request.vehicle_status)"/>
+                                </span>
+                            </div>
+                            <t t-if="maintenance_request.alert_id">
+                                <div class="col-md-4">
+                                    <div class="text-muted small">Aviso generado</div>
+                                    <div class="fw-semibold"><t t-out="maintenance_request.alert_id.name"/></div>
+                                </div>
+                            </t>
+                            <t t-if="maintenance_request.detailed_location">
+                                <div class="col-12">
+                                    <div class="text-muted small">Planta y lugar detallado</div>
+                                    <div class="fw-semibold" style="white-space:pre-line"><t t-out="maintenance_request.detailed_location"/></div>
+                                </div>
+                            </t>
+                            <div class="col-12">
+                                <div class="text-muted small">Descripcion de la necesidad</div>
+                                <div class="fw-semibold" style="white-space:pre-line"><t t-out="maintenance_request.description"/></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </t>
+    </template>
+
+    <template id="website_maintenance_request_login" name="Solicitudes de Mantencion - Login externo">
+        <t t-call="website.layout">
+            <div class="container py-4" style="max-width: 520px;">
+                <h2 class="mb-3">Acceso a Solicitudes de Mantencion</h2>
+                <div id="maintenance_request_login_error" class="alert alert-danger d-none"/>
+                <form id="maintenance_request_external_login_form" t-att-data-form-code="form_code" t-att-data-next-url="next_url">
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold" for="maintenance_request_login">Usuario</label>
+                        <input id="maintenance_request_login" name="login" class="form-control" autocomplete="username" required="required"/>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold" for="maintenance_request_password">Contrasena</label>
+                        <input id="maintenance_request_password" name="password" type="password" class="form-control" autocomplete="current-password" required="required"/>
+                    </div>
+                    <button type="submit" class="btn btn-primary w-100">
+                        <i class="fa fa-sign-in me-1"/> Ingresar
+                    </button>
+                </form>
+            </div>
+
+            <script>
+                (function () {
+                    var form = document.getElementById('maintenance_request_external_login_form');
+                    var errorBox = document.getElementById('maintenance_request_login_error');
+                    if (!form) return;
+
+                    function showError(message) {
+                        errorBox.textContent = message || 'No se pudo autenticar.';
+                        errorBox.classList.remove('d-none');
+                    }
+
+                    form.addEventListener('submit', function (event) {
+                        event.preventDefault();
+                        errorBox.classList.add('d-none');
+                        if (!window.ZOfflineAuth) {
+                            showError('Autenticacion offline no disponible.');
+                            return;
+                        }
+                        if (!navigator.onLine) {
+                            showError('Debe tener conexion para iniciar sesion.');
+                            return;
+                        }
+                        var login = form.querySelector('[name="login"]').value;
+                        var password = form.querySelector('[name="password"]').value;
+                        var formCode = form.dataset.formCode || 'solicitud_mantencion';
+                        window.ZOfflineAuth.login(formCode, login, password)
+                            .then(function () {
+                                window.location.href = form.dataset.nextUrl || '/solicitud-mantencion';
+                            })
+                            .catch(function (err) {
+                                showError(err.message);
+                            });
+                    });
+                })();
+            </script>
+        </t>
+    </template>
+
+    <template id="website_maintenance_request_access_denied" name="Solicitudes de Mantencion - Acceso denegado">
+        <t t-call="website.layout">
+            <div class="container py-4">
+                <div class="alert alert-danger">
+                    <i class="fa fa-lock me-1"/>
+                    <t t-out="error"/>
+                </div>
+                <a t-att-href="login_url" class="btn btn-primary">
+                    <i class="fa fa-sign-in me-1"/> Ingresar
+                </a>
+            </div>
+        </t>
+    </template>
+
+</odoo>

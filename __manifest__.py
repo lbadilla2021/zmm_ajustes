@@ -22,6 +22,7 @@
         'data/maintenance_alert_sequence.xml',
         'data/maintenance_request_simple_sequence.xml',
         'data/maintenance_checklist_sequence.xml',
+        'data/maintenance_request_offline_form.xml',
         'data/maintenance_checklist_items.xml',
         'data/maintenance_stage_data.xml',
         'data/checklist_offline_form.xml',
@@ -41,6 +42,7 @@
         'data/cron.xml',
         'data/cron_pm_alerts.xml',
         'templates/checklist_website.xml',
+        'templates/maintenance_request_website.xml',
     ],
     'assets': {
         'web.assets_backend': [

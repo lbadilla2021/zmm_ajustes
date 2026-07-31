@@ -33,13 +33,12 @@ class BarcaMaintenanceRequest(models.Model):
     vehicle_id = fields.Many2one(
         "fleet.vehicle",
         string="Vehículo",
-        required=True,
         tracking=True,
     )
     equipment_id = fields.Many2one(
         "maintenance.equipment",
         string="Equipo de mantenimiento",
-        readonly=True,
+        required=True,
         tracking=True,
     )
     priority = fields.Selection(
@@ -89,6 +88,38 @@ class BarcaMaintenanceRequest(models.Model):
         readonly=True,
         copy=False,
     )
+    offline_local_uuid = fields.Char(
+        string="UUID offline",
+        copy=False,
+        index=True,
+        help="UUID generado por el cliente cuando la solicitud fue creada sin conexion. "
+             "Permite idempotencia al re-sincronizar el mismo formulario.",
+    )
+    external_token_user_id = fields.Many2one(
+        "zweb.offline.form.token.user",
+        string="Usuario externo",
+        copy=False,
+        readonly=True,
+        index=True,
+        tracking=True,
+    )
+    external_login_snapshot = fields.Char(
+        string="Login externo",
+        copy=False,
+        readonly=True,
+        tracking=True,
+    )
+    offline_auth_method = fields.Selection(
+        [
+            ("odoo_user", "Usuario Odoo"),
+            ("external_token", "Token externo"),
+        ],
+        string="Metodo de autenticacion",
+        copy=False,
+        readonly=True,
+        default="odoo_user",
+        tracking=True,
+    )
 
     @api.constrains("vehicle_id", "equipment_id")
     def _check_vehicle_equipment_consistency(self):
@@ -103,21 +134,13 @@ class BarcaMaintenanceRequest(models.Model):
                     "de la solicitud."
                 )
 
-    @api.onchange("vehicle_id")
-    def _onchange_vehicle_id_set_equipment(self):
+    @api.onchange("equipment_id")
+    def _onchange_equipment_id_set_vehicle(self):
         for record in self:
-            if record.vehicle_id:
-                record.equipment_id = self.env["maintenance.equipment"].search(
-                    [("vehicle_id", "=", record.vehicle_id.id)],
-                    limit=1,
-                )
-            else:
-                record.equipment_id = False
+            record.vehicle_id = record.equipment_id.vehicle_id
 
     @api.model_create_multi
     def create(self, vals_list):
-        equipment_by_vehicle = {}
-
         for vals in vals_list:
             vals["request_date"] = fields.Datetime.now()
             if vals.get("name", "Nuevo") == "Nuevo":
@@ -126,15 +149,10 @@ class BarcaMaintenanceRequest(models.Model):
                     or "Nuevo"
                 )
 
-            vehicle_id = vals.get("vehicle_id")
-            if vehicle_id:
-                if vehicle_id not in equipment_by_vehicle:
-                    equipment = self.env["maintenance.equipment"].search(
-                        [("vehicle_id", "=", vehicle_id)],
-                        limit=1,
-                    )
-                    equipment_by_vehicle[vehicle_id] = equipment.id
-                vals["equipment_id"] = equipment_by_vehicle[vehicle_id] or False
+            equipment_id = vals.get("equipment_id")
+            if equipment_id:
+                equipment = self.env["maintenance.equipment"].browse(equipment_id)
+                vals["vehicle_id"] = equipment.vehicle_id.id or False
 
         return super().create(vals_list)
 
@@ -152,6 +170,8 @@ class BarcaMaintenanceRequest(models.Model):
             "Solicitud de Mantención %s creada por %s."
             % (self.name, self.requested_by_id.name)
         ]
+        if self.external_login_snapshot:
+            origin_lines.append("Usuario externo: %s" % self.external_login_snapshot)
         if self.detailed_location:
             origin_lines.append("Planta y Lugar detallado: %s" % self.detailed_location)
         if self.vehicle_status:
@@ -165,11 +185,10 @@ class BarcaMaintenanceRequest(models.Model):
     def write(self, vals):
         vals = dict(vals)
         vals.pop("request_date", None)
-        vals.pop("equipment_id", None)
 
-        if vals.get("vehicle_id"):
-            equipment = self._get_equipment_for_vehicle(vals["vehicle_id"])
-            vals["equipment_id"] = equipment.id
+        if "equipment_id" in vals:
+            equipment = self.env["maintenance.equipment"].browse(vals["equipment_id"])
+            vals["vehicle_id"] = equipment.vehicle_id.id or False
         return super().write(vals)
 
     def action_cancel(self):
@@ -190,6 +209,11 @@ class BarcaMaintenanceRequest(models.Model):
                 )
             if request.alert_id:
                 raise ValidationError("La solicitud ya tiene un aviso generado.")
+            if not request.vehicle_id:
+                raise ValidationError(
+                    "El equipo de mantenimiento seleccionado no tiene un "
+                    "vehículo asociado."
+                )
 
             alert_vals = {
                 "source_type": "request",
