@@ -1,7 +1,7 @@
 from collections import defaultdict
 
 from odoo import api, fields, models
-from odoo.exceptions import ValidationError
+from odoo.exceptions import AccessError, ValidationError
 
 
 class MaintenanceRequest(models.Model):
@@ -11,9 +11,17 @@ class MaintenanceRequest(models.Model):
     # El aviso asociado se cierra automaticamente cuando la OT llega a una etapa
     # final Barca: Cierre Total, Cierre Parcial o Desechar.
 
+    _BARCA_APPROVED_STAGE_NAMES = ("Aprobada", "Approved")
     _BARCA_PROGRESS_STAGE_NAMES = ("En progreso", "In Progress")
     _BARCA_REVIEW_STAGE_NAMES = ("En revisión", "En revision")
     _BARCA_DISCARD_STAGE_NAMES = ("Desechar", "Scrap", "Discard")
+
+    barca_vehicle_category_id = fields.Many2one(
+        "fleet.vehicle.model.category",
+        string="Categoría de Vehículos",
+        related="equipment_id.vehicle_id.category_id",
+        readonly=True,
+    )
 
     def _barca_find_stage(self, names=(), xmlids=()):
         Stage = self.env["maintenance.stage"]
@@ -65,6 +73,51 @@ class MaintenanceRequest(models.Model):
     def _barca_sync_maintenance_stages(self):
         """Normaliza etapas globales para que la barra no duplique estados Barca."""
         Stage = self.env["maintenance.stage"].sudo()
+        approved_stage = self._barca_find_stage(
+            xmlids=("zmm_ajustes.stage_barca_maintenance_approved",),
+            names=self._BARCA_APPROVED_STAGE_NAMES,
+        )
+        if not approved_stage:
+            approved_stage = Stage.create(
+                {
+                    "name": "Aprobada",
+                    "sequence": 20,
+                    "fold": False,
+                    "done": False,
+                }
+            )
+        approved_stage.write(
+            {
+                "name": "Aprobada",
+                "sequence": 20,
+                "fold": False,
+                "done": False,
+            }
+        )
+        self._barca_set_stage_xmlid(
+            "stage_barca_maintenance_approved", approved_stage
+        )
+        duplicate_approved = Stage.search(
+            [
+                ("id", "!=", approved_stage.id),
+                ("name", "in", list(self._BARCA_APPROVED_STAGE_NAMES)),
+            ]
+        )
+        for duplicate in duplicate_approved:
+            self._barca_merge_stage(duplicate, approved_stage)
+
+        progress_stage = self._barca_find_stage(
+            names=self._BARCA_PROGRESS_STAGE_NAMES
+        )
+        if progress_stage:
+            progress_stage.write(
+                {
+                    "sequence": 30,
+                    "fold": False,
+                    "done": False,
+                }
+            )
+
         review_stage = Stage.search(
             [("name", "in", ["Reparado", "Repaired"])],
             order="sequence, id",
@@ -138,6 +191,82 @@ class MaintenanceRequest(models.Model):
         self.env["barca.maintenance.workorder.line"].sudo().search(
             [("state", "=", "closed")]
         ).write({"state": "notified"})
+
+        # Las OT Barca creadas antes de incorporar Aprobada quedaban directamente
+        # En progreso. Solo se migran las que nunca comenzaron y conservan todas
+        # sus actividades pendientes; una OT ya iniciada no se retrocede.
+        if progress_stage:
+            unstarted_requests = self.sudo().search(
+                [
+                    ("stage_id", "=", progress_stage.id),
+                    ("barca_start_datetime", "=", False),
+                    ("barca_activity_line_ids", "!=", False),
+                ]
+            ).filtered(
+                lambda request: all(
+                    line.state == "pending"
+                    for line in request.barca_activity_line_ids
+                )
+            )
+            unstarted_requests.with_context(
+                skip_barca_stage_transition=True
+            ).write({"stage_id": approved_stage.id})
+
+    def _barca_get_approved_stage(self):
+        return self._barca_find_stage(
+            xmlids=("zmm_ajustes.stage_barca_maintenance_approved",),
+            names=self._BARCA_APPROVED_STAGE_NAMES,
+        )
+
+    def _barca_check_can_add_activities(self):
+        self.ensure_one()
+        user = self.env.user
+        allowed = (
+            user.has_group("zmm_ajustes.group_barca_programador")
+            or user.has_group("zmm_ajustes.group_barca_ejecutor")
+            or user.has_group("zmm_ajustes.group_barca_admin")
+        )
+        if not allowed:
+            raise AccessError(
+                "Solo el Programador, Jefe de Taller o Administrador Barca "
+                "puede agregar actividades a una OT."
+            )
+        if self._barca_is_restricted_executor() and not self._barca_is_stage_in_progress():
+            raise ValidationError(
+                "El ejecutor solo puede agregar actividades cuando la OT está "
+                "en etapa En progreso."
+            )
+        if not self.equipment_id:
+            raise ValidationError(
+                "Seleccione el equipo/vehículo de la OT antes de agregar actividades."
+            )
+        if not self.barca_vehicle_category_id:
+            raise ValidationError(
+                "El vehículo de la OT no tiene una Categoría de Vehículos "
+                "configurada."
+            )
+
+    def action_barca_open_activity_selection_wizard(self):
+        self.ensure_one()
+        self._barca_check_can_add_activities()
+        return {
+            "name": "Agregar varias actividades",
+            "type": "ir.actions.act_window",
+            "res_model": (
+                "barca.maintenance.workorder.activity.selection.wizard"
+            ),
+            "view_mode": "form",
+            "view_id": self.env.ref(
+                "zmm_ajustes.view_barca_workorder_activity_selection_wizard_form"
+            ).id,
+            "target": "new",
+            "context": {
+                "default_maintenance_request_id": self.id,
+            },
+        }
+
+    def _barca_get_stage_approved(self):
+        return self._barca_get_approved_stage()
 
     def _barca_get_progress_stage(self):
         return self._barca_find_stage(names=self._BARCA_PROGRESS_STAGE_NAMES)
@@ -224,6 +353,12 @@ class MaintenanceRequest(models.Model):
         stage = stage or self.stage_id
         progress_stage = self._barca_get_progress_stage()
         return bool(progress_stage and stage == progress_stage)
+
+    def _barca_is_stage_approved(self, stage=None):
+        self.ensure_one()
+        stage = stage or self.stage_id
+        approved_stage = self._barca_get_approved_stage()
+        return bool(approved_stage and stage == approved_stage)
 
     def _barca_is_stage_review(self, stage=None):
         self.ensure_one()
@@ -966,8 +1101,13 @@ class MaintenanceRequest(models.Model):
         string="Bloqueada para ejecutor",
         compute="_compute_barca_locked_for_executor",
     )
+
     barca_stage_is_in_progress = fields.Boolean(
         string="Etapa En progreso",
+        compute="_compute_barca_stage_flags",
+    )
+    barca_stage_is_approved = fields.Boolean(
+        string="Etapa Aprobada",
         compute="_compute_barca_stage_flags",
     )
     barca_stage_is_review = fields.Boolean(
@@ -1015,8 +1155,10 @@ class MaintenanceRequest(models.Model):
 
     barca_alert_id = fields.Many2one(
         "barca.maintenance.alert",
-        string="Aviso Barca",
+        string="Aviso de origen",
         index=True,
+        copy=False,
+        tracking=True,
     )
     barca_start_datetime = fields.Datetime(
         string="Fecha y hora de inicio",
@@ -1025,6 +1167,34 @@ class MaintenanceRequest(models.Model):
         tracking=True,
         help="Primer inicio real de la OT. Se registra al iniciar la primera "
              "actividad y no se modifica durante el ciclo de vida.",
+    )
+    barca_workshop_entry_datetime = fields.Datetime(
+        string="Fecha ingreso a taller",
+        copy=False,
+        tracking=True,
+        help="Fecha y hora de ingreso del vehículo al taller, registrada por "
+             "el Jefe de Taller.",
+    )
+    barca_workshop_exit_datetime = fields.Datetime(
+        string="Fecha salida de taller",
+        copy=False,
+        tracking=True,
+        help="Fecha y hora propuesta de salida del taller. Se completa al cerrar "
+             "parcial o totalmente la OT y puede ser ajustada por el Programador.",
+    )
+    barca_downtime_hours = fields.Float(
+        string="Tiempo fuera de servicio (hrs)",
+        compute="_compute_barca_downtime_hours",
+        store=True,
+        digits=(12, 2),
+    )
+    barca_can_edit_workshop_entry = fields.Boolean(
+        string="Puede editar ingreso a taller",
+        compute="_compute_barca_workshop_datetime_permissions",
+    )
+    barca_can_edit_workshop_exit = fields.Boolean(
+        string="Puede editar salida de taller",
+        compute="_compute_barca_workshop_datetime_permissions",
     )
     barca_activity_line_ids = fields.One2many(
         "barca.maintenance.workorder.line",
@@ -1073,6 +1243,83 @@ class MaintenanceRequest(models.Model):
             request.barca_all_activities_notified = total > 0 and notified == total
             request.barca_all_activities_closed = False
 
+    @api.depends(
+        "barca_workshop_entry_datetime",
+        "barca_workshop_exit_datetime",
+    )
+    def _compute_barca_downtime_hours(self):
+        for request in self:
+            if (
+                request.barca_workshop_entry_datetime
+                and request.barca_workshop_exit_datetime
+            ):
+                delta = (
+                    request.barca_workshop_exit_datetime
+                    - request.barca_workshop_entry_datetime
+                )
+                request.barca_downtime_hours = max(
+                    delta.total_seconds() / 3600.0,
+                    0.0,
+                )
+            else:
+                request.barca_downtime_hours = 0.0
+
+    @api.depends("stage_id")
+    @api.depends_context("uid")
+    def _compute_barca_workshop_datetime_permissions(self):
+        user = self.env.user
+        is_admin = user.has_group("zmm_ajustes.group_barca_admin")
+        can_edit_entry = is_admin or user.has_group(
+            "zmm_ajustes.group_barca_ejecutor"
+        )
+        can_edit_exit = is_admin or user.has_group(
+            "zmm_ajustes.group_barca_programador"
+        )
+        restricted_executor = self._barca_is_restricted_executor()
+        for request in self:
+            request.barca_can_edit_workshop_entry = can_edit_entry and (
+                not restricted_executor or request._barca_is_stage_in_progress()
+            )
+            request.barca_can_edit_workshop_exit = can_edit_exit
+
+    @api.constrains(
+        "barca_workshop_entry_datetime",
+        "barca_workshop_exit_datetime",
+    )
+    def _check_barca_workshop_dates(self):
+        for request in self:
+            if (
+                request.barca_workshop_entry_datetime
+                and request.barca_workshop_exit_datetime
+                and request.barca_workshop_exit_datetime
+                < request.barca_workshop_entry_datetime
+            ):
+                raise ValidationError(
+                    "La fecha de salida de taller no puede ser anterior a la "
+                    "fecha de ingreso."
+                )
+
+    def _barca_check_workshop_datetime_write_access(self, vals):
+        if self.env.su:
+            return
+
+        user = self.env.user
+        is_admin = user.has_group("zmm_ajustes.group_barca_admin")
+        if "barca_workshop_entry_datetime" in vals and not (
+            is_admin or user.has_group("zmm_ajustes.group_barca_ejecutor")
+        ):
+            raise AccessError(
+                "Solo el Jefe de Taller o Administrador Barca puede registrar "
+                "la fecha de ingreso a taller."
+            )
+        if "barca_workshop_exit_datetime" in vals and not (
+            is_admin or user.has_group("zmm_ajustes.group_barca_programador")
+        ):
+            raise AccessError(
+                "Solo el Programador o Administrador Barca puede registrar "
+                "la fecha de salida de taller."
+            )
+
     def _barca_is_restricted_executor(self):
         user = self.env.user
         return (
@@ -1083,12 +1330,16 @@ class MaintenanceRequest(models.Model):
 
     @api.depends("stage_id")
     def _compute_barca_stage_flags(self):
+        approved_stage = self._barca_get_approved_stage()
         progress_stage = self._barca_get_progress_stage()
         review_stage = self._barca_get_review_stage()
         partial_close_stage = self._barca_get_close_partial_stage()
         total_close_stage = self._barca_get_close_total_stage()
         discard_stage = self._barca_get_discard_stage()
         for request in self:
+            request.barca_stage_is_approved = bool(
+                approved_stage and request.stage_id == approved_stage
+            )
             request.barca_stage_is_in_progress = bool(
                 progress_stage and request.stage_id == progress_stage
             )
@@ -1248,7 +1499,8 @@ class MaintenanceRequest(models.Model):
         return bool(
             stage
             and (
-                self._barca_is_stage_in_progress(stage)
+                self._barca_is_stage_approved(stage)
+                or self._barca_is_stage_in_progress(stage)
                 or self._barca_is_stage_review(stage)
                 or self._barca_is_stage_total_close(stage)
                 or self._barca_is_stage_partial_close(stage)
@@ -1259,6 +1511,7 @@ class MaintenanceRequest(models.Model):
     def _barca_get_allowed_stage_names(self):
         stage_names = []
         for stage in (
+            self._barca_get_approved_stage(),
             self._barca_get_progress_stage(),
             self._barca_get_review_stage(),
             self._barca_get_close_partial_stage(),
@@ -1268,7 +1521,8 @@ class MaintenanceRequest(models.Model):
             if stage and stage.name not in stage_names:
                 stage_names.append(stage.name)
         return ", ".join(stage_names) or (
-            "En progreso, En revisión, Cierre Parcial, Cierre Total, Desechar"
+            "Aprobada, En progreso, En revisión, Cierre Parcial, "
+            "Cierre Total, Desechar"
         )
 
     def _barca_check_stage_transition(self, target_stage):
@@ -1288,8 +1542,18 @@ class MaintenanceRequest(models.Model):
                         request._barca_get_allowed_stage_names(),
                     )
                 )
+            if request._barca_is_stage_approved(target_stage):
+                raise ValidationError(
+                    "La etapa Aprobada se asigna al generar la OT desde un aviso."
+                )
             if request._barca_is_stage_in_progress(target_stage):
-                request._barca_check_can_return_to_progress()
+                if request._barca_is_stage_approved():
+                    raise ValidationError(
+                        "Una OT Aprobada cambia a En progreso al iniciar "
+                        "su primera actividad."
+                    )
+                else:
+                    request._barca_check_can_return_to_progress()
             elif request._barca_is_stage_review(target_stage):
                 request._barca_check_can_send_to_review()
             elif request._barca_is_stage_total_close(target_stage):
@@ -1324,24 +1588,107 @@ class MaintenanceRequest(models.Model):
             },
         }
 
-    def write(self, vals):
-        if "barca_start_datetime" in vals:
-            if not self.env.context.get("allow_barca_workorder_start_write"):
+    def _barca_start_from_activity(self, activity_line, start_datetime):
+        """Prepara la OT al iniciar una actividad real y pendiente.
+
+        Desde Aprobada cambia a En progreso y registra la hora inicial. Si una
+        OT histórica ya está En progreso pero no tiene hora inicial, completa
+        únicamente esa fecha. El método es privado para que ninguna de estas
+        escrituras dependa de banderas suministrables por un cliente RPC.
+        """
+        self.ensure_one()
+        if not (
+            self.env.user.has_group("zmm_ajustes.group_barca_ejecutor")
+            or self.env.user.has_group("zmm_ajustes.group_barca_admin")
+        ):
+            raise AccessError(
+                "Solo el Jefe de Taller o Administrador Barca puede iniciar la OT."
+            )
+        if (
+            not activity_line
+            or activity_line.maintenance_request_id != self
+            or activity_line.state != "pending"
+        ):
+            raise ValidationError(
+                "La OT solo puede iniciarse desde una actividad propia y pendiente."
+            )
+
+        is_approved = self._barca_is_stage_approved()
+        if not is_approved and not self._barca_is_stage_in_progress():
+            raise ValidationError(
+                "Solo se pueden iniciar actividades cuando la OT está "
+                "Aprobada o En progreso."
+            )
+
+        start_vals = {}
+        if is_approved:
+            progress_stage = self._barca_get_progress_stage()
+            if not progress_stage:
                 raise ValidationError(
-                    "La fecha y hora de inicio de la OT no se puede modificar "
-                    "manualmente."
+                    "No se encontró la etapa En progreso para iniciar la OT."
                 )
-            for request in self:
-                if request.barca_start_datetime:
+            start_vals["stage_id"] = progress_stage.id
+        if not self.barca_start_datetime:
+            start_vals["barca_start_datetime"] = start_datetime
+
+        # Se llama directamente al write heredado porque el write público de
+        # este modelo prohíbe correctamente estas escrituras manuales.
+        if start_vals:
+            super(MaintenanceRequest, self).write(start_vals)
+        if is_approved:
+            self.message_post(
+                body=(
+                    "<b>OT iniciada</b><br/>"
+                    "Primera actividad iniciada por: <b>%s</b>"
+                ) % self.env.user.name
+            )
+
+    @api.model_create_multi
+    def create(self, vals_list):
+        for vals in vals_list:
+            self._barca_check_workshop_datetime_write_access(vals)
+            if vals.get("barca_alert_id"):
+                workorder_name = self.env["ir.sequence"].next_by_code(
+                    "barca.maintenance.workorder"
+                )
+                if not workorder_name:
                     raise ValidationError(
-                        "La fecha y hora de inicio de la OT ya fue registrada "
-                        "y no puede modificarse."
+                        "No se encontró la secuencia de Orden de Trabajo Barca."
                     )
+                vals["name"] = workorder_name
+        return super().create(vals_list)
+
+    def write(self, vals):
+        self._barca_check_workshop_datetime_write_access(vals)
+        if "name" in vals:
+            renamed_workorders = self.filtered(
+                lambda request: (
+                    request.barca_alert_id and vals["name"] != request.name
+                )
+            )
+            if renamed_workorders:
+                raise ValidationError(
+                    "El correlativo de una Orden de Trabajo no puede modificarse."
+                )
+        if "barca_start_datetime" in vals:
+            raise ValidationError(
+                "La fecha y hora de inicio de la OT no se puede modificar "
+                "manualmente. Se registra al iniciar la primera actividad."
+            )
 
         self._barca_check_executor_write_access(vals)
         target_stage = False
         if "stage_id" in vals and vals["stage_id"]:
             target_stage = self.env["maintenance.stage"].browse(vals["stage_id"])
+            if any(
+                request._barca_is_stage_approved()
+                and request._barca_is_stage_in_progress(target_stage)
+                for request in self
+            ):
+                raise ValidationError(
+                    "Una OT Aprobada cambia a En progreso únicamente al iniciar "
+                    "su primera actividad."
+                )
             if not self.env.context.get("skip_barca_stage_transition"):
                 self._barca_check_stage_transition(target_stage)
         result = super().write(vals)
@@ -1394,7 +1741,10 @@ class MaintenanceRequest(models.Model):
         if not close_stage:
             raise ValidationError("No se encontró la etapa %s." % close_label)
 
-        self.write({"stage_id": close_stage.id})
+        close_vals = {"stage_id": close_stage.id}
+        if not self.barca_workshop_exit_datetime:
+            close_vals["barca_workshop_exit_datetime"] = fields.Datetime.now()
+        self.write(close_vals)
         self.barca_activity_line_ids.filtered(
             lambda l: l.barca_added_after_return
         ).write({"barca_added_after_return": False})
@@ -1648,6 +1998,15 @@ class BarcaMaintenanceWorkorderLine(models.Model):
         "barca.technical.location",
         string="Ubicación técnica",
         required=True,
+        domain="[('category_id', '=', vehicle_category_id)]",
+    )
+
+    vehicle_category_id = fields.Many2one(
+        "fleet.vehicle.model.category",
+        string="Categoría del vehículo",
+        related="maintenance_request_id.equipment_id.vehicle_id.category_id",
+        store=True,
+        readonly=True,
     )
 
     intervention_type_id = fields.Many2one(
@@ -1659,6 +2018,8 @@ class BarcaMaintenanceWorkorderLine(models.Model):
         "barca.maintenance.activity",
         string="Actividad",
         required=True,
+        domain="[('category_id', '=', vehicle_category_id), "
+               "('technical_location_id', '=', technical_location_id)]",
     )
 
     description = fields.Text(string="Descripción")
@@ -1732,6 +2093,11 @@ class BarcaMaintenanceWorkorderLine(models.Model):
         compute="_compute_barca_locked_for_executor",
     )
 
+    barca_can_start = fields.Boolean(
+        string="Puede iniciar",
+        compute="_compute_barca_can_start",
+    )
+
     # -------------------------------------------------------------------------
     # Módulo 4: marcado visual post-devolución
     # -------------------------------------------------------------------------
@@ -1759,6 +2125,26 @@ class BarcaMaintenanceWorkorderLine(models.Model):
                 restricted_executor
                 and line.maintenance_request_id
                 and not line.maintenance_request_id._barca_is_stage_in_progress()
+            )
+
+    @api.depends("state", "maintenance_request_id.stage_id")
+    @api.depends_context("uid")
+    def _compute_barca_can_start(self):
+        user = self.env.user
+        can_start_role = (
+            user.has_group("zmm_ajustes.group_barca_ejecutor")
+            or user.has_group("zmm_ajustes.group_barca_admin")
+        )
+        for line in self:
+            request = line.maintenance_request_id
+            line.barca_can_start = bool(
+                can_start_role
+                and line.state == "pending"
+                and request
+                and (
+                    request._barca_is_stage_approved()
+                    or request._barca_is_stage_in_progress()
+                )
             )
 
     def _barca_check_executor_parent_state(self):
@@ -1859,18 +2245,56 @@ class BarcaMaintenanceWorkorderLine(models.Model):
             if vals.get("state") == "closed":
                 vals["state"] = "notified"
             if vals.get("state") == "in_progress":
-                missing = self._barca_get_required_start_labels(vals)
-                if missing:
-                    raise ValidationError(
-                        "No se puede iniciar la actividad. Complete primero: %s."
-                        % ", ".join(missing)
-                    )
+                raise ValidationError(
+                    "Las actividades deben crearse en estado Pendiente y "
+                    "comenzarse mediante la acción Iniciar."
+                )
         self._barca_check_executor_create_parent_state(vals_list)
         records = super().create(vals_list)
         for record in records:
             if record._should_mark_after_return():
                 record.barca_added_after_return = True
         return records
+
+    @api.onchange("technical_location_id", "vehicle_category_id")
+    def _onchange_barca_activity_filter(self):
+        for line in self:
+            if line.activity_id and (
+                line.activity_id.technical_location_id
+                != line.technical_location_id
+                or line.activity_id.category_id != line.vehicle_category_id
+            ):
+                line.activity_id = False
+
+    # No incluir vehicle_category_id en el disparador: al agregar este campo
+    # related/store durante una actualización, Odoo lo recalcula para todas las
+    # líneas históricas. Validarlas en ese momento impediría actualizar el
+    # módulo y también dejaría la columna sin crear. La compatibilidad completa
+    # (incluida la categoría) se revisa al crear una línea o cuando el usuario
+    # cambia su actividad o ubicación técnica.
+    @api.constrains("activity_id", "technical_location_id")
+    def _check_barca_activity_compatibility(self):
+        for line in self:
+            if not line.activity_id:
+                continue
+            if (
+                line.technical_location_id
+                and line.activity_id.technical_location_id
+                != line.technical_location_id
+            ):
+                raise ValidationError(
+                    "La actividad '%s' no corresponde a la ubicación técnica '%s'."
+                    % (line.activity_id.name, line.technical_location_id.name)
+                )
+            if (
+                line.vehicle_category_id
+                and line.activity_id.category_id != line.vehicle_category_id
+            ):
+                raise ValidationError(
+                    "La actividad '%s' no corresponde a la categoría del "
+                    "vehículo '%s'."
+                    % (line.activity_id.name, line.vehicle_category_id.name)
+                )
 
     def write(self, vals):
         if "start_datetime" in vals and not self.env.context.get(
@@ -1884,6 +2308,25 @@ class BarcaMaintenanceWorkorderLine(models.Model):
             vals = dict(vals, state="notified")
         self._barca_check_executor_parent_state()
         if vals.get("state") == "in_progress":
+            if not (
+                self.env.user.has_group("zmm_ajustes.group_barca_ejecutor")
+                or self.env.user.has_group("zmm_ajustes.group_barca_admin")
+            ):
+                raise AccessError(
+                    "Solo el Jefe de Taller o Administrador Barca puede "
+                    "iniciar actividades de una OT."
+                )
+            blocked_lines = self.filtered(
+                lambda line: (
+                    not line.maintenance_request_id
+                    or not line.maintenance_request_id._barca_is_stage_in_progress()
+                )
+            )
+            if blocked_lines:
+                raise ValidationError(
+                    "La actividad solo puede pasar a En ejecución mediante "
+                    "Iniciar y con la OT en etapa En progreso."
+                )
             self._barca_check_can_start(vals)
         result = super().write(vals)
         if self._PLANNING_FIELDS & set(vals.keys()):
@@ -1957,6 +2400,15 @@ class BarcaMaintenanceWorkorderLine(models.Model):
             rec.material_summary = summary
 
     def action_start_line(self):
+        if not (
+            self.env.user.has_group("zmm_ajustes.group_barca_ejecutor")
+            or self.env.user.has_group("zmm_ajustes.group_barca_admin")
+        ):
+            raise AccessError(
+                "Solo el Jefe de Taller o Administrador Barca puede iniciar "
+                "actividades de una OT."
+            )
+
         start_datetime = fields.Datetime.now()
         for line in self:
             if line.state != "pending":
@@ -1964,17 +2416,16 @@ class BarcaMaintenanceWorkorderLine(models.Model):
                     "Solo se pueden iniciar actividades en estado Pendiente."
                 )
             line._barca_check_can_start()
+            request = line.maintenance_request_id
+            if not request:
+                raise ValidationError("La actividad no tiene una OT asociada.")
+            request._barca_start_from_activity(line, start_datetime)
             line.with_context(allow_barca_activity_start_write=True).write(
                 {
                     "state": "in_progress",
                     "start_datetime": start_datetime,
                 }
             )
-            request = line.maintenance_request_id
-            if request and not request.barca_start_datetime:
-                request.with_context(
-                    allow_barca_workorder_start_write=True
-                ).write({"barca_start_datetime": start_datetime})
         return True
 
     def action_barca_reserve_materials(self):

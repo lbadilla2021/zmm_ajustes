@@ -207,10 +207,19 @@ class BarcaMaintenanceChecklist(models.Model):
             else:
                 record.line_ids = [(5, 0, 0)]
 
+    def _barca_is_restricted_conductor(self):
+        return (
+            not self.env.su
+            and self.env.user.has_group("zmm_ajustes.group_barca_conductor")
+        )
+
     @api.model_create_multi
     def create(self, vals_list):
+        restricted_conductor = self._barca_is_restricted_conductor()
         equipment_by_vehicle = {}
         for vals in vals_list:
+            if restricted_conductor:
+                vals["requested_by_id"] = self.env.user.id
             vals["checklist_date"] = fields.Date.context_today(self)
             vals["line_ids"] = self._sanitize_line_commands(vals.get("line_ids"))
             if vals.get("name", "Nuevo") == "Nuevo":
@@ -236,6 +245,15 @@ class BarcaMaintenanceChecklist(models.Model):
         vals = dict(vals)
         vals.pop("checklist_date", None)
         vals.pop("equipment_id", None)
+
+        if (
+            self._barca_is_restricted_conductor()
+            and "requested_by_id" in vals
+            and vals["requested_by_id"] != self.env.user.id
+        ):
+            raise ValidationError(
+                "El conductor no puede cambiar el solicitante de un checklist."
+            )
 
         if "line_ids" in vals:
             vals["line_ids"] = self._sanitize_line_commands(vals.get("line_ids"))

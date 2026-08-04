@@ -7,7 +7,12 @@ zmm_ajustes/
 ├── __init__.py
 ├── __manifest__.py
 ├── hooks.py
+├── controllers/
+│   ├── __init__.py
+│   ├── checklist.py
+│   └── maintenance_request_website.py
 ├── data/
+│   ├── checklist_offline_form.xml
 │   ├── cron.xml
 │   ├── cron_fleet_expiration_alerts.xml
 │   ├── cron_pm_alerts.xml
@@ -15,7 +20,10 @@ zmm_ajustes/
 │   ├── maintenance_alert_sequence.xml
 │   ├── maintenance_checklist_items.xml
 │   ├── maintenance_checklist_sequence.xml
-│   └── maintenance_request_simple_sequence.xml
+│   ├── maintenance_request_offline_form.xml
+│   ├── maintenance_request_simple_sequence.xml
+│   ├── maintenance_workorder_sequence.xml
+│   └── maintenance_stage_data.xml
 ├── models/
 │   ├── __init__.py
 │   ├── fleet_alert_rule.py
@@ -35,7 +43,13 @@ zmm_ajustes/
 │   └── technical_location.py
 ├── security/
 │   ├── ir.model.access.csv
+│   ├── record_rules.xml
 │   └── res_groups.xml
+├── static/src/js/
+│   └── workorder_activity_start_button.js
+├── templates/
+│   ├── checklist_website.xml
+│   └── maintenance_request_website.xml
 └── views/
     ├── base_views.xml
     ├── fleet_alert_rule_views.xml
@@ -57,19 +71,18 @@ zmm_ajustes/
 `__manifest__.py` carga en este orden:
 
 1. `security/res_groups.xml`
-2. `security/ir.model.access.csv`
-3. Reglas de alertas de flotilla por defecto (`Modificaciones` y `Vencimientos`).
-4. Cron de vencimientos de flotilla.
-5. Secuencias de avisos, solicitudes simples y checklists.
-6. Datos/catálogo de checklist y vistas de catálogos/procesos.
-7. Vistas base y menús raíz.
-8. Vistas de alertas de flotilla.
-9. Vistas y menú de solicitud simple.
-10. Vistas y menú de Checklist.
-11. Vistas de avisos.
-12. Vista extendida de flota/contratos.
-13. Cron vacío histórico.
-14. Cron PM real.
+2. `security/record_rules.xml`
+3. `security/ir.model.access.csv`
+4. Reglas de alertas de flotilla por defecto (`Modificaciones` y `Vencimientos`).
+5. Cron de vencimientos de flotilla.
+6. Secuencias independientes de avisos (`AVS-*`), órdenes de trabajo (`OT-*`), solicitudes simples (`SM-*`) y checklists.
+7. Formularios offline, catálogo de checklist y etapas de OT.
+8. Vistas de catálogos y procesos, vistas base y menús.
+9. Vistas extendidas de Flotilla y contratos.
+10. Cron histórico y cron PM real.
+11. Plantillas web de Checklist y Solicitud de Mantención.
+
+El manifiesto también incorpora el asset backend `static/src/js/workorder_activity_start_button.js`.
 
 Además declara:
 
@@ -98,6 +111,9 @@ Ese hook solo sincroniza vehículos existentes con `maintenance.equipment`. Las 
 | `barca.maintenance.checklist.item` | `maintenance_checklist.py` | Catálogo de puntos de control por tipo de vehículo, tipo de control e ítem. |
 | `barca.maintenance.alert` | `maintenance_alert.py` | Aviso de mantención con workflow propio. |
 | `barca.maintenance.alert.line` | `maintenance_alert.py` | Actividades copiadas desde el plan al aviso. |
+| `barca.maintenance.alert.line.material` | `maintenance_alert.py` | Materiales asociados a cada actividad del aviso. |
+| `barca.maintenance.workorder.line` | `maintenance_request.py` | Actividades ejecutables de la OT. |
+| `barca.maintenance.workorder.line.material` | `maintenance_request.py` | Materiales operativos de cada actividad de OT. |
 | `barca.fleet.alert.rule` | `fleet_alert_rule.py` | Listas de distribución por regla para alertas de flotilla. |
 
 ## Modelos estándar extendidos
@@ -108,7 +124,16 @@ Ese hook solo sincroniza vehículos existentes con `maintenance.equipment`. Las 
 | `fleet.vehicle.log.contract` | `fleet_vehicle_log_contract.py` | Agrega adjuntos múltiples a contratos de flotilla. |
 | `fleet.vehicle.log.services` | `fleet_vehicle_log_services.py` | Agrega campo `name` de compatibilidad. |
 | `maintenance.equipment` | `maintenance_equipment.py` | Agrega `vehicle_id` único, contadores relacionados para **Contadores** y documentación relacionada de Flotilla en solo lectura para la pestaña **Documentación** de Equipos. |
-| `maintenance.request` | `maintenance_request.py` | Modelo estándar mantenido como Orden de Trabajo operativa. |
+| `maintenance.request` | `maintenance_request.py` | Orden de Trabajo operativa: actividades, materiales, revisión/cierre, ingreso/salida de taller y tiempo fuera de servicio. |
+
+## Controladores y formularios web/offline
+
+| Formulario | Controlador | Rutas base | Propiedad |
+|---|---|---|---|
+| Solicitud de Mantención | `controllers/maintenance_request_website.py` | `/solicitud-mantencion` | Usuario Odoo por `requested_by_id`; token por `external_token_user_id`. |
+| Checklist | `controllers/checklist.py` | `/checklist` | Usuario Odoo por `requested_by_id`; token por `external_token_user_id`. |
+
+Ambos controladores pueden mostrar todos los vehículos/equipos disponibles al crear, pero sus listados, detalles y búsquedas idempotentes por UUID se restringen al propietario autenticado.
 
 ## Menú principal
 

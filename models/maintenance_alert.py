@@ -333,7 +333,6 @@ class BarcaMaintenanceAlert(models.Model):
                 activities_summary = "\n\nActividades:\n" + "\n".join(lines)
 
             request_vals = {
-                "name": alert.name,
                 "request_date": fields.Datetime.now(),
                 "schedule_date": alert.barca_scheduled_date,
                 "maintenance_type": "corrective",
@@ -342,11 +341,14 @@ class BarcaMaintenanceAlert(models.Model):
                 "barca_alert_id": alert.id,
                 "barca_activity_line_ids": alert._prepare_workorder_activity_commands(),
             }
-            progress_stage = (
-                self.env["maintenance.request"]._barca_get_progress_stage()
+            approved_stage = (
+                self.env["maintenance.request"]._barca_get_approved_stage()
             )
-            if progress_stage:
-                request_vals["stage_id"] = progress_stage.id
+            if not approved_stage:
+                raise ValidationError(
+                    "No se encontró la etapa Aprobada para generar la OT."
+                )
+            request_vals["stage_id"] = approved_stage.id
             if "category_id" in self.env["maintenance.request"]._fields:
                 equipment_category = alert.equipment_id.category_id
                 if equipment_category:

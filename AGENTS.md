@@ -33,6 +33,11 @@ Estas instrucciones aplican a todo el módulo Odoo `zmm_ajustes`.
 - **Avisos** no debe quedar como menú principal; debe depender de `menu_barca_maintenance`.
 - **Planes de Mantenimiento**, **Solicitud de Mantención** y **Checklist** no deben depender de `menu_barca_maintenance`; deben depender de `menu_barca_alert_origins`.
 - La antigua opción basada en `maintenance.request` conserva los XML IDs existentes (`action_barca_maintenance_report`, `menu_barca_reporting_requests`) y se muestra visualmente como **Orden de Trabajo**. No renombrar su modelo técnico ni romper referencias existentes.
+- La OT generada desde un aviso debe quedar en etapa **Aprobada**. Solo el Jefe de Taller/Ejecutor o Administrador puede iniciar una actividad; al iniciar la primera actividad pendiente, la OT cambia automáticamente a **En progreso** y registra `barca_start_datetime`.
+- La OT generada desde un aviso usa un correlativo propio mediante `barca.maintenance.workorder`, con formato `OT-00001`; no hereda el número `AVS-*`. La OT conserva y muestra `barca_alert_id` como **Aviso de origen**.
+- En las actividades de OT, `vehicle_category_id` se deriva de `maintenance_request_id.equipment_id.vehicle_id.category_id`. La ubicación técnica se limita a esa categoría y el selector de actividad exige simultáneamente la categoría del vehículo y la ubicación técnica seleccionada; mantener también constraints ORM equivalentes.
+- La pestaña **Actividades** de la OT mantiene el ingreso manual línea a línea y agrega el asistente **Agregar varias actividades**. El asistente toma automáticamente la categoría del vehículo y precarga todas sus actividades compatibles en una grilla con casillas; al confirmar crea una línea pendiente por cada actividad marcada, tomando su ubicación y copiando duración, instrucciones y materiales estándar. El tipo de intervención se propone desde el uso más frecuente en planes PM y puede corregirse en la grilla.
+- En el encabezado de la OT, el campo estándar `category_id` se muestra como **Categoría de Equipo** y `barca_vehicle_category_id` como **Categoría de Vehículos**. Ambos son de solo lectura; la segunda se deriva de `equipment_id.vehicle_id.category_id`.
 - **Solicitud de Mantención** es el requerimiento simple inicial (`barca.maintenance.request`), no la OT estándar. Debe ubicarse bajo **Orígenes Avisos** y puede generar un `barca.maintenance.alert` con origen `request`.
 - En **Solicitud de Mantención**, la fecha es la fecha actual y queda bloqueada; el equipo de mantenimiento queda bloqueado y se carga automáticamente desde el vehículo; existen los campos **Planta y Lugar detallado** y **Estado del vehículo** (`operativo` / `no_operativo`).
 - **Checklist** (`barca.maintenance.checklist`) es una fuente de avisos bajo **Orígenes Avisos**; sus puntos se cargan desde el catálogo `barca.maintenance.checklist.item` por tipo de vehículo, guarda respuestas **Sí/No**, y al guardar genera automáticamente un aviso si existe al menos un **No**.
@@ -59,3 +64,10 @@ Estas instrucciones aplican a todo el módulo Odoo `zmm_ajustes`.
 - Validar XML después de editar vistas o menús.
 - Revisar que no se introduzcan XML IDs duplicados en `views/*.xml`.
 - Si se documenta una decisión funcional del módulo, actualizar también los documentos relevantes en `docs_codex/`.
+
+## Deuda técnica aceptada — Multiempresa
+- A fecha 2026-08-03, la operación de **Barca Mantenimiento** se considera monoempresa y corresponde a **Barca SpA**.
+- La compañía **INDOOR** existe en la base, pero no se utiliza operativamente por ahora.
+- No implementar todavía aislamiento multiempresa adicional en los modelos `barca.*`, portales, planes PM ni alertas de flotilla.
+- Antes de comenzar a utilizar INDOOR u otra compañía se debe resolver la deuda descrita en `docs_codex/07_riesgos_y_errores_conocidos.md`: agregar/propagar `company_id`, reglas de registro, validaciones `check_company`, filtros de portales y crons, y separación de reglas de correo por compañía.
+- Mientras esta deuda siga pendiente, no ingresar vehículos, planes, avisos, solicitudes, checklist ni configuración de alertas operativas para INDOOR.

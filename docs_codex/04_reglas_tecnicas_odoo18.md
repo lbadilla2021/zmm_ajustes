@@ -67,7 +67,7 @@ En formulario, el `statusbar` de `stage_id` queda `readonly="1"`: muestra el ava
 
 En Odoo 18, `user_has_groups()` **no se puede usar** como expresión en atributos `readonly=`, `invisible=` de vistas XML. El ORM no lo expone como campo del modelo en el contexto de evaluación de vistas.
 
-La forma correcta para controlar readonly por grupo es declarar el campo **dos veces** con el atributo `groups=`:
+Una forma válida para controlar readonly por grupo es declarar el campo **dos veces** con `groups=` cuando los conjuntos sean mutuamente excluyentes:
 
 ```xml
 <!-- Editable para programador y admin -->
@@ -78,6 +78,29 @@ La forma correcta para controlar readonly por grupo es declarar el campo **dos v
 ```
 
 Si el campo nativo debe ocultarse primero, usar un xpath previo con `invisible=1`.
+
+Cuando un mismo usuario puede acumular grupos, es preferible un único campo con un Boolean computado mediante `@api.depends_context('uid')`. Las fechas de taller usan este patrón con `barca_can_edit_workshop_entry` y `barca_can_edit_workshop_exit`. En ambos patrones, la vista es solo una ayuda de interfaz: la autorización sensible debe repetirse en `create()`/`write()` o en el método de acción correspondiente.
+
+## Reubicación de campos en vistas heredadas
+
+Para mover un campo estándar sin duplicarlo, usar `position="move"` dentro del destino. La OT mueve `maintenance_type` a la columna derecha, antes de `priority`, después de haber insertado `barca_start_datetime`; así la fecha de inicio permanece en la columna izquierda.
+
+```xml
+<xpath expr="//field[@name='priority']" position="before">
+    <xpath expr="//field[@name='maintenance_type']" position="move"/>
+</xpath>
+```
+
+## Propiedad de registros y controladores con `sudo`
+
+Las ACL no reemplazan las reglas de registro. `security/record_rules.xml` limita al Conductor a solicitudes/checklists propios y a las líneas de sus propios checklist, sin restringir el catálogo de vehículos.
+
+Los controladores web usan un entorno elevado para operar formularios públicos autenticados. Toda búsqueda de registros operativos debe agregar explícitamente el dominio del propietario:
+
+- sesión Odoo: `requested_by_id = request.env.user.id`;
+- token externo: `external_token_user_id = token_user.id`.
+
+El dominio debe aplicarse en listado, detalle, edición y búsqueda idempotente por `offline_local_uuid`. Conocer un ID o UUID ajeno nunca debe permitir leerlo o modificarlo.
 
 ## `parent.state` en listas inline
 
@@ -141,6 +164,18 @@ El método `create()` de `barca.maintenance.alert` asigna secuencia si `name == 
 
 No cambiar el código de secuencia sin ajustar `maintenance_alert.py`.
 
+## Secuencia de órdenes de trabajo
+
+La secuencia está en `data/maintenance_workorder_sequence.xml`:
+
+- Código: `barca.maintenance.workorder`
+- Prefijo: `OT-`
+- Padding: `5`
+
+El `create()` extendido de `maintenance.request` asigna esta secuencia cuando existe `barca_alert_id`. El aviso queda como **Aviso de origen** y el correlativo de OT no puede modificarse posteriormente. Las OT históricas conservan su número anterior.
+
+La fecha `barca_start_datetime` no se escribe mediante el `write()` público de la OT. `action_start_line()` llama al método privado `_barca_start_from_activity()`, que registra la hora inicial tanto al cambiar **Aprobada → En progreso** como al iniciar una OT histórica que ya esté **En progreso** sin fecha. Esto evita que la protección de campos del Ejecutor bloquee el inicio legítimo.
+
 ## Cron PM
 
 El cron está en `data/cron_pm_alerts.xml`:
@@ -169,9 +204,7 @@ Atención: `post_init_hook` se ejecuta al instalar, no necesariamente en cada ac
 
 ## `__pycache__`
 
-El ZIP recibido incluye archivos `__pycache__`. No son necesarios en un módulo Odoo versionado.
-
-Recomendación para commits:
+Los archivos `__pycache__` no son necesarios en un módulo Odoo versionado. Recomendación para commits:
 
 - Excluir `models/__pycache__/`.
 - Mantener `.gitignore` para evitar bytecode Python.
@@ -195,6 +228,8 @@ Revisar logs por:
 - Restricciones SQL.
 - Errores de dominio en vistas.
 - Errores de permisos ACL.
+- Errores de reglas de registro o dominios de propietario.
+- Errores de compilación de modificadores `readonly`/`invisible` de la vista.
 
 ## Fase 5: stock.picking y stock.move
 

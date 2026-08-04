@@ -111,6 +111,14 @@ class ChecklistWebsite(http.Controller):
             "offline_auth_method": "odoo_user",
         }
 
+    def _get_checklist_domain(self, access_result):
+        """Limit portal records to the authenticated checklist owner."""
+        if access_result.get("auth_method") == "external_token":
+            return [
+                ("external_token_user_id", "=", access_result["token_user"].id)
+            ]
+        return [("requested_by_id", "=", request.env.user.id)]
+
     def _json_access_denied(self, result):
         return {
             "ok": False,
@@ -163,7 +171,9 @@ class ChecklistWebsite(http.Controller):
 
         env = request.env(su=True)
         checklists = env["barca.maintenance.checklist"].search(
-            [], order="checklist_date desc, id desc", limit=50
+            self._get_checklist_domain(access_result),
+            order="checklist_date desc, id desc",
+            limit=50,
         )
         return self._render_template(
             "zmm_ajustes.website_checklist_list",
@@ -292,8 +302,12 @@ class ChecklistWebsite(http.Controller):
             return self._render_checklist_access_denied(access_result)
 
         env = request.env(su=True)
-        checklist = env["barca.maintenance.checklist"].browse(checklist_id)
-        if not checklist.exists():
+        checklist = env["barca.maintenance.checklist"].search(
+            [("id", "=", checklist_id)]
+            + self._get_checklist_domain(access_result),
+            limit=1,
+        )
+        if not checklist:
             return request.not_found()
         return self._render_template(
             "zmm_ajustes.website_checklist_detail",
@@ -317,8 +331,12 @@ class ChecklistWebsite(http.Controller):
             return self._render_checklist_access_denied(access_result)
 
         env = request.env(su=True)
-        checklist = env["barca.maintenance.checklist"].browse(checklist_id)
-        if not checklist.exists():
+        checklist = env["barca.maintenance.checklist"].search(
+            [("id", "=", checklist_id)]
+            + self._get_checklist_domain(access_result),
+            limit=1,
+        )
+        if not checklist:
             return request.not_found()
 
         error = None
@@ -413,7 +431,9 @@ class ChecklistWebsite(http.Controller):
 
         # Idempotencia: si ya sincronizamos este UUID, devolvemos el resultado previo.
         existing = env["barca.maintenance.checklist"].search(
-            [("offline_local_uuid", "=", local_uuid)], limit=1
+            [("offline_local_uuid", "=", local_uuid)]
+            + self._get_checklist_domain(access_result),
+            limit=1,
         )
         if existing:
             return {

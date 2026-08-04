@@ -92,17 +92,29 @@ Si se elimina un vehículo, puede eliminarse el equipo asociado. Revisar impacto
 
 Hay `company_id` en algunos modelos, pero no se observan reglas de registro por compañía.
 
-Si se usará con varias compañías, diseñar `ir.rule` antes de producción.
+**Decisión vigente 03-08-2026:** se acepta como deuda técnica porque la operación actual es monoempresa y corresponde a **Barca SpA**. La compañía **INDOOR** está creada en la base, pero no se utiliza operativamente.
+
+Por ahora no se implementará aislamiento multiempresa adicional. Mientras esta decisión esté vigente, no deben cargarse para INDOOR vehículos, equipos, planes PM, avisos, solicitudes, checklist ni destinatarios de alertas documentales.
+
+Antes de activar INDOOR u otra compañía se debe resolver esta deuda, como mínimo:
+
+- agregar o propagar `company_id` en documentos operativos `barca.*`;
+- crear reglas `ir.rule` por compañías permitidas;
+- validar relaciones mediante `check_company=True` o constraints equivalentes;
+- filtrar vehículos/equipos en portales que trabajan con entorno elevado;
+- ejecutar planes y crons dentro de la compañía correspondiente;
+- separar las reglas `Modificaciones` y `Vencimientos` por compañía;
+- migrar y validar los registros históricos existentes.
 
 ## 10. Importación manual de ubicaciones técnicas
 
 Las ubicaciones técnicas ya no se cargan desde un CSV del módulo. Si se importan manualmente, mantener códigos únicos para no generar conflictos lógicos en los XML IDs automáticos creados por `_ensure_external_ids()`.
 
-## 11. Campo `x_downtime_total` no calcula tiempo real
+## 11. Indicadores de tiempo fuera de servicio
 
-Actualmente `_compute_downtime()` asigna `0.0` siempre.
+La OT (`maintenance.request`) ya registra `barca_workshop_entry_datetime` y `barca_workshop_exit_datetime`, y calcula `barca_downtime_hours` como la diferencia real entre ambas fechas.
 
-Si se requiere KPI de tiempo fuera de servicio, implementar cálculo real entre entrada/salida o según eventos de taller.
+El campo legado `fleet.vehicle.x_downtime_total` continúa asignando `0.0` y no consolida todavía el historial de OTs del vehículo. Para informes operativos debe utilizarse `maintenance.request.barca_downtime_hours`; si se necesita un KPI acumulado por vehículo, queda pendiente definir si suma todas las OTs, solo un período o únicamente cierres válidos.
 
 ## 12. `x_odometer_next_service` es fijo +5000
 
@@ -142,7 +154,7 @@ En Odoo 18, `user_has_groups()` es un método Python del ORM y no existe como ca
 el campo "user_has_groups" no existe en el modelo "..."
 ```
 
-**Solución correcta:** usar el atributo `groups=` del campo declarando dos versiones del mismo campo — una editable para los grupos autorizados y otra `readonly="1"` para el resto. Ver sección correspondiente en `04_reglas_tecnicas_odoo18.md`.
+**Soluciones correctas:** usar `groups=` con dos versiones del campo cuando los grupos sean mutuamente excluyentes, o exponer un Boolean computado con `@api.depends_context('uid')` y usarlo en `readonly`. En ambos casos, repetir el control sensible en el ORM porque el readonly de la vista no constituye autorización. Ver `04_reglas_tecnicas_odoo18.md`.
 
 ## 17. `state` en listas inline no referencia el padre
 
@@ -152,9 +164,9 @@ Dentro de un `<list>` de `One2many`, `state` se evalúa en el modelo hijo. Si el
 
 La OT debe mostrar una sola barra de estado basada en `stage_id`, porque ese campo controla también las columnas del Kanban. No reintroducir una segunda barra `barca_state`.
 
-El botón **Enviar a revisión** mueve la OT desde **En progreso** a **En revisión**. Mientras está en **En revisión**, el ejecutor queda bloqueado y el programador puede devolverla a **En progreso** o cerrarla como **Cierre Total** / **Cierre Parcial**.
+La OT generada desde un aviso nace en **Aprobada** y solo cambia a **En progreso** cuando el Jefe de Taller o Administrador inicia la primera actividad. El botón **Enviar a revisión** mueve luego la OT desde **En progreso** a **En revisión**. Mientras está en **En revisión**, el ejecutor queda bloqueado y el programador puede devolverla a **En progreso** o cerrarla como **Cierre Total** / **Cierre Parcial**.
 
-La etapa estándar **Reparado** no debe quedar visible como flujo Barca. En actualización del módulo se normaliza a **En revisión** y se mergean etapas duplicadas de **En revisión** o **Desechar** para que la barra de estado no muestre opciones repetidas.
+La etapa estándar **Reparado** no debe quedar visible como flujo Barca. En actualización del módulo se normaliza a **En revisión** y se mergean etapas duplicadas de **Aprobada**, **En revisión** o **Desechar** para que la barra de estado no muestre opciones repetidas.
 
 ## 19. Fecha programada obligatoria para generar OT desde aviso
 
@@ -168,3 +180,14 @@ Desde el módulo 1 del flujo de revisión, `action_create_maintenance_request()`
 2. `create_uid` de la OT — fallback si no hay aviso asociado.
 
 No hay campo editable para seleccionar el revisor manualmente.
+
+## 21. Controladores web con entorno elevado
+
+Los portales de Solicitud de Mantención y Checklist usan un entorno elevado después de autenticar una sesión Odoo o token externo. Una búsqueda por ID o UUID sin dominio de propietario puede exponer o modificar registros ajenos.
+
+La implementación vigente agrega el dominio de propietario en listado, detalle, edición e idempotencia offline:
+
+- sesión Odoo: `requested_by_id = request.env.user.id`;
+- token externo: `external_token_user_id = token_user.id`.
+
+Al modificar rutas, no reemplazar esas búsquedas por `browse(id)` ni por `search([('id', '=', id)])` sin el dominio de autenticación.

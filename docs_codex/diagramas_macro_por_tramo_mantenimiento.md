@@ -25,7 +25,8 @@ flowchart LR
     A4 -->|Tomar para evaluacion| E4["Aviso en evaluacion"]
     E4 --> A5{"Fecha programada<br/>y equipo OK?"}
     A5 -->|No| E4
-    A5 -->|Si| OT["Orden de Trabajo<br/>En ejecucion"]
+    A5 -->|Si| OTA["Orden de Trabajo<br/>Aprobada"]
+    OTA -->|Iniciar primera actividad| OT["Orden de Trabajo<br/>En progreso"]
 
     OT --> T5["5. OT<br/>Ejecucion y revision"]
     T5 --> ACT["6. Actividades OT"]
@@ -34,16 +35,17 @@ flowchart LR
     A6 -->|Si| REV["OT en revision"]
     REV --> A7{"Decision<br/>Programador/Admin"}
     A7 -->|Devolver| OT
-    A7 -->|Aprobar| AP["OT aprobada"]
+    A7 -->|Cierre Total| CT["OT Cierre Total"]
+    A7 -->|Cierre Parcial| CP["OT Cierre Parcial"]
+    A7 -->|Desechar| DS["OT Desechada"]
 
     OT --> MAT["7. Materiales OT"]
     MAT --> MATF["Reserva / entrega / consumo / cierre"]
-    MATF --> AP
+    MATF --> REV
 
-    AP --> CIERRE["Cerrar etapa estandar OT"]
-    CIERRE --> A8{"OT terminada?"}
-    A8 -->|No| CIERRE
-    A8 -->|Si| CAV["Cerrar aviso"]
+    CT --> CAV["Cerrar aviso automaticamente"]
+    CP --> CAV
+    DS --> CAV
     CAV --> FIN["Fin ciclo mantenimiento"]
 
     FLOT["8. Flotilla<br/>Cambio documental o cron"] --> AF{"Hay vencimientos/cambios<br/>y destinatarios?"}
@@ -156,20 +158,23 @@ flowchart TD
     K --> L["Copiar actividades y materiales"]
     L --> M["Estado Con OT creada"]
     M --> N["Boton Ver OT"]
-    M --> O{"Cerrar aviso"}
-    O -->|OT no terminada| O1["No permite cerrar"]
-    O -->|OT terminada| P["Estado Cerrado"]
+    M --> O{"OT llega a Cierre Total,<br/>Cierre Parcial o Desechar?"}
+    O -->|No| M
+    O -->|Si| P["Aviso se cierra automaticamente"]
 ```
 
 ## 6. Tramo 5 - Orden de Trabajo
 
 Documento: **Orden de Trabajo**  
-Estado inicial: **En progreso**  
-Estado final esperado: **Cierre Total** o **Cierre Parcial**
+Estado inicial: **Aprobada**
+Estado final esperado: **Cierre Total**, **Cierre Parcial** o **Desechar**
 
 ```mermaid
 flowchart TD
-    A["OT En progreso"] --> B["Actividades copiadas desde aviso"]
+    A["OT Aprobada"] --> A0["Jefe de Taller inicia<br/>primera actividad"]
+    A0 --> A01["Sistema cambia OT<br/>a En progreso"]
+    A01 --> A1["Jefe de Taller registra<br/>Fecha ingreso a taller"]
+    A1 --> B["Actividades copiadas desde aviso"]
     B --> C["Ejecutor trabaja actividades"]
     C --> D{"Enviar a revision"}
     D --> E{"Tiene actividades?"}
@@ -181,8 +186,11 @@ flowchart TD
     H --> I{"Decision Programador/Admin"}
     I -->|Cierre Total| J["Etapa Cierre Total"]
     I -->|Cierre Parcial| J2["Etapa Cierre Parcial"]
-    J --> K["Notificar responsable"]
+    I -->|Desechar| J3["Etapa Desechar"]
+    J --> K["Proponer Fecha salida de taller<br/>y calcular tiempo fuera de servicio"]
     J2 --> K
+    K --> K2["Cerrar aviso asociado automaticamente"]
+    J3 --> K2
     I -->|Devolver a ejecucion| L{"Motivo informado?"}
     L -->|No| L1["Error: completar motivo"]
     L -->|Si| M["Etapa En progreso"]

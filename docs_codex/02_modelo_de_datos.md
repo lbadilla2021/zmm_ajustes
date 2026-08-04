@@ -588,6 +588,12 @@ Extensión en `models/maintenance_request.py`.
 
 La Solicitud de Mantención estándar de Odoo se renombra funcionalmente como Orden de Trabajo. Su ciclo de programación, ejecución, revisión y cierre queda separado del ciclo del aviso `barca.maintenance.alert`.
 
+En el encabezado de la OT se distinguen las dos clasificaciones relacionadas con el equipo seleccionado: `category_id` se presenta como **Categoría de Equipo** y `barca_vehicle_category_id` como **Categoría de Vehículos**. Esta última es un campo relacionado de solo lectura que sigue la ruta `equipment_id.vehicle_id.category_id` y se actualiza automáticamente al seleccionar el equipo/vehículo.
+
+Las OT creadas desde un aviso usan la secuencia `barca.maintenance.workorder`, con prefijo `OT-` y padding 5 (`OT-00001`). El aviso mantiene su propio `AVS-*` y queda relacionado en `barca_alert_id`, visible como **Aviso de origen**. El correlativo de una OT ya creada es inmutable. Los documentos históricos no se renumeran durante la actualización.
+
+La OT generada desde un aviso nace en la etapa **Aprobada**. Esta etapa representa trabajo autorizado pero aún no iniciado. El Jefe de Taller o Administrador puede iniciar una actividad pendiente desde **Aprobada**; el primer inicio cambia automáticamente la OT a **En progreso**. El modelo bloquea cambios manuales que intenten saltarse esta transición.
+
 El aviso asociado queda en estado técnico `in_progress` / funcional `Con OT creada` hasta que la OT asociada llega a **Cierre Total**, **Cierre Parcial** o **Desechar**; en ese momento se cierra automáticamente. **En revisión** representa revisión del programador y no cierre final. La descripción de la OT puede guardar un resumen textual de actividades, pero el detalle operativo estable se guarda en `barca_activity_line_ids` y en sus materiales.
 
 ### Fase 4: ciclo operativo de actividades de OT
@@ -597,6 +603,10 @@ El aviso asociado queda en estado técnico `in_progress` / funcional `Con OT cre
 - `pending`: Pendiente.
 - `in_progress`: En ejecución.
 - `notified`: Notificada.
+
+Cada línea obtiene `vehicle_category_id` mediante la ruta `maintenance_request_id.equipment_id.vehicle_id.category_id`. El desplegable de `technical_location_id` muestra solo ubicaciones de esa categoría y `activity_id` muestra únicamente actividades cuya `category_id` y `technical_location_id` coincidan simultáneamente con la categoría del vehículo y la ubicación escogida. Un onchange limpia una actividad que deje de ser compatible y constraints ORM rechazan combinaciones inválidas creadas por importación o RPC. La validación se dispara al crear la línea o al modificar su actividad o ubicación; el recálculo técnico de la categoría almacenada no bloquea la actualización del módulo por inconsistencias históricas, que pueden abrirse y corregirse posteriormente.
+
+El modelo transitorio `barca.maintenance.workorder.activity.selection.wizard` implementa la incorporación múltiple opcional. A partir de la OT obtiene automáticamente la categoría del vehículo y crea líneas transitorias `barca.maintenance.workorder.activity.selection.wizard.line` para todas las actividades activas de esa categoría. Cada línea muestra casilla de selección, ubicación técnica, actividad, tipo de intervención propuesto, duración y materiales. El tipo se propone según el más utilizado por esa actividad en los planes PM, con **Realizar** como respaldo, y permanece editable. Al confirmar crea una `barca.maintenance.workorder.line` pendiente por cada casilla marcada, tomando la ubicación de la actividad y copiando `estimated_duration`, las instrucciones técnicas a `description` y las líneas `material_template_line_ids` como materiales estimados de la OT. La grilla One2many original continúa disponible para ingreso individual.
 
 
 Varias actividades de una misma OT pueden estar en `in_progress` al mismo tiempo; el modelo no aplica una restricción de actividad única en ejecución. La notificación de avance se registra en la misma actividad mediante:
@@ -608,6 +618,16 @@ Varias actividades de una misma OT pueden estar en `in_progress` al mismo tiempo
 - `notified_by_id`: usuario que notificó la actividad.
 
 `maintenance.request` registra `barca_start_datetime` con la fecha/hora del primer inicio de actividad de la OT. Este valor es de solo lectura, se escribe una sola vez y no se modifica al reabrir actividades ni durante el resto del ciclo de vida de la OT.
+
+`barca.maintenance.workorder.line` calcula `barca_can_start` según el usuario, el estado de la actividad y la etapa de la OT. Solo Jefe de Taller (`group_barca_ejecutor`) o Administrador pueden iniciar; la actividad debe estar `pending` y la OT debe estar **Aprobada** o **En progreso**.
+
+La OT también registra la permanencia del vehículo en taller mediante:
+
+- `barca_workshop_entry_datetime`: fecha y hora de ingreso, informada manualmente por el Jefe de Taller o Administrador Barca.
+- `barca_workshop_exit_datetime`: fecha y hora de salida. Si está vacía, al ejecutar **Cierre Total** o **Cierre Parcial** se propone la fecha/hora del cierre; el Programador o Administrador puede corregirla posteriormente.
+- `barca_downtime_hours`: horas decimales fuera de servicio, calculadas y almacenadas como la diferencia entre salida e ingreso. Queda en `0.0` mientras falte una de las fechas.
+
+La salida no puede ser anterior al ingreso. Los permisos de escritura se validan en el modelo, además de reflejarse como solo lectura en el formulario según el rol.
 
 `maintenance.request` calcula contadores de actividades Barca para apoyar revisión operativa:
 

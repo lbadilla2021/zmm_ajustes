@@ -53,7 +53,16 @@
                         <group>
                             <field name="name" readonly="1"/>
                             <field name="request_date" readonly="1"/>
-                            <field name="requested_by_id" readonly="state != 'draft'"/>
+                            <field
+                                name="requested_by_id"
+                                readonly="1"
+                                groups="zmm_ajustes.group_barca_conductor"
+                            />
+                            <field
+                                name="requested_by_id"
+                                readonly="state != 'draft'"
+                                groups="zmm_ajustes.group_barca_programador,zmm_ajustes.group_barca_ejecutor,zmm_ajustes.group_barca_bodega,zmm_ajustes.group_barca_admin"
+                            />
                             <field name="priority" readonly="state != 'draft'"/>
                             <field name="vehicle_status" readonly="state != 'draft'"/>
                         </group>

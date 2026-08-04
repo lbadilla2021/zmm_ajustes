@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="rule_barca_maintenance_request_conductor_own" model="ir.rule">
+        <field name="name">Solicitud de Mantención: conductor sólo registros propios</field>
+        <field name="model_id" ref="model_barca_maintenance_request"/>
+        <field name="domain_force">[('requested_by_id', '=', user.id)]</field>
+        <field name="groups" eval="[(4, ref('zmm_ajustes.group_barca_conductor'))]"/>
+        <field name="perm_read" eval="True"/>
+        <field name="perm_write" eval="True"/>
+        <field name="perm_create" eval="True"/>
+        <field name="perm_unlink" eval="False"/>
+    </record>
+
+    <record id="rule_barca_maintenance_checklist_conductor_own" model="ir.rule">
+        <field name="name">Checklist: conductor sólo registros propios</field>
+        <field name="model_id" ref="model_barca_maintenance_checklist"/>
+        <field name="domain_force">[('requested_by_id', '=', user.id)]</field>
+        <field name="groups" eval="[(4, ref('zmm_ajustes.group_barca_conductor'))]"/>
+        <field name="perm_read" eval="True"/>
+        <field name="perm_write" eval="True"/>
+        <field name="perm_create" eval="True"/>
+        <field name="perm_unlink" eval="False"/>
+    </record>
+
+    <record id="rule_barca_maintenance_checklist_line_conductor_own" model="ir.rule">
+        <field name="name">Línea de Checklist: conductor sólo registros propios</field>
+        <field name="model_id" ref="model_barca_maintenance_checklist_line"/>
+        <field name="domain_force">[('checklist_id.requested_by_id', '=', user.id)]</field>
+        <field name="groups" eval="[(4, ref('zmm_ajustes.group_barca_conductor'))]"/>
+        <field name="perm_read" eval="True"/>
+        <field name="perm_write" eval="True"/>
+        <field name="perm_create" eval="True"/>
+        <field name="perm_unlink" eval="False"/>
+    </record>
+</odoo>

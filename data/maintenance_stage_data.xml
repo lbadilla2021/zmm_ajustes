@@ -1,5 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
+    <record id="stage_barca_maintenance_approved" model="maintenance.stage">
+        <field name="name">Aprobada</field>
+        <field name="sequence">20</field>
+        <field name="fold">0</field>
+        <field name="done">0</field>
+    </record>
+
     <record id="stage_barca_maintenance_close_total" model="maintenance.stage">
         <field name="name">Cierre Total</field>
         <field name="sequence">50</field>

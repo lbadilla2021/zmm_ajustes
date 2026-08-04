@@ -26,10 +26,10 @@ Orden de Trabajo
 Ejecucion de actividades
         |
         v
-Revision / aprobacion
+Revision / cierre total o parcial
         |
         v
-Cierre de aviso y actualizacion de medidores
+Cierre automatico del aviso y actualizacion de medidores
 ```
 
 Los **Avisos** concentran la necesidad de mantenimiento. La **Orden de Trabajo** es donde se ejecuta el trabajo real, se notifican actividades y se controlan materiales.
@@ -239,6 +239,9 @@ Restricciones:
 - No se puede cancelar una solicitud que ya genero aviso.
 - No se puede generar aviso desde una solicitud cancelada.
 - No se puede generar mas de un aviso desde la misma solicitud.
+- El Conductor puede seleccionar cualquiera de los vehículos/equipos disponibles.
+- El Conductor solo puede visualizar y editar solicitudes propias; el solicitante se asigna automáticamente y no puede reasignarlo.
+- En el portal `/solicitud-mantencion`, la propiedad se controla por usuario Odoo o por el token externo autenticado, incluido el reintento offline por UUID.
 
 ## 7. Checklist
 
@@ -287,6 +290,8 @@ Logica automatica al guardar:
 - Si no hay ningun **No**, no crea aviso.
 - La descripcion del aviso usa las observaciones; si estan vacias, usa un texto automatico.
 - Los puntos de control no se copian como actividades al aviso.
+- El Conductor puede seleccionar cualquiera de los vehículos disponibles, pero solo puede visualizar y editar checklist propios y sus líneas.
+- En el portal `/checklist`, listado, detalle, edición y sincronización offline quedan aislados por usuario Odoo o token externo.
 
 ## 8. Avisos
 
@@ -320,7 +325,7 @@ Estados:
 | En evaluacion | Tomado por Programador/Admin para analizar y preparar OT. |
 | Con OT creada | Ya se genero una OT. La ejecucion ocurre en la OT. |
 | Rechazado | Aviso descartado. |
-| Cerrado | Aviso terminado, normalmente despues de cerrar/aprobar la OT. |
+| Cerrado | Aviso terminado automáticamente cuando la OT llega a Cierre Total, Cierre Parcial o Desechar. |
 | En revision (legado) | Estado historico de compatibilidad. |
 
 Botones:
@@ -331,7 +336,7 @@ Botones:
 | Rechazar | Estado Nuevo o En evaluacion, Programador/Admin | Cambia a Rechazado. |
 | Generar OT | Estado En evaluacion, sin OT, Programador/Admin | Crea una Orden de Trabajo estandar. Requiere fecha programada y equipo. |
 | Ver OT | Estado Con OT creada y con OT asociada | Abre la OT vinculada. |
-| Cerrar aviso | Estado Con OT creada, Programador/Admin | Cierra el aviso si la OT esta en una etapa terminada. |
+| Cerrar aviso | Estado Con OT creada, Programador/Admin | Acción explícita compatible; solo funciona si la OT ya está en Cierre Total, Cierre Parcial o Desechar. Normalmente el cierre de la OT ya cierra el aviso automáticamente. |
 
 Restricciones:
 
@@ -350,22 +355,37 @@ La OT corresponde al modelo estandar `maintenance.request`, mostrado funcionalme
 
 Al presionar **Generar OT** en el aviso:
 
-1. Se crea una OT con nombre igual al numero de aviso.
+1. Se crea una OT con correlativo propio `OT-00001`; el aviso `AVS-*` queda visible como **Aviso de origen**.
 2. Se copia la fecha programada del aviso a la OT.
 3. Se asigna el equipo de mantenimiento.
 4. Se copia la descripcion del aviso.
 5. Se copian las actividades del aviso como actividades ejecutables de OT.
 6. Se copian los materiales de cada actividad.
-7. El aviso queda en estado **Con OT creada**.
+7. La OT queda en etapa **Aprobada**.
+8. El aviso queda en estado **Con OT creada**.
+
+Fechas de taller visibles debajo de **Fecha de solicitud**:
+
+| Campo | Responsable | Comportamiento |
+|---|---|---|
+| Fecha ingreso a taller | Jefe de Taller/Admin | Se registra manualmente cuando el vehículo ingresa al taller. |
+| Fecha salida de taller | Programador/Admin | Al cerrar parcial o totalmente se propone la fecha/hora del cierre si el campo está vacío; puede corregirse. |
+| Tiempo fuera de servicio (hrs) | Sistema | Diferencia en horas decimales entre salida e ingreso. |
+
+La fecha de salida no puede ser anterior a la fecha de ingreso.
+
+Para compactar el encabezado, **Tipo de mantenimiento** se muestra en la columna derecha, antes de **Prioridad**; **Fecha y hora de inicio** permanece en la columna izquierda.
 
 Etapas principales de la OT:
 
 | Estado | Significado |
 |---|---|
+| Aprobada | OT autorizada y preparada, todavía sin ejecución iniciada. |
 | En progreso | OT en trabajo operativo. |
 | En revisión | Ejecutor/Admin envio la OT para revision del programador. |
 | Cierre Total | Programador/Admin cerro totalmente la OT. |
 | Cierre Parcial | Programador/Admin cerro parcialmente la OT. |
+| Desechar | Programador/Admin descarto la OT desde En revisión. |
 
 Botones principales:
 
@@ -375,6 +395,8 @@ Botones principales:
 | Cierre Total | Etapa En revisión, Programador/Admin | Cierra totalmente la OT y notifica al responsable. |
 | Cierre Parcial | Etapa En revisión, Programador/Admin | Cierra parcialmente la OT y notifica al responsable. |
 | Devolver a progreso | Etapa En revisión, Programador/Admin | Requiere motivo; vuelve a En progreso y notifica al responsable. |
+| Desechar | Etapa En revisión, Programador/Admin | Descarta la OT y cierra automáticamente el aviso asociado. |
+| Reabrir a revisión | Etapa final, Programador/Admin | Devuelve una OT cerrada/desechada a En revisión y reabre internamente el aviso asociado. |
 | Reservar materiales | Lineas con cantidad a solicitar a bodega | Crea picking interno solo por las cantidades solicitadas y asigna stock disponible. |
 | Cerrar materiales | Materiales disponibles/consumidos regularizados | Sincroniza disponible desde Inventario si corresponde y calcula consumos, devoluciones y costos. |
 | Smart button Reserva | Existe reserva | Abre el picking de reserva. |
@@ -396,6 +418,12 @@ Las actividades estan en la pestaña **Actividades**.
 | Resultado | Resuelto, Parcial o No resuelto. |
 | Materiales | Productos usados/estimados para la actividad. |
 
+Al crear una línea, primero seleccione **Ubicación técnica**. El sistema toma automáticamente la categoría del vehículo de la OT y muestra únicamente ubicaciones de esa categoría. En **Actividad** solo aparecerán tareas configuradas para esa misma categoría y ubicación técnica. Si cambia la ubicación por otra incompatible, la actividad seleccionada se limpia y debe escoger una nueva.
+
+En el encabezado, **Categoría de Equipo** identifica la clasificación del equipo de mantenimiento y **Categoría de Vehículos** muestra la clasificación de flotilla del vehículo asociado. Ambos campos se completan automáticamente y no se editan manualmente.
+
+Para incorporar varias tareas, presione **Agregar varias actividades** en la pestaña **Actividades**. El sistema toma la categoría del vehículo y muestra todas las actividades compatibles en una tabla. Marque las casillas requeridas, revise el tipo de intervención propuesto y confirme con **Agregar seleccionadas**. Se crea una línea pendiente por cada actividad; la ubicación técnica se obtiene automáticamente y se copian duración, instrucciones y materiales estándar. La grilla inferior continúa permitiendo agregar o editar actividades individualmente.
+
 Estados operativos:
 
 | Estado | Significado |
@@ -409,7 +437,7 @@ Botones:
 
 | Boton | Disponible cuando | Funcion |
 |---|---|---|
-| Iniciar | Pendiente | Cambia la actividad a En ejecucion. |
+| Iniciar | Pendiente y OT Aprobada/En progreso; Jefe de Taller/Admin | Cambia la actividad a En ejecucion. Al iniciar la primera actividad de una OT Aprobada, cambia automáticamente la OT a En progreso y registra la fecha/hora de inicio. |
 | Notificar | En ejecucion | Abre/ejecuta notificacion. Requiere descripcion y resultado. |
 | Cerrar linea | No vigente | El cierre individual de actividades fue reemplazado por el cierre parcial o total de la OT. |
 | Reabrir a pendiente | En ejecucion o Notificada; Programador/Admin | Limpia fecha/usuario de notificacion y vuelve a Pendiente. |
@@ -419,7 +447,8 @@ Para enviar la OT a revision, todas las actividades deben estar **Notificadas**.
 ## 11. Revision de OT
 
 ```text
-En progreso -> En revisión -> Cierre Total / Cierre Parcial
+Aprobada --Iniciar primera actividad--> En progreso
+En progreso -> En revisión -> Cierre Total / Cierre Parcial / Desechar
              \-> Devuelta a En progreso
 ```
 
@@ -436,6 +465,8 @@ En progreso -> En revisión -> Cierre Total / Cierre Parcial
 - Solo desde **En revisión**.
 - Disponible para Programador/Admin.
 - Cambia a la etapa de cierre seleccionada.
+- Si **Fecha salida de taller** está vacía, propone la fecha y hora del cierre; el Programador puede modificarla.
+- Recalcula **Tiempo fuera de servicio (hrs)** al existir ingreso y salida.
 - Limpia marcas de actividades agregadas/modificadas tras devolucion.
 - Notifica al responsable de ejecucion de la OT.
 
@@ -447,6 +478,11 @@ En progreso -> En revisión -> Cierre Total / Cierre Parcial
 - Cambia a **En progreso**.
 - Incrementa contador de devoluciones.
 - Notifica al responsable de ejecucion.
+
+**Desechar / Reabrir a revisión**
+
+- **Desechar** solo está disponible desde **En revisión** para Programador/Admin y cierra automáticamente el aviso.
+- **Reabrir a revisión** está disponible desde Cierre Total, Cierre Parcial o Desechar; devuelve la OT a **En revisión** y, si el aviso estaba cerrado, lo retorna internamente a **Con OT creada**.
 
 Si despues de una devolucion un Programador/Admin agrega o modifica actividades de planificacion, estas quedan marcadas como agregadas/modificadas tras devolucion hasta que la OT tenga cierre total o parcial.
 
@@ -523,13 +559,15 @@ No crea picking de devolucion.
 
 ## 13. Cierre del aviso
 
-Despues de ejecutar y revisar la OT, el aviso debe cerrarse desde **Mantenimiento > Avisos** con el boton **Cerrar aviso**.
+Al llevar la OT a **Cierre Total**, **Cierre Parcial** o **Desechar**, el sistema cierra automáticamente el aviso asociado. No es necesario volver al aviso para completar el flujo normal.
 
 Condiciones:
 
 - El aviso debe estar en **Con OT creada**.
 - Debe tener OT asociada.
-- La OT debe estar en una etapa estandar marcada como terminada en Odoo.
+- La OT debe estar en una etapa final Barca: **Cierre Total**, **Cierre Parcial** o **Desechar**.
+
+El botón **Cerrar aviso** se mantiene como acción explícita compatible para avisos históricos o reintentos, pero aplica las mismas validaciones.
 
 Al cerrar un aviso de origen **PM**, el sistema actualiza el vehiculo:
 
@@ -633,8 +671,9 @@ La marca **Seguro** del vehiculo se calcula automaticamente si existe un contrat
 4. Completar fecha programada.
 5. Generar OT.
 6. Revisar OT enviadas por ejecutores.
-7. Aprobar o devolver con motivo.
-8. Cerrar aviso cuando la OT ya este terminada.
+7. Realizar Cierre Total/Cierre Parcial, Desechar o devolver con motivo.
+8. Verificar la fecha de salida propuesta y ajustarla si corresponde.
+9. Confirmar que el aviso se cerró automáticamente.
 
 **Ejecutor**
 
@@ -686,9 +725,12 @@ En evaluacion -> Rechazado
 OT Barca:
 
 ```text
+Aprobada -> En progreso (al iniciar la primera actividad)
 En progreso -> En revisión -> Cierre Total
 En progreso -> En revisión -> Cierre Parcial
+En progreso -> En revisión -> Desechar
 En revisión -> En progreso
+Cierre Total / Cierre Parcial / Desechar -> En revisión (reapertura)
 ```
 
 Actividad de OT:

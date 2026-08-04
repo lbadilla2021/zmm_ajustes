@@ -139,9 +139,18 @@ class BarcaMaintenanceRequest(models.Model):
         for record in self:
             record.vehicle_id = record.equipment_id.vehicle_id
 
+    def _barca_is_restricted_conductor(self):
+        return (
+            not self.env.su
+            and self.env.user.has_group("zmm_ajustes.group_barca_conductor")
+        )
+
     @api.model_create_multi
     def create(self, vals_list):
+        restricted_conductor = self._barca_is_restricted_conductor()
         for vals in vals_list:
+            if restricted_conductor:
+                vals["requested_by_id"] = self.env.user.id
             vals["request_date"] = fields.Datetime.now()
             if vals.get("name", "Nuevo") == "Nuevo":
                 vals["name"] = (
@@ -185,6 +194,15 @@ class BarcaMaintenanceRequest(models.Model):
     def write(self, vals):
         vals = dict(vals)
         vals.pop("request_date", None)
+
+        if (
+            self._barca_is_restricted_conductor()
+            and "requested_by_id" in vals
+            and vals["requested_by_id"] != self.env.user.id
+        ):
+            raise ValidationError(
+                "El conductor no puede cambiar el solicitante de una solicitud."
+            )
 
         if "equipment_id" in vals:
             equipment = self.env["maintenance.equipment"].browse(vals["equipment_id"])

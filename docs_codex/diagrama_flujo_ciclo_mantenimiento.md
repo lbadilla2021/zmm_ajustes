@@ -74,9 +74,11 @@ flowchart TD
     OT3 --> OT4["Copiar actividades del aviso"]
     OT4 --> OT5["Copiar materiales por actividad"]
     OT5 --> AVI["Aviso pasa a Con OT creada"]
-    OT5 --> OT["OT Barca - Estado En ejecucion"]
+    OT5 --> OTA["OT Barca - Etapa Aprobada"]
+    OTA -->|Jefe de Taller inicia primera actividad| OT["OT Barca - Etapa En progreso"]
 
-    OT --> MAT0{"Hay materiales?"}
+    OT --> OTENTRY["Jefe de Taller registra Fecha ingreso a taller"]
+    OTENTRY --> MAT0{"Hay materiales?"}
     MAT0 -->|No| ACT0["Ejecutar actividades"]
     MAT0 -->|Si| MAT1{"Reservar materiales?"}
 
@@ -117,25 +119,24 @@ flowchart TD
     OTD3 --> OT
     OTDES -->|Cierre Total| OTA1["OT Etapa Cierre Total"]
     OTDES -->|Cierre Parcial| OTA1B["OT Etapa Cierre Parcial"]
+    OTDES -->|Desechar| OTAD["OT Etapa Desechar"]
     OTA1 --> OTA2["Notifica responsable"]
     OTA1B --> OTA2
+    OTAD --> AVCLOSE2
 
-    OTA2 --> MATC0{"Picking validado en Inventario?"}
-    MATC0 -->|No| OTCLOSESTD["Regularizar traslado interno"]
+    OTA2 --> OTEXIT["Proponer Fecha salida de taller y calcular tiempo fuera de servicio"]
+    OTEXIT --> AVCLOSE2
+    OTA2 --> MATC0{"Materiales requieren regularizacion?"}
+    MATC0 -->|No| MATFIN["Ciclo de materiales sin pendientes"]
     MATC0 -->|Si| MATC1["Registrar cantidad consumida por material"]
     MATC1 --> MATC2{"Cerrar materiales"}
     MATC2 -->|Consumo mayor que retirado| MATCERR["Validacion: corregir consumo"]
     MATCERR --> MATC1
     MATC2 -->|Valido| MATC3["Calcular devuelto = retirado - consumido"]
     MATC3 --> MATC4["Calcular costo estimado y real"]
-    MATC4 --> OTCLOSESTD
+    MATC4 --> MATFIN
 
-    OTCLOSESTD --> AVCLOSE0["Volver al Aviso asociado"]
-    AVCLOSE0 --> AVCLOSE1{"OT esta en etapa terminada?"}
-    AVCLOSE1 -->|No| AVCLOSEERR["No permite cerrar aviso"]
-    AVCLOSEERR --> OTCLOSESTD
-    AVCLOSE1 -->|Si| AVCLOSE2["Boton Cerrar aviso"]
-    AVCLOSE2 --> AVCLOSE3["Aviso Estado Cerrado"]
+    AVCLOSE2["Cerrar aviso asociado automaticamente"] --> AVCLOSE3["Aviso Estado Cerrado"]
     AVCLOSE3 --> AVCLOSE4{"Aviso origen PM?"}
     AVCLOSE4 -->|No| FIN["Fin del ciclo"]
     AVCLOSE4 -->|Si| AVCLOSE5["Actualizar medidores del vehiculo sin retroceder valores"]
@@ -166,7 +167,7 @@ flowchart TD
 | Solicitud | Solicitud de Mantencion | Nueva | Aviso creado o Cancelada |
 | Checklist | Checklist | Nuevo | Aviso generado, Cerrado sin aviso o Cancelado |
 | Aviso | Avisos | Nuevo | Con OT creada, Rechazado o Cerrado |
-| OT | Orden de Trabajo | En progreso | Cierre Total o Cierre Parcial |
+| OT | Orden de Trabajo | Aprobada | Cierre Total o Cierre Parcial |
 | Actividad OT | Actividades de OT | Pendiente | Notificada |
 | Materiales | Materiales de OT | Pendiente reserva | Reservado/parcial/sin stock, entregado y cerrado |
 | Flotilla | Vehiculo | Cambio documental o revision programada | Correo enviado o sin envio por falta de vencimientos/destinatarios |
@@ -180,4 +181,5 @@ flowchart TD
 - La devolucion de OT a ejecucion requiere motivo.
 - El cierre de materiales requiere entrega previa y consumo menor o igual a cantidad retirada.
 - El aviso solo cierra cuando la OT asociada esta en una etapa estandar terminada.
-- Al cerrar aviso PM, los medidores del vehiculo se actualizan sin retroceder valores.
+- Al cerrar total/parcialmente o desechar la OT, el aviso asociado se cierra automáticamente.
+- Al cerrarse un aviso PM, los medidores del vehículo se actualizan sin retroceder valores.

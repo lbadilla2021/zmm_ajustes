@@ -7,6 +7,8 @@
 - [ ] Buscar el modelo exacto en `models/`.
 - [ ] Buscar vistas relacionadas en `views/`.
 - [ ] Buscar permisos en `security/ir.model.access.csv`.
+- [ ] Buscar reglas de propiedad en `security/record_rules.xml`.
+- [ ] Si existe ruta web/offline, revisar también `controllers/`, `templates/` y datos `zweb_offline_forms`.
 - [ ] Revisar si hay menús o botones con grupos.
 - [ ] Revisar si el cambio afecta cron o hook.
 - [ ] Confirmar compatibilidad con Odoo 18.
@@ -40,6 +42,17 @@
 - [ ] Validar grupos en botones y menús.
 - [ ] Validar dominios dinámicos en one2many.
 - [ ] En Odoo 18, preferir sintaxis compatible actual.
+- [ ] Si se mueve un campo estándar, validar el xpath y usar `position="move"` sin duplicarlo.
+- [ ] Si el readonly depende del usuario, respaldarlo con una validación ORM; la vista no es una barrera de seguridad.
+
+## Si se cambia Solicitud de Mantención o Checklist
+
+- [ ] Mantener al Conductor limitado a registros propios por `requested_by_id`.
+- [ ] Mantener libre la selección entre todos los vehículos/equipos disponibles.
+- [ ] Impedir que el Conductor reasigne `requested_by_id`.
+- [ ] Propagar la propiedad a líneas de Checklist mediante `checklist_id.requested_by_id`.
+- [ ] En portal, aplicar dominio de propietario en listado, detalle, edición y UUID offline.
+- [ ] Probar por separado sesión Odoo y token externo.
 
 ## Si se cambia flujo de avisos
 
@@ -79,14 +92,16 @@ Después de cada cambio relevante:
 3. Crear/editar ubicación técnica.
 4. Crear/editar actividad.
 5. Crear plan con línea.
-6. Generar aviso manual.
-7. Aprobar aviso.
-8. Crear OT.
-9. Mover OT a etapa cerrada/plegada.
-10. Confirmar que aviso pasa a revisión.
-11. Cerrar aviso.
-12. Verificar actualización de medidores del vehículo.
-13. Ejecutar cron manualmente o método `run_pm_scheduler()`.
+6. Crear Solicitud/Checklist como Conductor y verificar que otro Conductor no pueda verla ni editarla.
+7. Generar un aviso y tomarlo para evaluación.
+8. Completar Fecha programada y generar la OT.
+9. Registrar Fecha ingreso a taller como Ejecutor/Jefe de Taller.
+10. Iniciar y notificar todas las actividades; enviar la OT a revisión.
+11. Cerrar total o parcialmente como Programador y verificar la propuesta de salida y el tiempo fuera de servicio.
+12. Confirmar que el aviso asociado se cierra automáticamente; si es PM, verificar medidores sin retrocesos.
+13. Verificar que la salida pueda ajustarse por Programador y no sea anterior al ingreso.
+14. Ejecutar cron manualmente o método `run_pm_scheduler()`.
+15. Validar XML, XML IDs duplicados, rutas del manifiesto y sintaxis Python.
 
 ## Comando tipo para pedir trabajo a Codex
 

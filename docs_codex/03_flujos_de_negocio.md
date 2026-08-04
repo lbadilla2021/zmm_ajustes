@@ -311,7 +311,7 @@ En evaluación
 
 Con OT creada
   ├─ Ver OT
-  └─ Cerrar aviso → Cerrado, solo si la OT está en una etapa terminada
+  └─ La OT llega a Cierre Total / Cierre Parcial / Desechar → Cerrado automáticamente
 
 Rechazado
   └─ Sin acciones operativas normales
@@ -319,6 +319,8 @@ Rechazado
 Cerrado
   └─ Sin acciones operativas normales
 ```
+
+El botón explícito **Cerrar aviso** se conserva como mecanismo compatible y aplica la misma validación de etapa final, pero no es necesario en el flujo normal porque el cierre de la OT invoca `action_close()` automáticamente.
 
 Valores técnicos de estado:
 
@@ -361,12 +363,22 @@ allow_alert_state_write=True
 
 La nueva `barca.maintenance.request` representa el requerimiento inicial de mantención creado por un usuario autorizado. No reemplaza la OT estándar. Su objetivo es capturar vehículo/equipo, solicitante, prioridad sugerida, planta y lugar detallado, estado del vehículo y descripción de la necesidad. La fecha de solicitud es la fecha actual y el equipo de mantenimiento queda bloqueado porque se deriva automáticamente del vehículo.
 
+El Conductor puede seleccionar cualquiera de los vehículos/equipos disponibles, pero
+en backend y portal sólo puede consultar o modificar solicitudes propias. Al crear,
+`requested_by_id` se fuerza al usuario actual y no puede ser reasignado por el
+Conductor.
+
 Un programador o administrador puede usar `action_create_alert()` para generar un aviso `barca.maintenance.alert` desde esa solicitud. El aviso queda con `source_type = request`, `source_reference` con el número de solicitud y `source_request_id` con el vínculo técnico al origen.
 
 
 ## Checklist
 
 El modelo `barca.maintenance.checklist` crea un formulario inicial similar a la Solicitud de Mantención simple, pero agrega tipo de vehículo, hora de carga de combustible, odómetro, observaciones y líneas de puntos de control. Al seleccionar `checklist_type`, el sistema regenera las líneas desde `barca.maintenance.checklist.item` y evita mezclar puntos de distintos tipos.
+
+El Conductor puede seleccionar cualquiera de los vehículos disponibles, pero sólo
+puede consultar o modificar checklists propios y sus líneas. La propiedad se determina
+por `requested_by_id`; el solicitante se fuerza al usuario actual y no puede ser
+reasignado por el Conductor.
 
 Al guardar un checklist en estado `new`, el sistema evalúa automáticamente las líneas. Si existe al menos una línea marcada como `no`, crea un `barca.maintenance.alert` con `source_type = checklist`, `source_reference` igual al número del checklist y `checklist_id` como vínculo técnico al origen. La descripción del aviso se toma desde `observations` cuando existe; si está vacía se usa un texto automático del checklist. Los puntos de control no se copian al aviso.
 
@@ -384,24 +396,30 @@ Reglas:
 
 Valores creados:
 
-- `name`: número del aviso.
+- `name`: correlativo propio de OT mediante `barca.maintenance.workorder`, con formato `OT-00001`.
 - `request_date`: fecha actual.
 - `maintenance_type`: `corrective`.
 - `description`: descripción del aviso + resumen de actividades.
 - `equipment_id`: equipo asociado al vehículo.
+- `stage_id`: etapa **Aprobada**; la OT todavía no está en ejecución.
 
 Después de crear la OT:
 
 1. Guarda `maintenance_request_id` en el aviso.
-2. Guarda `barca_alert_id` en la OT.
+2. Guarda `barca_alert_id` en la OT y lo muestra como **Aviso de origen**; el número `AVS-*` no se reutiliza como número de OT.
 3. Copia cada `barca.maintenance.alert.line` a una actividad ejecutable `barca.maintenance.workorder.line`.
 4. Copia cada `barca.maintenance.alert.line.material` a un material ejecutable `barca.maintenance.workorder.line.material`.
 5. Pasa el aviso a estado técnico `in_progress` / funcional `Con OT creada`.
+6. La OT permanece en **Aprobada** hasta que el Jefe de Taller o Administrador inicia su primera actividad.
 
 
 ## Copia de actividades y materiales a la OT
 
 La pestaña **Actividades** de la OT estándar muestra líneas `barca.maintenance.workorder.line`. Cada línea conserva los datos técnicos copiados desde la actividad del aviso: ubicación técnica, tipo de intervención, actividad, duración estimada, descripción/instrucciones, observaciones y estado operativo (`pending`, `in_progress`, `notified`).
+
+Al agregar o modificar una actividad manualmente, la categoría se toma del vehículo asociado al equipo de la OT. El selector de ubicación técnica queda limitado a esa categoría; después de elegir la ubicación, el selector **Actividad** muestra solo actividades que coincidan tanto con la categoría del vehículo como con la ubicación técnica. La misma compatibilidad se valida en el modelo.
+
+Como alternativa al ingreso línea a línea, **Agregar varias actividades** abre un asistente modal que toma la categoría desde el vehículo de la OT y muestra inmediatamente todas las actividades compatibles en una tabla. El usuario marca las casillas requeridas y puede revisar o corregir el tipo de intervención propuesto. Al confirmar se incorpora una línea pendiente por cada selección; la ubicación se toma de cada actividad y se copian duración, instrucciones y materiales estándar del catálogo. El asistente no elimina ni reemplaza la edición manual existente.
 
 Cada actividad de OT contiene una subpestaña de **Materiales / Repuestos / Kits** con líneas `barca.maintenance.workorder.line.material`. Se copian producto `product.product`, unidad de medida, cantidad estimada, secuencia, nota y referencia al material del aviso (`alert_line_material_id`). Los kits siguen tratándose como productos íntegros y no se explotan en componentes. La grilla principal de actividades de la OT muestra **N° materiales** y **Materiales** para revisar rápidamente qué productos ejecutables tiene cada actividad.
 
@@ -412,6 +430,15 @@ Las cantidades operativas de materiales de OT deben ser mayores o iguales a cero
 La OT gestiona su propio ciclo de programación, ejecución, revisión y cierre. Cambiar la OT a **En revisión** no cierra el aviso. El aviso permanece en `Con OT creada` hasta que la OT pasa a **Cierre Total**, **Cierre Parcial** o **Desechar**; entonces la OT invoca `action_close()` del aviso automáticamente.
 
 Una OT en **Cierre Parcial**, **Cierre Total** o **Desechar** puede reabrirse a **En revisión** mediante la acción **Reabrir a revisión** para Programador/Admin. Si el aviso asociado estaba cerrado, se devuelve internamente a `Con OT creada` usando el contexto de transición permitido. **Desechar** solo está disponible desde **En revisión**.
+
+En el encabezado de la OT, debajo de **Fecha de solicitud**, se controla el tiempo fuera de servicio:
+
+1. El Jefe de Taller registra manualmente **Fecha ingreso a taller** mientras ejecuta la OT.
+2. Al realizar **Cierre Total** o **Cierre Parcial**, si **Fecha salida de taller** está vacía, el sistema propone la fecha y hora efectiva de esa acción.
+3. El Programador puede modificar la fecha de salida propuesta.
+4. **Tiempo fuera de servicio (hrs)** se recalcula como `salida - ingreso` y se muestra en horas decimales.
+
+El modelo rechaza una fecha de salida anterior al ingreso. El Administrador Barca puede intervenir en ambas fechas.
 
 ## Cierre del aviso PM
 
@@ -436,7 +463,7 @@ Pendiente → En ejecución → Notificada
 
 Acciones disponibles:
 
-- **Iniciar**: cambia una actividad `pending` a `in_progress` y registra `start_datetime` con la fecha/hora real de inicio de esa actividad. Si es la primera actividad iniciada de la OT, registra también `barca_start_datetime` en la OT. Se permite que varias actividades de la misma OT estén simultáneamente en ejecución; Fase 4 no impone una restricción de actividad única en curso.
+- **Iniciar**: disponible para Jefe de Taller o Administrador cuando la actividad está pendiente y la OT está **Aprobada** o **En progreso**. Si se inicia la primera actividad de una OT **Aprobada**, cambia automáticamente la OT a **En progreso**. La actividad pasa de `pending` a `in_progress` y registra `start_datetime`; el primer inicio registra además `barca_start_datetime` en la OT. Se permite que varias actividades de la misma OT estén simultáneamente en ejecución; Fase 4 no impone una restricción de actividad única en curso.
 - **Notificar**: exige descripción de lo realizado, resultado y cantidades de materiales no negativas; cambia la actividad `in_progress` a `notified` y registra fecha/hora y usuario notificador.
 - **Reabrir a pendiente**: solo para administrador o programador Barca; vuelve la actividad a `pending` y limpia fecha/hora de inicio de la actividad y fecha/usuario de notificación, conservando descripción, resultado, materiales y cantidades informadas. El inicio de la OT (`barca_start_datetime`) no se limpia ni se recalcula.
 

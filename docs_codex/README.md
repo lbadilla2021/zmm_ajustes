@@ -2,6 +2,8 @@
 
 Este directorio guarda notas de contexto funcional y técnico para futuras modificaciones del módulo `zmm_ajustes`.
 
+Estado documental: revisado contra el código vigente el **03-08-2026**. La referencia funcional actual contempla portales web/offline, aislamiento por propietario para Conductores, flujo de OT por `stage_id`, cierre automático del aviso y fechas de ingreso/salida de taller.
+
 ## Documentos
 
 - `diagrama_flujo_ciclo_mantenimiento.md`: diagrama Mermaid detallado del ciclo completo de mantenimiento.
@@ -12,7 +14,7 @@ Este directorio guarda notas de contexto funcional y técnico para futuras modif
 - `02_modelo_de_datos.md`: modelos propios/extendidos, incluyendo la ampliación productiva de Flotilla.
 - `03_flujos_de_negocio.md`: flujos PM, avisos, solicitudes, checklist y alertas documentales de Flotilla.
 - `04_reglas_tecnicas_odoo18.md`: convenciones técnicas para Odoo 18 y cron.
-- `05_seguridad_menus_roles.md`: grupos, ACL, menús y accesos.
+- `05_seguridad_menus_roles.md`: grupos, ACL, reglas de registro, seguridad de portal, menús y accesos.
 - `06_importacion_datos_csv.md`: criterios de importación manual de datos.
 - `07_riesgos_y_errores_conocidos.md`: riesgos funcionales/técnicos vigentes.
 - `08_checklist_antes_de_cambiar.md`: checklist operativo antes de modificar el módulo.

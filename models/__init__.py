@@ -11,6 +11,7 @@ from . import maintenance_equipment
 from . import maintenance_kit
 from . import maintenance_alert
 from . import maintenance_request
+from . import maintenance_workorder_activity_wizard
 from . import maintenance_request_simple
 
 from . import maintenance_checklist
