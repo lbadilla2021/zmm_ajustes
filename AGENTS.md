@@ -41,6 +41,7 @@ Estas instrucciones aplican a todo el módulo Odoo `zmm_ajustes`.
 - **Solicitud de Mantención** es el requerimiento simple inicial (`barca.maintenance.request`), no la OT estándar. Debe ubicarse bajo **Orígenes Avisos** y puede generar un `barca.maintenance.alert` con origen `request`.
 - En **Solicitud de Mantención**, la fecha es la fecha actual y queda bloqueada; el equipo de mantenimiento queda bloqueado y se carga automáticamente desde el vehículo; existen los campos **Planta y Lugar detallado** y **Estado del vehículo** (`operativo` / `no_operativo`).
 - **Checklist** (`barca.maintenance.checklist`) es una fuente de avisos bajo **Orígenes Avisos**; sus puntos se cargan desde el catálogo `barca.maintenance.checklist.item` por tipo de vehículo, guarda respuestas **Sí/No**, y al guardar genera automáticamente un aviso si existe al menos un **No**.
+- El encabezado de **Checklist** incluye **Seleccionar todos los Sí** para marcar o limpiar masivamente las respuestas afirmativas. El rol **Conductor** puede provocar la generación automática del aviso al guardar un Checklist propio con al menos un **No**, sin recibir permiso general para crear avisos manualmente.
 - El catálogo de ítems de Checklist se administra desde **Configuración → Checklist** y debe mostrar/editar tipo de vehículo, tipo de control e ítem de control.
 - El menú de equipos debe mostrarse como **Equipos** en plural.
 

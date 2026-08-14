@@ -2434,6 +2434,26 @@ class BarcaMaintenanceWorkorderLine(models.Model):
             raise ValidationError("La actividad no tiene una OT asociada.")
         return self.maintenance_request_id.action_barca_reserve_materials()
 
+    def action_open_materials_modal(self):
+        """Abre únicamente los materiales asociados a esta actividad de OT."""
+        self.ensure_one()
+        view = self.env.ref(
+            "zmm_ajustes.view_barca_maintenance_workorder_line_materials_modal"
+        )
+        return {
+            "type": "ir.actions.act_window",
+            "name": "Materiales de la actividad",
+            "res_model": "barca.maintenance.workorder.line",
+            "view_mode": "form",
+            "views": [(view.id, "form")],
+            "view_id": view.id,
+            "res_id": self.id,
+            "target": "new",
+            "context": {
+                "default_maintenance_request_id": self.maintenance_request_id.id,
+            },
+        }
+
     def action_notify_line(self):
         for line in self:
             if line.state != "in_progress":
@@ -2461,29 +2481,27 @@ class BarcaMaintenanceWorkorderLine(models.Model):
         return True
 
     def action_notify_line_open_form(self):
-        """Abre el formulario de la actividad en la pestaña Notificación.
-
-        Usado desde la lista de actividades de la OT, donde el usuario
-        necesita completar notification_note y result antes de notificar.
-        El botón "Notificar" del header del form ejecuta action_notify_line
-        una vez que los campos estén completos.
-        """
+        """Abre el modal dedicado a la notificación de la actividad."""
         self.ensure_one()
-        if self.state != "in_progress":
+        if self.state not in ("in_progress", "notified"):
             raise ValidationError(
-                "Solo se pueden notificar actividades en estado En ejecución."
+                "Solo se puede abrir la notificación de una actividad en "
+                "ejecución o ya notificada."
             )
+        view = self.env.ref(
+            "zmm_ajustes.view_barca_maintenance_workorder_line_notification_modal"
+        )
         return {
             "type": "ir.actions.act_window",
             "name": "Notificar actividad",
             "res_model": "barca.maintenance.workorder.line",
             "view_mode": "form",
-            "views": [(False, "form")],
+            "views": [(view.id, "form")],
+            "view_id": view.id,
             "res_id": self.id,
             "target": "new",
             "context": {
                 "default_maintenance_request_id": self.maintenance_request_id.id,
-                "active_tab": "notification",
             },
         }
 

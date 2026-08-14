@@ -113,6 +113,12 @@ class BarcaMaintenanceChecklist(models.Model):
         string="Puntos de control",
         copy=True,
     )
+    select_all_yes = fields.Boolean(
+        string="Seleccionar todos los Sí",
+        default=False,
+        store=False,
+        help="Marca todos los puntos como Sí. Al desmarcarla, limpia todos los Sí.",
+    )
     alert_id = fields.Many2one(
         "barca.maintenance.alert",
         string="Aviso vinculado",
@@ -206,6 +212,14 @@ class BarcaMaintenanceChecklist(models.Model):
                     }
             else:
                 record.line_ids = [(5, 0, 0)]
+
+    @api.onchange("select_all_yes")
+    def _onchange_select_all_yes(self):
+        for record in self:
+            for line in record.line_ids:
+                line.yes = record.select_all_yes
+                if record.select_all_yes:
+                    line.no = False
 
     def _barca_is_restricted_conductor(self):
         return (
@@ -414,12 +428,16 @@ class BarcaMaintenanceChecklist(models.Model):
 
     def _create_alert_from_checklist(self):
         self.ensure_one()
-        alert = self.env["barca.maintenance.alert"].create(self._prepare_alert_vals())
+        # El Conductor puede provocar la creación automática desde su Checklist,
+        # pero no recibe permiso general para crear avisos manualmente.
+        alert = self.env["barca.maintenance.alert"].sudo().create(
+            self._prepare_alert_vals()
+        )
         self.with_context(skip_checklist_auto_process=True).write(
             {"alert_id": alert.id, "state": "notice_created"}
         )
         self.message_post(body="Aviso generado automáticamente al guardar: %s" % alert.name)
-        return alert
+        return self.env["barca.maintenance.alert"].browse(alert.id)
 
     def _auto_process_after_save(self):
         if self.env.context.get("skip_checklist_auto_process"):

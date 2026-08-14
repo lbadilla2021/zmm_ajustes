@@ -247,7 +247,7 @@ Restricciones:
 
 Ruta: **Mantencion Barca > Origenes Avisos > Checklist**.
 
-El checklist carga puntos de control desde el catalogo por tipo de vehiculo y permite responder **Si** o **No**.
+El checklist carga puntos de control desde el catalogo por tipo de vehiculo y permite responder **Si** o **No**. La casilla **Seleccionar todos los Sí** del encabezado marca todos los puntos como Sí; al desmarcarla, limpia esas selecciones.
 
 | Campo | Uso |
 |---|---|
@@ -286,7 +286,7 @@ Botones y guardado:
 
 Logica automatica al guardar:
 
-- Si hay al menos un **No**, crea aviso con origen **Checklist**.
+- Si hay al menos un **No**, crea aviso con origen **Checklist**, también cuando el Checklist es guardado por un usuario con rol **Conductor**.
 - Si no hay ningun **No**, no crea aviso.
 - La descripcion del aviso usa las observaciones; si estan vacias, usa un texto automatico.
 - Los puntos de control no se copian como actividades al aviso.
