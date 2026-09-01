@@ -62,6 +62,13 @@ class BarcaMaintenanceAlert(models.Model):
         string="Equipo de mantenimiento",
         tracking=True,
     )
+    vehicle_category_id = fields.Many2one(
+        "fleet.vehicle.model.category",
+        string="Categoría de Vehículos",
+        related="vehicle_id.category_id",
+        store=True,
+        readonly=True,
+    )
 
     # Líneas de actividades propagadas desde el plan
     alert_line_ids = fields.One2many(
@@ -477,6 +484,15 @@ class BarcaMaintenanceAlertLine(models.Model):
         "barca.technical.location",
         string="Ubicación técnica",
         required=True,
+        domain="[('category_id', '=', vehicle_category_id)]",
+    )
+
+    vehicle_category_id = fields.Many2one(
+        "fleet.vehicle.model.category",
+        string="Categoría del vehículo",
+        related="alert_id.vehicle_id.category_id",
+        store=True,
+        readonly=True,
     )
 
     intervention_type_id = fields.Many2one(
@@ -489,6 +505,8 @@ class BarcaMaintenanceAlertLine(models.Model):
         "barca.maintenance.activity",
         string="Actividad",
         required=True,
+        domain="[('category_id', '=', vehicle_category_id), "
+               "('technical_location_id', '=', technical_location_id)]",
     )
 
     estimated_duration = fields.Float(
@@ -648,6 +666,46 @@ class BarcaMaintenanceAlertLine(models.Model):
 
     def _prepare_workorder_material_commands(self):
         return self._prepare_material_commands_from_alert_line()
+
+    @api.onchange("technical_location_id", "vehicle_category_id")
+    def _onchange_barca_activity_filter(self):
+        for line in self:
+            if line.activity_id and (
+                line.activity_id.technical_location_id
+                != line.technical_location_id
+                or line.activity_id.category_id != line.vehicle_category_id
+            ):
+                line.activity_id = False
+
+    # No incluir vehicle_category_id en el disparador: al agregar este campo
+    # related/store durante una actualización, Odoo lo recalcula para todas las
+    # líneas históricas. Validarlas en ese momento impediría actualizar el
+    # módulo y también dejaría la columna sin crear. La compatibilidad completa
+    # (incluida la categoría) se revisa al crear una línea o cuando el usuario
+    # cambia su actividad o ubicación técnica.
+    @api.constrains("activity_id", "technical_location_id")
+    def _check_barca_activity_compatibility(self):
+        for line in self:
+            if not line.activity_id:
+                continue
+            if (
+                line.technical_location_id
+                and line.activity_id.technical_location_id
+                != line.technical_location_id
+            ):
+                raise ValidationError(
+                    "La actividad '%s' no corresponde a la ubicación técnica '%s'."
+                    % (line.activity_id.name, line.technical_location_id.name)
+                )
+            if (
+                line.vehicle_category_id
+                and line.activity_id.category_id != line.vehicle_category_id
+            ):
+                raise ValidationError(
+                    "La actividad '%s' no corresponde a la categoría del "
+                    "vehículo '%s'."
+                    % (line.activity_id.name, line.vehicle_category_id.name)
+                )
 
     @api.model_create_multi
     def create(self, vals_list):

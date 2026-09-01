@@ -463,6 +463,7 @@ Campos principales:
 - `pm_id`
 - `vehicle_id`
 - `equipment_id`
+- `vehicle_category_id`: categoría del vehículo, relacionada desde `vehicle_id.category_id`, almacenada y de solo lectura.
 - `alert_line_ids`
 - `priority`: `low`, `medium`, `high`.
 - `state`
@@ -494,6 +495,7 @@ Campos:
 - `sequence`
 - `alert_id`
 - `plan_line_id`
+- `vehicle_category_id`: categoría relacionada desde el vehículo del aviso; se usa como referencia técnica para los dominios.
 - `technical_location_id`
 - `intervention_type_id`
 - `activity_id`
@@ -505,6 +507,8 @@ Campos:
 - `material_summary`: resumen visible con hasta tres productos y sufijo `(+N)` si existen más.
 
 Estas líneas se copian desde `barca.maintenance.plan.line` al crear aviso desde PM. Sus materiales se copian desde `barca.maintenance.plan.line.material` hacia líneas nuevas de `barca.maintenance.alert.line.material`, por lo que cada aviso mantiene registros propios e independientes del plan. No existen materiales globales en el encabezado del aviso.
+
+En el formulario del aviso, `technical_location_id` queda limitado a ubicaciones de `vehicle_category_id`. Después de seleccionar la ubicación, `activity_id` muestra únicamente actividades que coinciden simultáneamente con esa categoría y ubicación. Un onchange limpia una actividad que deje de ser compatible y constraints ORM rechazan combinaciones inválidas creadas mediante importación o RPC. Al igual que en las líneas de OT, el campo relacionado almacenado no forma parte del disparador del constraint para permitir el recálculo de datos históricos durante la actualización del módulo.
 
 ## `barca.maintenance.alert.line.material`
 

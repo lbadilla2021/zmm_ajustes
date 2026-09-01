@@ -347,6 +347,8 @@ Restricciones:
 
 Cuando el aviso viene de un plan, hereda ubicacion tecnica, tipo de intervencion, actividad, duracion, observaciones y materiales. Es una copia propia: cambiar el plan despues no cambia avisos ya generados.
 
+El encabezado muestra la **Categoría de Vehículos** tomada automáticamente del vehículo. Al editar las actividades, seleccione primero la **Ubicación técnica**: solo aparecen ubicaciones de esa categoría. Luego, **Actividad** muestra únicamente actividades configuradas para la misma categoría y ubicación. Si cambia la ubicación por otra incompatible, la actividad anterior se limpia y debe seleccionarla nuevamente.
+
 ## 9. Orden de Trabajo
 
 Ruta: **Mantencion Barca > Mantenimiento > Orden de Trabajo**.

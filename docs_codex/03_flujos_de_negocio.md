@@ -285,6 +285,8 @@ Campos copiados:
 - `note`
 - `sequence`
 
+El encabezado del aviso muestra en solo lectura la categoría del vehículo. Al agregar o modificar actividades manualmente, **Ubicación técnica** se limita a esa categoría y **Actividad** se limita a la combinación de categoría y ubicación elegida. Si la ubicación o la categoría dejan de ser compatibles, la actividad se limpia en el formulario; el modelo aplica las mismas validaciones para operaciones por importación o RPC.
+
 Campos de materiales copiados por cada actividad:
 
 - `sequence`
