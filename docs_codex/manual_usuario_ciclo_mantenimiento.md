@@ -347,7 +347,7 @@ Restricciones:
 
 Cuando el aviso viene de un plan, hereda ubicacion tecnica, tipo de intervencion, actividad, duracion, observaciones y materiales. Es una copia propia: cambiar el plan despues no cambia avisos ya generados.
 
-El encabezado muestra la **Categoría de Vehículos** tomada automáticamente del vehículo. Al editar las actividades, seleccione primero la **Ubicación técnica**: solo aparecen ubicaciones de esa categoría. Luego, **Actividad** muestra únicamente actividades configuradas para la misma categoría y ubicación. Si cambia la ubicación por otra incompatible, la actividad anterior se limpia y debe seleccionarla nuevamente.
+El encabezado muestra la **Categoría de Vehículos** y el **Tipo de vehículo**, tomados automáticamente del vehículo. Al editar las actividades, seleccione primero la **Ubicación técnica**: solo aparecen ubicaciones de nivel 0 de esa categoría y tipo. Luego, **Actividad** muestra únicamente actividades configuradas para la misma categoría y ubicación. Si cambia alguno de esos datos y la selección deja de ser compatible, la ubicación y la actividad se limpian y deben seleccionarse nuevamente.
 
 ## 9. Orden de Trabajo
 
@@ -420,9 +420,9 @@ Las actividades estan en la pestaña **Actividades**.
 | Resultado | Resuelto, Parcial o No resuelto. |
 | Materiales | Productos usados/estimados para la actividad. |
 
-Al crear una línea, primero seleccione **Ubicación técnica**. El sistema toma automáticamente la categoría del vehículo de la OT y muestra únicamente ubicaciones de esa categoría. En **Actividad** solo aparecerán tareas configuradas para esa misma categoría y ubicación técnica. Si cambia la ubicación por otra incompatible, la actividad seleccionada se limpia y debe escoger una nueva.
+Al crear una línea, primero seleccione **Ubicación técnica**. El sistema toma automáticamente la categoría y el tipo del vehículo de la OT y muestra únicamente ubicaciones de nivel 0 que coincidan con ambos datos. En **Actividad** solo aparecerán tareas configuradas para esa misma categoría y ubicación técnica. Si cambia alguno de esos datos y la selección deja de ser compatible, la ubicación y la actividad se limpian y deben escogerse nuevamente.
 
-En el encabezado, **Categoría de Equipo** identifica la clasificación del equipo de mantenimiento y **Categoría de Vehículos** muestra la clasificación de flotilla del vehículo asociado. Ambos campos se completan automáticamente y no se editan manualmente.
+En el encabezado, **Categoría de Equipo** identifica la clasificación del equipo de mantenimiento, **Categoría de Vehículos** muestra la clasificación de flotilla y **Tipo de vehículo** distingue automóvil o bicicleta. Los campos se completan automáticamente y no se editan manualmente.
 
 Para incorporar varias tareas, presione **Agregar varias actividades** en la pestaña **Actividades**. El sistema toma la categoría del vehículo y muestra todas las actividades compatibles en una tabla. Marque las casillas requeridas, revise el tipo de intervención propuesto y confirme con **Agregar seleccionadas**. Se crea una línea pendiente por cada actividad; la ubicación técnica se obtiene automáticamente y se copian duración, instrucciones y materiales estándar. La grilla inferior continúa permitiendo agregar o editar actividades individualmente.
 

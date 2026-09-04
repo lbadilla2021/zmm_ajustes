@@ -22,6 +22,11 @@ class MaintenanceRequest(models.Model):
         related="equipment_id.vehicle_id.category_id",
         readonly=True,
     )
+    barca_vehicle_type = fields.Selection(
+        related="equipment_id.vehicle_id.vehicle_type",
+        string="Tipo de vehículo",
+        readonly=True,
+    )
 
     def _barca_find_stage(self, names=(), xmlids=()):
         Stage = self.env["maintenance.stage"]
@@ -1998,13 +2003,20 @@ class BarcaMaintenanceWorkorderLine(models.Model):
         "barca.technical.location",
         string="Ubicación técnica",
         required=True,
-        domain="[('category_id', '=', vehicle_category_id)]",
+        domain="[('category_id', '=', vehicle_category_id), "
+               "('vehicle_type', '=', vehicle_type), ('level', '=', 0)]",
     )
 
     vehicle_category_id = fields.Many2one(
         "fleet.vehicle.model.category",
         string="Categoría del vehículo",
         related="maintenance_request_id.equipment_id.vehicle_id.category_id",
+        store=True,
+        readonly=True,
+    )
+    vehicle_type = fields.Selection(
+        related="maintenance_request_id.equipment_id.vehicle_id.vehicle_type",
+        string="Tipo de vehículo",
         store=True,
         readonly=True,
     )
@@ -2256,9 +2268,15 @@ class BarcaMaintenanceWorkorderLine(models.Model):
                 record.barca_added_after_return = True
         return records
 
-    @api.onchange("technical_location_id", "vehicle_category_id")
+    @api.onchange("technical_location_id", "vehicle_category_id", "vehicle_type")
     def _onchange_barca_activity_filter(self):
         for line in self:
+            if line.technical_location_id and (
+                line.technical_location_id.category_id != line.vehicle_category_id
+                or line.technical_location_id.vehicle_type != line.vehicle_type
+                or line.technical_location_id.level != 0
+            ):
+                line.technical_location_id = False
             if line.activity_id and (
                 line.activity_id.technical_location_id
                 != line.technical_location_id
@@ -2275,6 +2293,15 @@ class BarcaMaintenanceWorkorderLine(models.Model):
     @api.constrains("activity_id", "technical_location_id")
     def _check_barca_activity_compatibility(self):
         for line in self:
+            if line.technical_location_id and (
+                line.technical_location_id.category_id != line.vehicle_category_id
+                or line.technical_location_id.vehicle_type != line.vehicle_type
+                or line.technical_location_id.level != 0
+            ):
+                raise ValidationError(
+                    "La ubicación técnica debe ser de nivel 0 y corresponder "
+                    "a la categoría y al tipo del vehículo."
+                )
             if not line.activity_id:
                 continue
             if (

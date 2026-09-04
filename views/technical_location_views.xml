@@ -8,6 +8,7 @@
                 <field name="code"/>
                 <field name="name"/>
                 <field name="category_id"/>
+                <field name="vehicle_type"/>
                 <field name="parent_id"/>
                 <field name="parent_code"/>
                 <field name="level"/>
@@ -31,6 +32,7 @@
                             <field name="code"/>
                             <field name="company_id" groups="base.group_multi_company"/>
                             <field name="category_id"/>
+                            <field name="vehicle_type"/>
                             <field name="parent_id"/>
                             <field name="parent_code"/>
                             <field name="level"/>
@@ -50,6 +52,7 @@
                                 <field name="code"/>
                                 <field name="name"/>
                                 <field name="category_id"/>
+                                <field name="vehicle_type"/>
                                 <field name="level"/>
                             </list>
                         </field>
@@ -67,6 +70,7 @@
                 <field name="name"/>
                 <field name="code"/>
                 <field name="category_id"/>
+                <field name="vehicle_type"/>
                 <field name="parent_id"/>
                 <field name="parent_code"/>
                 <field name="level"/>
@@ -76,6 +80,7 @@
 
                 <group expand="0" string="Agrupar por">
                     <filter name="group_by_category" string="Categoría" domain="[]" context="{'group_by': 'category_id'}"/>
+                    <filter name="group_by_vehicle_type" string="Tipo de vehículo" domain="[]" context="{'group_by': 'vehicle_type'}"/>
                     <filter name="group_by_level" string="Nivel" domain="[]" context="{'group_by': 'level'}"/>
                     <filter name="group_by_parent" string="Padre" domain="[]" context="{'group_by': 'parent_id'}"/>
                 </group>

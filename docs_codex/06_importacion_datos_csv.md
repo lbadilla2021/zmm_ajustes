@@ -36,6 +36,7 @@ Para importar ubicaciones técnicas manualmente, preparar un archivo para el imp
 name
 code
 category_id
+vehicle_type
 parent_code
 kit_id
 estimated_useful_life
@@ -47,7 +48,9 @@ Notas:
 
 - `name` y `code` son obligatorios.
 - `category_id` es obligatorio y debe apuntar a una categoría existente de `fleet.vehicle.model.category`.
+- `vehicle_type` es obligatorio: usar `car` para automóviles o `bike` para bicicletas. Al actualizar una instalación existente, las ubicaciones actuales reciben `car` por defecto y se deben reclasificar manualmente las que correspondan a bicicletas.
 - `parent_code` puede usarse para enlazar una sububicación con una ubicación padre ya creada/importada.
+- Padre e hijo deben tener la misma categoría y el mismo tipo de vehículo.
 - Si se usa `parent_code`, importar primero los padres y luego los hijos.
 
 ## XML IDs automáticos

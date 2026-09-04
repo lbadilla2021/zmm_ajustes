@@ -2,12 +2,18 @@ from odoo import api, fields, models
 from odoo.exceptions import ValidationError
 
 
+VEHICLE_TYPE_SELECTION = [
+    ("car", "Automóvil"),
+    ("bike", "Bicicleta"),
+]
+
+
 class BarcaTechnicalLocation(models.Model):
     _name = "barca.technical.location"
     _description = "Ubicación técnica"
     _parent_name = "parent_id"
     _parent_store = True
-    _order = "category_id, parent_id, name"
+    _order = "vehicle_type, category_id, parent_id, name"
 
     name = fields.Char(string="Nombre", required=True)
     code = fields.Char(string="Código", required=True)
@@ -16,6 +22,13 @@ class BarcaTechnicalLocation(models.Model):
         "fleet.vehicle.model.category",
         string="Categoría de vehículo",
         required=True,
+    )
+
+    vehicle_type = fields.Selection(
+        VEHICLE_TYPE_SELECTION,
+        string="Tipo de vehículo",
+        required=True,
+        default="car",
     )
 
     company_id = fields.Many2one(
@@ -27,7 +40,7 @@ class BarcaTechnicalLocation(models.Model):
     parent_id = fields.Many2one(
         "barca.technical.location",
         string="Ubicación padre",
-        domain="[('category_id', '=', category_id), ('company_id', 'in', [company_id, False]), ('id', '!=', id)]",
+        domain="[('category_id', '=', category_id), ('vehicle_type', '=', vehicle_type), ('company_id', 'in', [company_id, False]), ('id', '!=', id)]",
         ondelete="cascade",
     )
 
@@ -97,6 +110,18 @@ class BarcaTechnicalLocation(models.Model):
         for rec in self:
             rec.level = rec.parent_id.level + 1 if rec.parent_id else 0
 
+    @api.constrains("parent_id", "category_id", "vehicle_type")
+    def _check_parent_compatibility(self):
+        for rec in self.filtered("parent_id"):
+            if rec.parent_id.category_id != rec.category_id:
+                raise ValidationError(
+                    "La ubicación padre debe pertenecer a la misma categoría de vehículo."
+                )
+            if rec.parent_id.vehicle_type != rec.vehicle_type:
+                raise ValidationError(
+                    "La ubicación padre debe pertenecer al mismo tipo de vehículo."
+                )
+
     @api.depends("parent_id.code")
     def _compute_parent_code(self):
         for rec in self:
@@ -111,6 +136,8 @@ class BarcaTechnicalLocation(models.Model):
             domain = [("code", "=", rec.parent_code), ("id", "!=", rec.id)]
             if rec.category_id:
                 domain.append(("category_id", "=", rec.category_id.id))
+            if rec.vehicle_type:
+                domain.append(("vehicle_type", "=", rec.vehicle_type))
 
             parents = self.search(domain, limit=2)
             if not parents:

@@ -160,6 +160,7 @@ Campos principales:
 - `name`
 - `code`
 - `category_id`
+- `vehicle_type`: tipo de vehículo (`car` / `bike`), obligatorio; los registros existentes se migran con `car` por defecto.
 - `company_id`
 - `parent_id`
 - `parent_code`
@@ -178,6 +179,7 @@ Características:
 - Usa `_parent_store = True`.
 - Calcula `complete_name` como ruta jerárquica.
 - Calcula `level` según padre.
+- Exige que padre e hijo pertenezcan a la misma categoría y tipo de vehículo.
 - Permite asignar padre mediante `parent_code`.
 - Crea XML IDs estables mediante `_ensure_external_ids()` usando el `code`.
 
@@ -464,6 +466,7 @@ Campos principales:
 - `vehicle_id`
 - `equipment_id`
 - `vehicle_category_id`: categoría del vehículo, relacionada desde `vehicle_id.category_id`, almacenada y de solo lectura.
+- `vehicle_type`: tipo del vehículo, relacionado desde `vehicle_id.vehicle_type`, almacenado y de solo lectura.
 - `alert_line_ids`
 - `priority`: `low`, `medium`, `high`.
 - `state`
@@ -496,6 +499,7 @@ Campos:
 - `alert_id`
 - `plan_line_id`
 - `vehicle_category_id`: categoría relacionada desde el vehículo del aviso; se usa como referencia técnica para los dominios.
+- `vehicle_type`: tipo relacionado desde el vehículo del aviso; se usa como referencia técnica para los dominios.
 - `technical_location_id`
 - `intervention_type_id`
 - `activity_id`
@@ -508,7 +512,7 @@ Campos:
 
 Estas líneas se copian desde `barca.maintenance.plan.line` al crear aviso desde PM. Sus materiales se copian desde `barca.maintenance.plan.line.material` hacia líneas nuevas de `barca.maintenance.alert.line.material`, por lo que cada aviso mantiene registros propios e independientes del plan. No existen materiales globales en el encabezado del aviso.
 
-En el formulario del aviso, `technical_location_id` queda limitado a ubicaciones de `vehicle_category_id`. Después de seleccionar la ubicación, `activity_id` muestra únicamente actividades que coinciden simultáneamente con esa categoría y ubicación. Un onchange limpia una actividad que deje de ser compatible y constraints ORM rechazan combinaciones inválidas creadas mediante importación o RPC. Al igual que en las líneas de OT, el campo relacionado almacenado no forma parte del disparador del constraint para permitir el recálculo de datos históricos durante la actualización del módulo.
+En el formulario del aviso, `technical_location_id` queda limitado a ubicaciones de nivel 0 cuya categoría y tipo coincidan con `vehicle_category_id` y `vehicle_type`. Después de seleccionar la ubicación, `activity_id` muestra únicamente actividades que coinciden simultáneamente con esa categoría y ubicación. Un onchange limpia ubicaciones o actividades incompatibles y constraints ORM rechazan combinaciones inválidas creadas mediante importación o RPC. Los campos relacionados almacenados no forman parte del disparador del constraint para permitir el recálculo de datos históricos durante la actualización del módulo.
 
 ## `barca.maintenance.alert.line.material`
 
@@ -592,7 +596,7 @@ Extensión en `models/maintenance_request.py`.
 
 La Solicitud de Mantención estándar de Odoo se renombra funcionalmente como Orden de Trabajo. Su ciclo de programación, ejecución, revisión y cierre queda separado del ciclo del aviso `barca.maintenance.alert`.
 
-En el encabezado de la OT se distinguen las dos clasificaciones relacionadas con el equipo seleccionado: `category_id` se presenta como **Categoría de Equipo** y `barca_vehicle_category_id` como **Categoría de Vehículos**. Esta última es un campo relacionado de solo lectura que sigue la ruta `equipment_id.vehicle_id.category_id` y se actualiza automáticamente al seleccionar el equipo/vehículo.
+En el encabezado de la OT se distinguen las clasificaciones relacionadas con el equipo seleccionado: `category_id` se presenta como **Categoría de Equipo**, `barca_vehicle_category_id` como **Categoría de Vehículos** y `barca_vehicle_type` como **Tipo de vehículo**. Los dos últimos son campos relacionados de solo lectura que siguen las rutas de `equipment_id.vehicle_id` y se actualizan automáticamente al seleccionar el equipo/vehículo.
 
 Las OT creadas desde un aviso usan la secuencia `barca.maintenance.workorder`, con prefijo `OT-` y padding 5 (`OT-00001`). El aviso mantiene su propio `AVS-*` y queda relacionado en `barca_alert_id`, visible como **Aviso de origen**. El correlativo de una OT ya creada es inmutable. Los documentos históricos no se renumeran durante la actualización.
 
@@ -608,9 +612,9 @@ El aviso asociado queda en estado técnico `in_progress` / funcional `Con OT cre
 - `in_progress`: En ejecución.
 - `notified`: Notificada.
 
-Cada línea obtiene `vehicle_category_id` mediante la ruta `maintenance_request_id.equipment_id.vehicle_id.category_id`. El desplegable de `technical_location_id` muestra solo ubicaciones de esa categoría y `activity_id` muestra únicamente actividades cuya `category_id` y `technical_location_id` coincidan simultáneamente con la categoría del vehículo y la ubicación escogida. Un onchange limpia una actividad que deje de ser compatible y constraints ORM rechazan combinaciones inválidas creadas por importación o RPC. La validación se dispara al crear la línea o al modificar su actividad o ubicación; el recálculo técnico de la categoría almacenada no bloquea la actualización del módulo por inconsistencias históricas, que pueden abrirse y corregirse posteriormente.
+Cada línea obtiene `vehicle_category_id` y `vehicle_type` desde `maintenance_request_id.equipment_id.vehicle_id`. El desplegable de `technical_location_id` muestra solo ubicaciones de nivel 0 que coincidan con ambos valores y `activity_id` muestra únicamente actividades cuya `category_id` y `technical_location_id` coincidan simultáneamente con la categoría del vehículo y la ubicación escogida. Un onchange limpia una ubicación o actividad que deje de ser compatible y constraints ORM rechazan combinaciones inválidas creadas por importación o RPC. La validación se dispara al crear la línea o al modificar su actividad o ubicación; el recálculo técnico de los campos relacionados almacenados no bloquea la actualización del módulo por inconsistencias históricas, que pueden abrirse y corregirse posteriormente.
 
-El modelo transitorio `barca.maintenance.workorder.activity.selection.wizard` implementa la incorporación múltiple opcional. A partir de la OT obtiene automáticamente la categoría del vehículo y crea líneas transitorias `barca.maintenance.workorder.activity.selection.wizard.line` para todas las actividades activas de esa categoría. Cada línea muestra casilla de selección, ubicación técnica, actividad, tipo de intervención propuesto, duración y materiales. El tipo se propone según el más utilizado por esa actividad en los planes PM, con **Realizar** como respaldo, y permanece editable. Al confirmar crea una `barca.maintenance.workorder.line` pendiente por cada casilla marcada, tomando la ubicación de la actividad y copiando `estimated_duration`, las instrucciones técnicas a `description` y las líneas `material_template_line_ids` como materiales estimados de la OT. La grilla One2many original continúa disponible para ingreso individual.
+El modelo transitorio `barca.maintenance.workorder.activity.selection.wizard` implementa la incorporación múltiple opcional. A partir de la OT obtiene automáticamente la categoría y el tipo del vehículo y crea líneas transitorias `barca.maintenance.workorder.activity.selection.wizard.line` para las actividades activas de esa categoría cuya ubicación sea del mismo tipo y de nivel 0. Cada línea muestra casilla de selección, ubicación técnica, actividad, tipo de intervención propuesto, duración y materiales. El tipo de intervención se propone según el más utilizado por esa actividad en los planes PM, con **Realizar** como respaldo, y permanece editable. Al confirmar crea una `barca.maintenance.workorder.line` pendiente por cada casilla marcada, tomando la ubicación de la actividad y copiando `estimated_duration`, las instrucciones técnicas a `description` y las líneas `material_template_line_ids` como materiales estimados de la OT. La grilla One2many original continúa disponible para ingreso individual.
 
 
 Varias actividades de una misma OT pueden estar en `in_progress` al mismo tiempo; el modelo no aplica una restricción de actividad única en ejecución. La notificación de avance se registra en la misma actividad mediante:

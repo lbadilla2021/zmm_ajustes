@@ -285,7 +285,7 @@ Campos copiados:
 - `note`
 - `sequence`
 
-El encabezado del aviso muestra en solo lectura la categoría del vehículo. Al agregar o modificar actividades manualmente, **Ubicación técnica** se limita a esa categoría y **Actividad** se limita a la combinación de categoría y ubicación elegida. Si la ubicación o la categoría dejan de ser compatibles, la actividad se limpia en el formulario; el modelo aplica las mismas validaciones para operaciones por importación o RPC.
+El encabezado del aviso muestra en solo lectura la categoría y el tipo del vehículo. Al agregar o modificar actividades manualmente, **Ubicación técnica** muestra solo registros de nivel 0 que coincidan simultáneamente con esa categoría y ese tipo; **Actividad** se limita a la combinación de categoría y ubicación elegida. Si la ubicación, la categoría o el tipo dejan de ser compatibles, la selección se limpia en el formulario; el modelo aplica las mismas validaciones para operaciones por importación o RPC.
 
 Campos de materiales copiados por cada actividad:
 
@@ -419,7 +419,7 @@ Después de crear la OT:
 
 La pestaña **Actividades** de la OT estándar muestra líneas `barca.maintenance.workorder.line`. Cada línea conserva los datos técnicos copiados desde la actividad del aviso: ubicación técnica, tipo de intervención, actividad, duración estimada, descripción/instrucciones, observaciones y estado operativo (`pending`, `in_progress`, `notified`).
 
-Al agregar o modificar una actividad manualmente, la categoría se toma del vehículo asociado al equipo de la OT. El selector de ubicación técnica queda limitado a esa categoría; después de elegir la ubicación, el selector **Actividad** muestra solo actividades que coincidan tanto con la categoría del vehículo como con la ubicación técnica. La misma compatibilidad se valida en el modelo.
+Al agregar o modificar una actividad manualmente, la categoría y el tipo se toman del vehículo asociado al equipo de la OT. El selector de ubicación técnica muestra solo registros de nivel 0 de esa categoría y tipo; después de elegir la ubicación, el selector **Actividad** muestra solo actividades que coincidan tanto con la categoría del vehículo como con la ubicación técnica. La misma compatibilidad se valida en el modelo.
 
 Como alternativa al ingreso línea a línea, **Agregar varias actividades** abre un asistente modal que toma la categoría desde el vehículo de la OT y muestra inmediatamente todas las actividades compatibles en una tabla. El usuario marca las casillas requeridas y puede revisar o corregir el tipo de intervención propuesto. Al confirmar se incorpora una línea pendiente por cada selección; la ubicación se toma de cada actividad y se copian duración, instrucciones y materiales estándar del catálogo. El asistente no elimina ni reemplaza la edición manual existente.
 

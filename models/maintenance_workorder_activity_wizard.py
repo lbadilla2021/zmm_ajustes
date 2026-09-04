@@ -21,6 +21,11 @@ class BarcaMaintenanceWorkorderActivitySelectionWizard(models.TransientModel):
         related="maintenance_request_id.barca_vehicle_category_id",
         readonly=True,
     )
+    vehicle_type = fields.Selection(
+        related="maintenance_request_id.barca_vehicle_type",
+        string="Tipo de vehículo",
+        readonly=True,
+    )
 
     selection_line_ids = fields.One2many(
         "barca.maintenance.workorder.activity.selection.wizard.line",
@@ -71,6 +76,8 @@ class BarcaMaintenanceWorkorderActivitySelectionWizard(models.TransientModel):
             [
                 ("active", "=", True),
                 ("category_id", "=", request.barca_vehicle_category_id.id),
+                ("technical_location_id.vehicle_type", "=", request.barca_vehicle_type),
+                ("technical_location_id.level", "=", 0),
             ],
             order="technical_location_id, name, id",
         )
@@ -116,12 +123,16 @@ class BarcaMaintenanceWorkorderActivitySelectionWizard(models.TransientModel):
             lambda line: (
                 line.activity_id.category_id != self.vehicle_category_id
                 or not line.activity_id.technical_location_id
+                or line.activity_id.technical_location_id.vehicle_type
+                != self.vehicle_type
+                or line.activity_id.technical_location_id.level != 0
             )
         )
         if incompatible:
             raise ValidationError(
                 "Existen actividades seleccionadas que no corresponden a la "
-                "categoría del vehículo de la OT."
+                "categoría y al tipo del vehículo de la OT, o cuya "
+                "ubicación técnica no es de nivel 0."
             )
 
         missing_type = selected_lines.filtered(

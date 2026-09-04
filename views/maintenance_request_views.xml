@@ -12,6 +12,7 @@
                 <field name="barca_locked_for_executor" column_invisible="1"/>
                 <field name="barca_can_start" column_invisible="1"/>
                 <field name="vehicle_category_id" column_invisible="1"/>
+                <field name="vehicle_type" column_invisible="1"/>
                 <field name="technical_location_id" required="1" readonly="barca_locked_for_executor" force_save="1"/>
                 <field name="intervention_type_id" required="1" readonly="barca_locked_for_executor" force_save="1"/>
                 <field name="activity_id" required="1" readonly="barca_locked_for_executor" force_save="1"/>
@@ -188,6 +189,7 @@
                     <field name="barca_locked_for_executor" invisible="1"/>
                     <field name="barca_can_start" invisible="1"/>
                     <field name="vehicle_category_id" invisible="1"/>
+                    <field name="vehicle_type" invisible="1"/>
                     <notebook>
                         <page string="Actividad" name="activity">
                             <group>
@@ -286,6 +288,7 @@
 
             <xpath expr="//sheet//field[@name='category_id']" position="after">
                 <field name="barca_vehicle_category_id" readonly="1"/>
+                <field name="barca_vehicle_type" readonly="1"/>
             </xpath>
 
             <xpath expr="//field[@name='user_id']" position="attributes">
@@ -459,6 +462,7 @@
                             <field name="barca_added_after_return" column_invisible="1"/>
                             <field name="barca_can_start" column_invisible="1"/>
                             <field name="vehicle_category_id" column_invisible="1"/>
+                            <field name="vehicle_type" column_invisible="1"/>
                             <field name="technical_location_id" required="1" readonly="parent.barca_locked_for_executor" force_save="1"/>
                             <field name="intervention_type_id" required="1" readonly="parent.barca_locked_for_executor" force_save="1"/>
                             <field name="activity_id" required="1" readonly="parent.barca_locked_for_executor" force_save="1"/>
